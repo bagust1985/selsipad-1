@@ -1,0 +1,70 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 7 - Social-Fi Feed + Blue Check (Lifetime)",
+    "generated_date": "2026-01-05",
+    "overview": "Spesifikasi Social-Fi (feed mirip Twitter) dengan aturan gating ketat berbasis status Blue Check untuk posting dan klaim reward.",
+    "core_rules": {
+        "posting_rights": "Hanya user Blue Check (lifetime) yang bisa membuat post, reply, atau quote.",
+        "blue_check_cost": "$10 per user untuk akses seumur hidup.",
+        "fee_distribution": "70% Treasury, 30% Pool Reward Referral.",
+        "reward_claim_gate": "Reward referral tetap terakumulasi (accrue) untuk semua, namun klaim hanya bisa dilakukan oleh user Blue Check dan mempunyai Referral aktif.",
+        "referral_model": "Single-side incentive berdasarkan volume kontribusi/trading (integrasi Modul 10)."
+    },
+    "user_access_levels": {
+        "normal_user": [
+            "Membaca timeline (global/following).",
+            "Melakukan Follow/Unfollow, Like, Bookmark, dan Report.",
+            "Dilarang membuat konten (post/reply/quote/repost)."
+        ],
+        "blue_check_user": [
+            "Semua hak akses user biasa.",
+            "Dapat membuat post, reply, quote, dan repost.",
+            "Dapat mengakses halaman Rewards dan melakukan klaim penarikan."
+        ]
+    },
+    "database_schema_supabase": {
+        "profile_extensions": "blue_check_status (NONE, ACTIVE, BANNED, REVOKED), is_banned, banned_until, ban_reason.",
+        "feed_posts": "author_profile_id, post_type, parent_post_id, content_text (max 500), content_entities, media, status (ACTIVE, HIDDEN, DELETED).",
+        "interactions": "feed_likes, feed_bookmarks, follows, feed_reports (unique constraints per user/post).",
+        "financial_tracking": "fee_events (type: BLUE_CHECK_PURCHASE), fee_splits, reward_ledger, reward_claims."
+    },
+    "security_rls_policies": {
+        "insertion": "INSERT feed_posts hanya diizinkan jika blue_check_status = 'ACTIVE' dan is_banned = false.",
+        "modification": "UPDATE/DELETE hanya oleh penulis (soft delete) atau admin.",
+        "claims": "INSERT reward_claims hanya diizinkan untuk profil berstatus ACTIVE Blue Check."
+    },
+    "api_endpoints": {
+        "public": [
+            "GET /feed/timeline",
+            "GET /feed/posts/:id",
+            "GET /feed/search"
+        ],
+        "authenticated": [
+            "POST /feed/posts (Blue-check only via RLS).",
+            "POST /feed/posts/:id/like",
+            "POST /profiles/:id/follow",
+            "POST /feed/posts/:id/report"
+        ],
+        "blue_check_service": [
+            "POST /blue-check/checkout",
+            "POST /blue-check/confirm (verify-tx)."
+        ],
+        "rewards": [
+            "GET /rewards/summary",
+            "POST /rewards/claim (Blue-check only)."
+        ]
+    },
+    "admin_dashboard_requirements": [
+        "Moderation queue untuk memproses laporan (hide/delete post).",
+        "User management (ban/unban, revoke/restore blue check).",
+        "Monitoring pembayaran blue check dan status fee split.",
+        "Audit log untuk semua tindakan administratif."
+    ],
+    "done_definition_mvp": [
+        "Pembelian Blue Check seharga $10 dengan split 70/30 tercatat di ledger.",
+        "RLS posting hanya untuk Blue Check aktif sudah diimplementasikan.",
+        "Timeline global, following, dan detail post berfungsi.",
+        "Sistem reward claim gate aktif (non-blue-check status: LOCKED).",
+        "Dashboard admin dengan moderasi dan audit log tersedia."
+    ]
+}

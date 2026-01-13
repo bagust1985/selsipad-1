@@ -1,0 +1,48 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 10 - Reward Pool + Referral Engine (Single-Side)",
+    "generated_date": "2026-01-05",
+    "core_specifications": {
+        "referral_model": "Single-side: hadiah hanya untuk referrer berdasarkan kontribusi referee.",
+        "claim_gate": "Reward tetap terakumulasi (accrue) untuk semua, tapi hanya bisa diklaim oleh user status Blue Check ACTIVE.",
+        "payout_address": "Otomatis dikirim ke primary wallet user di profil sesuai jaringan aset reward.",
+        "non_referrer_rule": "Jika referee tidak punya referrer, porsi referral dialihkan ke Treasury."
+    },
+    "reward_sources": {
+        "presale_fairlaunch": "Success fee (5%) didistribusikan secara proporsional kepada referrer dari peserta yang eligible.",
+        "bonding_swap": "1.5% swap fee dibagi 50% Treasury dan 50% Referral Pool.",
+        "blue_check": "$10 purchase fee dibagi 70% Treasury dan 30% Referral Pool."
+    },
+    "engine_inputs": {
+        "contribute_event": {
+            "fields": [
+                "profile_id (referee)",
+                "wallet",
+                "module_type",
+                "amount",
+                "currency",
+                "tx_id"
+            ],
+            "sources": [
+                "Presale Participation",
+                "Fairlaunch Contribution",
+                "Bonding BUY/SELL volume",
+                "Blue Check Purchase"
+            ] 
+        }
+    },
+    "database_schema": {
+        "tables": [
+            "fee_events & fee_splits: Pencatatan fee global dan target distribusinya.",
+            "contribute_events: Input mentah untuk mesin referral.",
+            "referral_reward_ledger: Buku besar pendapatan reward per event yang bisa ditelusuri.",
+            "referral_claims: Status pencairan (PENDING, PAID, FAILED) dan detail payout."
+        ]
+    },
+    "pipeline_workflow": [
+        "Ingest contribute_events dari berbagai modul.",
+        "Worker melakukan sweep fee_splits target REFERRAL_POOL.",
+        "Distribusi ledger (direct mapping atau proporsional untuk round sukses).",
+        "Eksekusi klaim melalui Tx Manager setelah verifikasi status Blue Check."
+    ]
+}

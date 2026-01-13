@@ -1,0 +1,82 @@
+{
+    "modul_16": {
+        "judul": "Fee Token Creation",
+        "deskripsi": "Fee token creation dibayar oleh developer saat membuat project/token sesuai dengan tipe dan jaringan (chain) yang digunakan.",
+        "daftar_biaya": {
+            "presale": {
+                "BSC": "$0.5$ BNB",
+                "ETH": "$0.1$ ETH",
+                "Solana": "$1$ SOL"
+            },
+            "fairlaunch": {
+                "BSC": "$0.2$ BNB",
+                "ETH": "$0.1$ ETH",
+                "Solana": "$1$ SOL"
+            },
+            "bonding_curve": {
+                "BSC": null,
+                "ETH": null,
+                "Solana": "$0.5$ SOL"
+            }
+        },
+        "sumber_tabel": ""
+    },
+    "modul_16_1": {
+        "judul": "Fee Project & Distribusi",
+        "deskripsi": "Skema distribusi pendapatan dari berbagai layanan platform SELSIPAD.",
+        "skema_distribusi": [
+            {
+                "kategori": "Presale",
+                "cakupan": "EVM & Solana",
+                "syarat": "Status Finalize",
+                "total_fee": "$5\\%$",
+                "pembagian": {
+                    "Treasury": "$2.5\\%$",
+                    "Reward Referral": "$2\\%$",
+                    "Stake SBT": "$0.5\\%$"
+                },
+                "referensi": ""
+            },
+            {
+                "kategori": "Fairlaunch",
+                "cakupan": "EVM & Solana",
+                "syarat": "Status tercapai softcap",
+                "pembagian": {
+                    "Treasury": "$2.5\\%$",
+                    "Reward Referral": "$2\\%$",
+                    "Stake SBT": "$0.5\\%$"
+                },
+                "referensi": ""
+            },
+            {
+                "kategori": "Bonding Curve",
+                "biaya_layanan": "Fee swap $1.5\\%$, Migrate $2.5$ SOL",
+                "pembagian": {
+                    "Treasury": "$50\\%$",
+                    "Reward Referral": "$50\\%$"
+                },
+                "referensi": ""
+            },
+            {
+                "kategori": "Fee Centang Biru",
+                "biaya": "$\\$10$",
+                "pembagian": {
+                    "Treasury": "$70\\%$",
+                    "Reward Referral": "$30\\%$"
+                },
+                "referensi": ""
+            },
+            {
+                "kategori": "Fee Token Creation",
+                "pembagian": {
+                    "Wallet Treasury": "$100\\%$"
+                },
+                "referensi": ""
+            }
+        ]
+    },
+    "catatan_tambahan": {
+        "referral_rule": "Klaim reward referral hanya dapat dilakukan oleh user dengan status Blue Check Verified.",
+        "payout_wallet": "Aliran dana Token Creation masuk 100% ke Wallet Treasury."
+    }
+}

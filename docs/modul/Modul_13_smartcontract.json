@@ -1,0 +1,35 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 13 - Smart Contracts & Solana Programs (MVP)",
+    "generated_date": "2026-01-05",
+    "chain_scope": {
+        "evm": [
+            "Presale Round.",
+            "Fairlaunch Pool (Price Discovery).",
+            "Liquidity Lock Vault.",
+            "Vesting Vault.",
+            "Fee Collector & Vaults (Treasury/Referral/NFT Staking)."
+        ],
+        "solana": [
+            "Bonding Curve Program (Deploy, Swap, Migration).",
+            "Fairlaunch Pool (Opsional).",
+            "SBT Collection & Staking Program (Proof-of-Human)."
+        ]
+    },
+    "fee_and_payout_rules": {
+        "standard_fees": "5% presale/fairlaunch sukses; 1.5% bonding swap; $10 blue check; $10 staking claim.",
+        "payout_logic": "Referral payout ke primary wallet; Staking claim fee verifikasi off-chain.",
+        "fee_splits": "3-alur (Treasury/Referral/NFT Staking) atau split khusus (misal: bonding swap 50/50)."
+    },
+    "security_model": {
+        "ownership": "Kontrak/program disarankan menggunakan multisig.",
+        "upgradability": "MVP lebih memilih non-upgradeable untuk kontrak core yang memegang dana; upgrade via registry pointer.",
+        "controls": "Admin hanya bisa pause/cancel; dana peserta tidak boleh bisa disedot oleh admin.",
+        "invariants": [
+            "LP lock minimal 12 bulan.",
+            "Team vesting wajib untuk proyek presale/fairlaunch.",
+            "Jalur refund tidak boleh bisa diblokir."
+        ]
+    },
+    "integration": "Indexer memantau event/log on-chain untuk sinkronisasi ke database Supabase (Projects, Rounds, Contributions, Fee events)."
+}

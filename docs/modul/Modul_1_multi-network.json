@@ -1,0 +1,170 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 1: Multi-network Support (EVM & Solana)",
+    "generated_date": "2026-01-04",
+    "description": "Dokumen ini mengunci fondasi teknis untuk semua modul berikutnya (Modul 2-11). Fokus utamanya adalah konsistensi multi-network, backend Supabase, dan Admin Dashboard.",
+    "tech_stack": {
+        "monorepo": "Turborepo",
+        "frontend_user": "Next.js (App Router) + TypeScript + Tailwind + shadcn/ui",
+        "admin_dashboard": "Next.js (app terpisah)",
+        "backend_api": "NestJS (TypeScript)",
+        "database_auth": "Supabase (Postgres + RLS + Storage + Realtime)",
+        "queue_jobs": "BullMQ (Redis) - Opsional awal/MVP polling DB",
+        "blockchain_libs": {
+            "evm": "wagmi + viem (client), viem (server)",
+            "solana": "@solana/wallet-adapter (client), @solana/web3.js (server)"
+        },
+        "smart_contracts": {
+            "evm": "Foundry",
+            "solana": "Anchor"
+        }
+    },
+    "architecture_principles": [
+        "Domain logic tunggal dengan chain execution via adapter (EVMAdapter/SolAdapter)",
+        "On-chain untuk settlement, off-chain sebagai UI truth (indexer + DB)",
+        "Event/Tx pipeline sebagai tulang punggung status dan analytics",
+        "Paid RPC hanya digunakan di sisi server/indexer (tidak bocor ke client)"
+    ],
+    "scope": {
+        "goals_mvp": [
+            "Multi-network wallet connection (EVM & Solana)",
+            "Signature-based authentication (Nonce verification)",
+            "Unified Chain SDK Adapter",
+            "Unified Tx Manager dengan status konsisten dan idempotency",
+            "Minimal Indexer untuk update status transaksi",
+            "RPC Pool dengan fallback dan healthcheck",
+            "Supabase schema + RLS",
+            "Admin Dashboard MVP untuk management chain dan RPC"
+        ],
+        "non_goals": [
+            "Implementasi Smart Contract (Modul 2-6)",
+            "Parsing domain events spesifik (presale/vesting)"
+        ]
+    },
+    "repo_structure": {
+        "apps": [
+            "web",
+            "admin",
+            "api",
+            "indexer"
+        ],
+        "packages": [
+            "sdk",
+            "contracts-evm",
+            "programs-sol",
+            "ui",
+            "types",
+            "config"
+        ],
+        "docs": [
+            "architecture",
+            "adr"
+        ]
+    },
+    "core_points": [
+        {
+            "point": 1,
+            "title": "Network Registry",
+            "description": "Daftar jaringan/cluster yang dikelola via admin secara dinamis."
+        },
+        {
+            "point": 2,
+            "title": "Wallet Connect",
+            "description": "Integrasi wagmi (EVM) dan @solana/wallet-adapter (SOL) dengan Unified State (Zustand)."
+        },
+        {
+            "point": 3,
+            "title": "Unified Identity",
+            "description": "Satu profile Supabase dapat terhubung ke banyak wallet (Multi-wallet)."
+        },
+        {
+            "point": 4,
+            "title": "Signature Auth",
+            "description": "Login tanpa email/password menggunakan SIWE-style (EVM) dan paralel format (SOL)."
+        },
+        {
+            "point": 5,
+            "title": "Chain Adapter SDK",
+            "description": "Abstraksi interface (IChainAdapter) agar domain logic tidak bergantung pada jenis chain."
+        },
+        {
+            "point": 6,
+            "title": "Tx Manager",
+            "description": "Siklus hidup transaksi (CREATED, SUBMITTED, CONFIRMED, FINALIZED) dengan Idempotency Key."
+        },
+        {
+            "point": 7,
+            "title": "RPC Provider Pool",
+            "description": "Manajemen paid RPC dengan retry, failover, dan circuit breaker sederhana."
+        },
+        {
+            "point": 8,
+            "title": "Indexer Minimal",
+            "description": "Polling status transaksi SUBMITTED dan pemutakhiran ke database."
+        },
+        {
+            "point": 9,
+            "title": "Supabase Schema & RLS",
+            "description": "Keamanan data user dan admin berbasis Row Level Security."
+        },
+        {
+            "point": 10,
+            "title": "Admin Dashboard MVP",
+            "description": "Panel untuk mengelola chain registry, RPC endpoints, monitor transaksi, dan kontrol user."
+        }
+    ],
+    "database_schema_summary": {
+        "public_tables": [
+            "profiles (id, display_name, is_banned, admin_role)",
+            "wallets (id, profile_id, network_type, address, is_primary)",
+            "chains (id, network_type, chain_ref, enabled, confirmations_required)",
+            "transactions (id, profile_id, action, idempotency_key, status, tx_ref, metadata)",
+            "chain_events (id, network_type, event_type, tx_ref, payload)"
+        ],
+        "private_tables": [
+            "auth_nonces (purpose, address, nonce, expires_at)",
+            "chains_rpc (chain_ref, rpc_primary, rpc_fallbacks)"
+        ]
+    },
+    "api_endpoints": {
+        "auth": [
+            "POST /auth/nonce",
+            "POST /auth/verify"
+        ],
+        "tx_manager": [
+            "POST /tx/create",
+            "POST /tx/submitted",
+            "GET /tx/:id",
+            "GET /tx/by-idempotency",
+            "POST /tx/reconcile"
+        ],
+        "admin": [
+            "GET/POST/PATCH /admin/chains",
+            "GET/PATCH /admin/rpc/:chainRef",
+            "GET /admin/transactions",
+            "GET /admin/users",
+            "PATCH /admin/users/:id/ban",
+            "GET /admin/audit"
+        ]
+    },
+    "checklist_done": {
+        "must_have": [
+            "Connect EVM+SOL dengan mismatch handling",
+            "Auth nonce-sign-verify (EVM+SOL)",
+            "Supabase schema + RLS + Storage policy",
+            "SDK IChainAdapter & Error Normalization",
+            "Indexer polling & status update",
+            "Admin panel untuk chain & RPC management"
+        ],
+        "nice_to_have": [
+            "Realtime trigger indexer",
+            "RPC health summary dashboard",
+            "Refresh token management"
+        ]
+    },
+    "consistency_notes": [
+        "Semua aksi chain modul 2-6 wajib masuk SDK & Tx Manager (idempotency)",
+        "Status UI wajib mengacu ke tabel transactions (bukan direct chain query)",
+        "Paid RPC dilarang keras masuk ke client side"
+    ]
+}

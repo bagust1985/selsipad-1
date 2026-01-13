@@ -1,0 +1,34 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 5 - Liquidity Lock (Min 12 Bulan)",
+    "generated_date": "2026-01-05",
+    "core_rules": {
+        "min_lock_duration": "Wajib minimal 12 bulan untuk semua proyek yang listing.",
+        "finalization_gate": "Proyek tidak bisa dianggap sukses/final jika status likuiditas belum LOCKED.",
+        "source_of_truth": "UI membaca status dari database Supabase, bukan query langsung ke blockchain."
+    },
+    "scope": {
+        "evm": "V2 LP token lock (UniswapV2/PancakeV2 forks).",
+        "solana": "SPL LP token lock (Raydium/Orca)."
+    },
+    "workflow": {
+        "step_1": "LP Lock Plan: Dibuat saat wizard presale (minimal 12 bulan).",
+        "step_2": "Add Liquidity: Dieksekusi admin setelah proyek sukses (FINALIZED_SUCCESS).",
+        "step_3": "Lock Liquidity: Penguncian LP token di locker provider.",
+        "step_4": "Indexer Update: Memastikan status menjadi LOCKED di database."
+    },
+    "database_schema": {
+        "tables": [
+            "lp_lock_plans (project_id, dex, lock_months, status) ",
+            "liquidity_positions (pool_address, lp_token_or_mint, lp_amount_minted) ",
+            "liquidity_locks (locker_provider, lock_vault_address, unlock_at, status) "
+        ]
+    },
+    "admin_dashboard": {
+        "features": [
+            "Queue Ready-to-Lock untuk proyek yang sudah final.",
+            "Eksekusi manual add/lock liquidity.",
+            "Audit log untuk semua tindakan admin."
+        ]
+    }
+}

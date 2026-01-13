@@ -1,0 +1,74 @@
+{
+    "document_info": {
+        "title": "SELSIPAD Patch Spec - Modul 10 (Referral Pool) ",
+        "version": "1.0 ",
+        "date": "13 Jan 2026 ",
+        "target": "Patch (backward compatible) ",
+        "summary": "Revisi aturan klaim referral yang mewajibkan status Blue Check aktif dan minimal satu referral aktif."
+    },
+    "definitions": {
+        "blue_check": "Status verifikasi pada profil yang dinyatakan valid jika berstatus ACTIVE atau VERIFIED.",
+        "referral_relationship": "Relasi antara referrer dan referee yang valid dengan status ACTIVE.",
+        "referral_aktif": "Kondisi di mana kolom 'activated_at' terisi karena referee telah melakukan minimal satu qualifying event.",
+        "qualifying_event": "Event yang memicu pembagian biaya (fee split) dengan target REFERRAL_POOL, seperti kontribusi atau pembelian."
+    },
+    "business_rules": {
+        "BR-1": "Klaim referral hanya diizinkan jika Blue Check valid DAN jumlah referral aktif (active_referral_count) minimal satu.",
+        "BR-2": "Jika jumlah referral aktif sama dengan nol, maka klaim ditolak dengan pesan NO_ACTIVE_REFERRAL.",
+        "BR-3": "Kolom 'activated_at' diisi saat qualifying event pertama kali dilakukan oleh referee.",
+        "BR-4": "Antarmuka pengguna (UI) Selsifeed harus mengikuti aturan validasi dan menampilkan alasan jika klaim dinonaktifkan."
+    },
+    "data_model_changes": {
+        "referral_relationships_table": "Penambahan kolom 'activated_at' dengan tipe timestamptz.",
+        "profiles_table": "Penambahan kolom 'active_referral_count' dengan tipe integer, tidak boleh null, dan default nol.",
+        "indexing": [
+            "Unique index pada (referrer_profile_id, referee_profile_id).",
+            "Index pada (referrer_profile_id, activated_at).",
+            "Index pada (referee_profile_id)."
+        ]
+    },
+    "logic_and_api": {
+        "worker_patch": "Menambahkan logika untuk mengecek qualifying event, mengisi 'activated_at' jika masih kosong, serta menambah jumlah 'active_referral_count' pada profil referrer.",
+        "api_endpoint": "POST /v1/rewards/referral/claim ",
+        "api_validation_steps": [
+            {
+                "step": 1,
+                "check": "Status Blue Check harus ACTIVE/VERIFIED",
+                "error_code": "403 BLUECHECK_REQUIRED "
+            },
+            {
+                "step": 2,
+                "check": "active_referral_count >= 1",
+                "error_code": "403 NO_ACTIVE_REFERRAL "
+            },
+            {
+                "step": 3,
+                "check": "claimable_amount > 0",
+                "error_code": "409 NOTHING_TO_CLAIM "
+            },
+            {
+                "step": 4,
+                "check": "Idempotency key belum pernah sukses",
+                "error_code": "409 IDEMPOTENCY_CONFLICT "
+            }
+        ]
+    },
+    "ui_states_selsifeed": {
+        "state_a": {
+            "condition": "Blue Check tidak aktif",
+            "behavior": "Tombol nonaktif disertai ajakan (CTA) untuk verifikasi "
+        },
+        "state_b": {
+            "condition": "Blue Check aktif, namun referral aktif nol",
+            "behavior": "Tombol nonaktif dengan pesan 'Belum ada referral aktif' "
+        },
+        "state_c": {
+            "condition": "Memenuhi syarat (eligible), namun jumlah reward nol",
+            "behavior": "Tombol nonaktif dengan pesan 'Belum ada reward' "
+        },
+        "state_d": {
+            "condition": "Memenuhi syarat (eligible) dan jumlah reward lebih dari nol",
+            "behavior": "Tombol aktif untuk melakukan klaim "
+        }
+    }
+}

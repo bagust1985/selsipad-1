@@ -1,0 +1,37 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 14 - API Documentation (MVP)",
+    "generated_date": "2026-01-05",
+    "api_conventions": {
+        "auth": "Bearer JWT (Supabase Auth) dengan kewajiban MFA untuk admin.",
+        "base_url": "https://api.selsipad.xyz/v1 (Admin: /v1/admin/* via Edge Functions).",
+        "idempotency": "Wajib menggunakan header Idempotency-Key untuk operasi POST seperti payout, approve, dan finalize.",
+        "pagination": "Cursor-based (?cursor=...&limit=...) mengembalikan items dan next_cursor.",
+        "errors": "Format JSON standar dengan kode (VALIDATION_ERROR, UNAUTHORIZED, dll) dan pesan detail."
+    },
+    "endpoint_categories": {
+        "public_user": [
+            "Auth & Profile: Link/verify wallet, set primary wallet.",
+            "Launchpad: Browse projects, stats, timeline, dan partisipasi (contribute/claim/refund).",
+            "Bonding Curve: Quote swap, swap execution, dan event stream untuk chart.",
+            "Social-Fi: Feed posts (hanya Blue Check), likes, dan report content.",
+            "Rewards & Badges: Referral stats, claim rewards (gate: Blue Check), dan katalog badge.",
+            "Staking: SBT status, claim SBT (fee $10), register/unregister staking, dan reward claim."
+        ],
+        "developer_creator": [
+            "Onboarding: Submit KYC per project (video + ID + payment hash).",
+            "Creation: Configure dan deploy presale/fairlaunch (gate: KYC + SC Scan) serta bonding curve."
+        ],
+        "admin_edge_functions": [
+            "Security: Enforce MFA dan manajemen role (SUPER_ADMIN).",
+            "Operations: KYC queue management, project control (pause/cancel), fee rules, treasury management.",
+            "Payout & Mod: Persetujuan payout (two-man rule), moderasi feed (ban/remove), dan manual badge issue."
+        ]
+    },
+    "gate_rules": {
+        "social": "Hanya user Blue Check ACTIVE yang bisa membuat post di feed.",
+        "rewards": "Hanya user Blue Check ACTIVE yang bisa klaim reward referral.",
+        "payout": "Semua pembayaran otomatis dikirim ke primary wallet user di profil."
+    },
+    "done_definition": "Daftar endpoint lengkap untuk user, developer, dan admin dengan gate rules dan konvensi keamanan yang terpenuhi."
+}

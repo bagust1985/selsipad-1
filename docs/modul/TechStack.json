@@ -1,0 +1,61 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 15 - Techstack + Struktur Project (MVP)",
+    "generated_date": "2026-01-05",
+    "summary": "Dokumen ini mengunci fondasi teknis dan struktur repositori untuk pengerjaan MVP SELSIPAD oleh solo builder. Fokus utamanya adalah penggunaan monorepo, arsitektur serverless, dan keamanan admin yang ketat.",
+    "core_techstack": {
+        "monorepo": "Turborepo (solo-friendly) ",
+        "language": "TypeScript end-to-end (FE, BE, Indexer, Worker, Tx Manager) ",
+        "database_auth": "Supabase (Postgres + RLS + Auth) ",
+        "queue_scheduling": "Upstash (Redis + QStash) untuk job ringan dan deduplikasi ",
+        "hosting": {
+            "services": "GCP Cloud Run ",
+            "frontend": "Vercel (Recommended) "
+        },
+        "blockchain_access": "Paid RPC untuk jaringan EVM dan Solana "
+    },
+    "high_level_architecture": {
+        "user_app": "Next.js (App Router) untuk fitur launchpad, sosial, dan rewards.",
+        "admin_portal": "Next.js terpisah dengan domain berbeda dan wajib MFA TOTP.",
+        "edge_functions": "Supabase Edge Functions (Deno) untuk endpoint sensitif (KYC, payout, admin gate).",
+        "indexer": "Layanan Cloud Run terpisah untuk EVM dan Solana guna memantau event on-chain.",
+        "worker": "Consumer QStash untuk distribusi referral, evaluasi badge, dan rekonsiliasi.",
+        "tx_manager": "Layanan Cloud Run untuk eksekusi transaksi payout dengan retry logic dan idempotensi.",
+        "sbt_boundary": "Minting/claiming SBT Proof of Human berada di luar sistem launchpad; launchpad hanya memverifikasi status untuk staking."
+    },
+    "repository_structure": {
+        "root": "selsipad/",
+        "apps": {
+            "web": "User app (Next.js) ",
+            "admin": "Admin portal (Next.js) dengan domain terpisah "
+        },
+        "services": {
+            "indexer_evm": "Cloud Run service untuk sinkronisasi EVM ",
+            "indexer_sol": "Cloud Run service untuk sinkronisasi Solana ",
+            "worker": "QStash consumer untuk background tasks ",
+            "tx_manager": "Layanan eksekutor payout "
+        },
+        "supabase": {
+            "migrations": "SQL migrations untuk skema DB ",
+            "functions": "Edge Functions (Deno) ",
+            "policies": "Definisi Row Level Security (RLS) ",
+            "seed": "Script untuk badge defs dan fee rules "
+        },
+        "packages": {
+            "ui": "Komponen UI bersama (shadcn/ui + Tailwind) ",
+            "sdk": "TypeScript client (API + types) untuk sinkronisasi FE/BE ",
+            "chains": "Penyimpanan ABI (EVM), IDL (Solana), dan konfigurasi alamat ",
+            "config": "Konfigurasi bersama untuk eslint, tsconfig, dan prettier "
+        }
+    },
+    "security_alignment": {
+        "admin": "MFA mandatory, RBAC server-side, audit log append-only, dan two-man rule untuk aksi kritis.",
+        "data_access": "RLS deny-by-default; penulisan data sensitif wajib melalui Edge Functions menggunakan service role key (hanya di server).",
+        "secrets": "Kunci RPC dan wallet Tx Manager disimpan di Secret Manager/KMS."
+    },
+    "deployment_environments": [
+        "dev: Lokal + Supabase dev project ",
+        "staging: Cloud Run staging + Supabase staging ",
+        "prod: Cloud Run prod + Supabase prod "
+    ]
+}

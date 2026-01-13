@@ -1,0 +1,36 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 8 - User Profile (Multi-wallet, Multi-network)",
+    "generated_date": "2026-01-05",
+    "core_principles": {
+        "access_control": "Wajib login (authenticated-only) untuk melihat profil dan halaman feed.",
+        "multi_wallet": "Satu profil mendukung banyak wallet (EVM + Solana) dengan opsi primary wallet per jaringan.",
+        "privacy": "Opsi menyembunyikan (hide) alamat wallet; wallet tersembunyi hanya bisa dilihat pemilik dan admin.",
+        "auth_method": "Login dan wallet linking menggunakan verifikasi signature (EVM/Solana sign message) + challenge nonce.",
+        "blue_check": "Status lifetime (NONE, ACTIVE, BANNED, REVOKED) disimpan langsung di profil."
+    },
+    "database_schema": {
+        "tables": [
+            "profiles: Menyimpan data identitas seperti handle (unique), display_name, bio, dan status blue_check.",
+            "profile_wallets: Menyimpan alamat wallet, tipe network, status primary, dan opsi is_hidden.",
+            "profile_settings: Pengaturan privasi, notifikasi, dan locale.",
+            "referrals: Mencatat hubungan referrer dan referee (apply once).",
+            "profile_badges: Badge yang diterbitkan untuk profil (Modul 11)."
+        ]
+    },
+    "admin_controls": {
+        "features": [
+            "Ban/restrict profil.",
+            "Revoke/restore status blue check.",
+            "Issue badges secara manual.",
+            "Audit log wajib untuk semua tindakan admin."
+        ]
+    },
+    "done_definition_mvp": [
+        "Profile CRUD dengan kewajiban autentikasi.",
+        "Wallet login & linking multi-network berbasis signature.",
+        "Enforcement RLS untuk privasi wallet.",
+        "Referral code generation & apply once logic.",
+        "Admin dashboard untuk manajemen user."
+    ]
+}

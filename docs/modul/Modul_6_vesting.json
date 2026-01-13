@@ -1,0 +1,30 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 6 - Vesting (EVM & Solana)",
+    "generated_date": "2026-01-05",
+    "core_principles": {
+        "mandatory": "Semua presale round wajib memiliki vesting schedule.",
+        "anchor_time": "tge_at default adalah waktu presale final, namun admin bisa override.",
+        "source_of_truth": "Perhitungan jumlah token yang bisa diklaim dilakukan di server-side."
+    },
+    "vesting_types": {
+        "tge_cliff_linear": "Unlock persentase awal saat TGE, diikuti masa tunggu (cliff), lalu linear.",
+        "cliff_linear": "Tanpa unlock awal, langsung masa tunggu lalu linear."
+    },
+    "automation": {
+        "trigger": "Alokasi dibuat otomatis saat presale berstatus FINALIZED_SUCCESS.",
+        "idempotency": "Proses pembuatan alokasi menggunakan unique constraints untuk mencegah data ganda."
+    },
+    "claim_flow": {
+        "endpoint": "POST /vesting/claim ",
+        "tx_manager": "Menggunakan action VESTING_CLAIM dengan status CREATED hingga FINALIZED.",
+        "idempotency_key": "Berbasis bucket 1 jam (VESTING_CLAIM:{allocationId}:{bucket})."
+    },
+    "database_schema": {
+        "tables": [
+            "vesting_schedules (round_id, type, tge_at, params) ",
+            "vesting_allocations (profile_id, wallet, total_allocation, claimed_amount) ",
+            "vesting_claims (allocation_id, amount, tx_id, status) "
+        ]
+    }
+}

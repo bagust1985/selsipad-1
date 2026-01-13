@@ -1,0 +1,45 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 11 - Badge System",
+    "generated_date": "2026-01-05",
+    "badge_scopes": {
+        "user_badges": "Melekat pada profil pengguna untuk reputasi dan status tim.",
+        "project_badges": "Melekat pada proyek atau round tertentu dan dapat kedaluwarsa."
+    },
+    "catalog": {
+        "auto_badges": [
+            {
+                "code": "REFERRAL_PRO",
+                "threshold": "Memiliki >= 20 referee yang aktif berkontribusi (memiliki >= 1 contribute_event).",
+                "logic": "Dihitung secara otomatis oleh worker rule engine."
+            },
+            {
+                "code": "WHALE",
+                "threshold": "Total kontribusi lintas modul >= $20,000 (EVM & Solana).",
+                "logic": "Dihitung dari nilai yang dinormalisasi ke USD atau aset stabil."
+            }
+        ],
+        "project_badges": [
+            {
+                "code": "DEV_KYC_VERIFIED",
+                "trigger": "Admin menyetujui KYC, liveness, dan pembayaran biaya terverifikasi.",
+                "expiry": "Kedaluwarsa saat status proyek mencapai tahap final (Success/Fail/Cancel)."
+            },
+            {
+                "code": "SC_AUDIT_PASS",
+                "trigger": "Hasil scan atau audit smart contract dinyatakan PASS.",
+                "logic": "Dapat dicabut (Revoked) jika audit ulang gagal atau oleh admin."
+            }
+        ],
+        "manual_team_badges": [
+            "TEAM_ADMIN, TEAM_MOD, TEAM_IT_PROGRAMMER, TEAM_CEO (Hanya untuk tim internal SELSI)."
+        ]
+    },
+    "security_note": "Akses administratif tidak boleh hanya bergantung pada badge; badge hanya berfungsi sebagai label UI sementara otorisasi menggunakan RBAC.",
+    "data_model": {
+        "tables": [
+            "badge_definitions (Master data untuk kode, scope, nama, deskripsi, dan ikon).",
+            "badge_instances (Data badge yang diterbitkan, status ACTIVE/EXPIRED/REVOKED, dan metadata)."
+        ]
+    }
+}

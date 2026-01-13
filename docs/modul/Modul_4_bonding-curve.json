@@ -1,0 +1,33 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 4 - Fairlaunch Solana (Bonding Curve Scheme)",
+    "network": "Solana Only ",
+    "compliance": {
+        "dev_kyc": "OFF (Permissionless) khusus untuk skema bonding curve.",
+        "team_vesting": "Wajib menggunakan Modul 6 (kind=TEAM).",
+        "lp_lock": "Wajib minimal 12 bulan setelah migrasi ke DEX."
+    },
+    "fee_structure": {
+        "deploy_fee": "0.5 SOL per pool (wajib terverifikasi sebelum LIVE).",
+        "swap_fee": "1.5% per transaksi (50% Treasury, 50% Referral Pool).",
+        "migration_fee": "2.5 SOL saat graduate/migrasi ke DEX."
+    },
+    "pricing_model": {
+        "type": "AMM Constant-Product dengan Virtual Reserves.",
+        "formula": "$k = (vSOL + rSOL) * (vTOK + rTOK)$ "
+    },
+    "graduation_rules": {
+        "trigger": "sol_raised_total >= graduation_sol_target.",
+        "listing_price": "last_curve_price * (1 + listing_premium_bps / 10000).",
+        "dex_target": "Raydium atau Orca."
+    },
+    "database_schema": {
+        "tables": [
+            "bonding_pools (virtual_reserves, fee_bps, graduation_target, status) ",
+            "bonding_trades (side, amount_in, amount_out, price_snapshot) ",
+            "bonding_pool_snapshots (sol_reserve, token_reserve, last_price) ",
+            "bonding_migrations (graduated_at, listing_price, lp_mint, status) ",
+            "fee_events & fee_splits (pencatatan distribusi fee) "
+        ]
+    }
+}

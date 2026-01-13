@@ -1,0 +1,43 @@
+{
+    "modul_7": {
+        "nama_modul": "Selsifeed: AMA Marketing + Voice/Video Utility Centang Biru (Blue Check) ",
+        "tujuan": "Menyediakan kanal promosi terkurasi dan termonetisasi untuk developer dengan pengawasan admin untuk menjaga kualitas dan mencegah spam.",
+        "alur_kerja": "Developer mengisi formulir dan membayar biaya -> Admin menyetujui atau menolak -> AMA ditayangkan di feed -> Sesi berjalan (teks/suara/video) -> Selesai.",
+        "komponen_data_dan_endpoint": {
+            "ama_sessions": "Metadata sesi meliputi judul, jadwal, tipe sesi (text/voice/video), status, project_id, dan referensi pembayaran (fee_ref).",
+            "ama_participants": "Data opsional untuk join/leave, peran (host/speaker/audience), dan audit ringan.",
+            "ama_submit_EF": "Endpoint untuk pengajuan AMA dan referensi pembayaran.",
+            "admin_ama_approve_EF": "Kontrol akses (RBAC) dan audit untuk mengubah status menjadi APPROVED atau REJECTED.",
+            "ama_join_token_EF": "Pembuatan token join dengan batas waktu (time-limited) untuk provider seperti Agora.",
+            "ama_status_EF": "Polling status sesi untuk kebutuhan antarmuka pengguna (UI)."
+        },
+        "keamanan_voice_video": {
+            "kunci_api": "API key atau provider secret wajib berada di sisi server (server-side).",
+            "token_join": "Backend menghasilkan token join dengan masa berlaku (TTL) 5-15 menit yang hanya diberikan kepada pengguna yang berhak."
+        },
+        "utility_centang_biru": {
+            "aturan_klaim_referral": "Hanya pengguna dengan status Blue Check yang diperbolehkan melakukan klaim reward referral.",
+            "implementasi": "Verifikasi disimpan sebagai badge (tipe: BLUE_CHECK_VERIFIED) dengan validasi badge dan mekanisme idempotensi sebelum proses payout."
+        },
+        "checklist_implementasi": {
+            "backend": [
+                "Tabel AMA, referensi pembayaran, dan logika persetujuan.",
+                "Integrasi token untuk suara/video.",
+                "Validasi status Blue Check untuk klaim reward referral.",
+                "Pencatatan log audit admin."
+            ],
+            "ui": [
+                "Formulir pengajuan AMA.",
+                "Halaman persetujuan/penolakan untuk admin.",
+                "Komponen untuk bergabung dalam sesi suara/video.",
+                "Tampilan status centang biru.",
+                "Halaman klaim reward referral yang terproteksi (gated)."
+            ],
+            "operasional": [
+                "Monitoring pembayaran yang tidak tuntas (orphan payments).",
+                "Penerapan idempotensi dan pembatasan laju permintaan (rate limiting).",
+                "Penerapan RBAC dan MFA untuk tindakan administratif."
+            ]
+        }
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 12 - Admin Dashboard + Security",
+    "generated_date": "2026-01-05",
+    "security_architecture": {
+        "portal_isolation": "Admin portal harus berada di domain atau subdomain terpisah dari aplikasi pengguna.",
+        "mfa_policy": "TOTP wajib bagi semua admin/moderator; magic-link dinonaktifkan untuk akun admin.",
+        "rbac_enforcement": "Role-Based Access Control ditegakkan di sisi server melalui Edge Functions atau API.",
+        "service_role_security": "Kunci Service Role tidak boleh dikirim ke client; hanya digunakan di server untuk akses tabel sensitif.",
+        "audit_logging": "Audit log bersifat append-only (tidak bisa diubah/hapus) untuk semua aksi admin."
+    },
+    "roles_and_permissions": {
+        "super_admin": "Mengelola hak akses (role grants), persetujuan treasury, dan aturan biaya final.",
+        "admin": "Menyetujui KYC, mengelola proyek, moderasi, dan penerbitan badge manual.",
+        "kyc_reviewer": "Akses baca dan persetujuan/penolakan KYC tanpa akses edit treasury.",
+        "moderator": "Moderasi feed sosial dan melakukan ban/unban pengguna.",
+        "finance": "Memantau treasury dan biaya serta menyetujui pembayaran (payout)."
+    },
+    "two_man_rule": {
+        "description": "Aksi berisiko tinggi (nyawa) memerlukan persetujuan dari admin kedua sebelum eksekusi.",
+        "applicable_actions": [
+            "Perubahan wallet treasury atau vault refs.",
+            "Eksekusi pembayaran manual (manual payout).",
+            "Pemberian hak akses role (Role grants).",
+            "Pembaruan aturan biaya (Fee rules update)."
+        ],
+        "constraint": "Approver tidak boleh sama dengan Requester."
+    },
+    "database_protection": "Tabel sensitif seperti KYC submissions, treasury, dan audit logs berstatus deny-by-default melalui RLS."
+}

@@ -1,0 +1,45 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 3 - Fairlaunch Pool (Price Discovery)",
+    "networks": [
+        "EVM (Ethereum + BNB)",
+        "Solana"
+    ],
+    "core_logic": {
+        "price_discovery": "Harga final dihitung di akhir periode berdasarkan total dana terkumpul dibagi token yang dijual.",
+        "cap_rules": "Hanya menggunakan Softcap; tidak ada Hardcap.",
+        "refund_policy": "Jika dana terkumpul < softcap, maka investor mendapatkan refund."
+    },
+    "formulas": {
+        "final_price": "total_raised / token_for_sale ",
+        "user_token_allocation": "user_contribution * token_for_sale / total_raised ",
+        "listing_price": "final_price * (1 + listing_premium_bps / 10000) "
+    },
+    "requirements": {
+        "liquidity": "Minimal 70% dari dana terkumpul wajib masuk likuiditas dengan LP lock minimal 12 bulan.",
+        "team_vesting": "Token jatah tim wajib masuk vesting vault (kind=TEAM).",
+        "compliance": "Wajib melewati Dev KYC dan SC Scan dari Modul 2."
+    },
+    "lifecycle_status": [
+        "DRAFT",
+        "SUBMITTED_FOR_REVIEW",
+        "APPROVED_TO_DEPLOY",
+        "DEPLOYED",
+        "TOKEN_DEPOSIT_CONFIRMED",
+        "UPCOMING",
+        "LIVE",
+        "ENDED",
+        "FINALIZED_SUCCESS",
+        "FINALIZED_FAIL",
+        "REFUNDING",
+        "CLOSED"
+    ],
+    "database_schema": {
+        "tables": [
+            "fairlaunch_rounds (id, project_id, softcap, listing_premium, final_price, etc) ",
+            "fairlaunch_contributions (round_id, profile_id, amount_paid, status) ",
+            "fairlaunch_claims (round_id, profile_id, amount_claimed) ",
+            "fairlaunch_refunds (round_id, profile_id, amount_refunded) "
+        ]
+    }
+}

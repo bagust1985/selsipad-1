@@ -1,0 +1,32 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 9 (v2) - SBT Staking (Proof of Human)",
+    "generated_date": "2026-01-05",
+    "scope_updates": {
+        "external_mint": "Mint/claim SBT tidak dilakukan di launchpad; berasal dari proyek eksternal.",
+        "launchpad_role": "Hanya melakukan verifikasi kepemilikan SBT, staking, dan claim reward."
+    },
+    "core_rules": {
+        "no_cooldown": "Tidak ada masa tunggu (cooldown) saat melakukan unstake.",
+        "claim_fee": "Biaya klaim reward staking adalah flat $10 per klaim.",
+        "blue_check_exemption": "Tidak memerlukan status Blue Check untuk berpartisipasi dalam staking ini.",
+        "eligibility": "Staking hanya tersedia untuk wallet yang memegang SBT valid/terverifikasi."
+    },
+    "data_model": {
+        "tables": [
+            "staking_positions: Mencatat status staked_at, unstaked_at, dan referensi SBT.",
+            "staking_claims: Mencatat history klaim reward, bukti pembayaran fee $10, dan status payout.",
+            "sbt_status_cache: Cache hasil verifikasi on-chain untuk performa query."
+        ]
+    },
+    "reward_funding": {
+        "source": "Berasal dari fee_splits target NFT_STAKING.",
+        "exceptions": "Fee dari Bonding Swap dan Blue Check tidak menyuplai modul ini."
+    },
+    "done_definition_v2": [
+        "Verifikasi kepemilikan SBT eksternal (on-chain/cache).",
+        "Fitur Stake & Unstake tanpa cooldown.",
+        "Flow klaim reward dengan verifikasi fee $10.",
+        "Keamanan RLS dan idempotency untuk mencegah double payout."
+    ]
+}

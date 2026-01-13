@@ -1,0 +1,36 @@
+{
+    "project": "SELSIPAD v3",
+    "module": "Modul 17 - Trending Project",
+    "generated_date": "2026-01-13",
+    "trending_logic": {
+        "primary_signal": "post_count (jumlah post terkait project id dalam kurun waktu 24 jam).",
+        "tie_breaker": "comment_count (jumlah komentar pada post-post terkait project tersebut).",
+        "categories": [
+            "PRESALE",
+            "FAIRLAUNCH",
+            "BONDING_CURVE"
+        ],
+        "score_formula": "(post_count * 10) + comment_count (jika membutuhkan angka tunggal)."
+    },
+    "gating_and_security": {
+        "posting_gate": "Hanya user Blue Check ACTIVE dengan badge yang disyaratkan (Creator/Owner) yang bisa membuat post untuk trending.",
+        "data_integrity": "Tabel agregasi trending bersifat read-only bagi client; hanya worker yang boleh melakukan pembaruan (upsert).",
+        "rls": "Kebijakan RLS harus ditegakkan di tingkat database untuk mencegah manipulasi."
+    },
+    "pipeline": {
+        "frequency": "Pekerjaan agregasi (job) berjalan setiap 10 menit.",
+        "window": "Menghitung data dari 24 jam terakhir.",
+        "limit": "Menyimpan hingga Top 50 proyek per kategori di database untuk fleksibilitas UI."
+    },
+    "ui_spec": {
+        "placement": "Halaman awal (UI 1) dengan komponen tab per kategori.",
+        "performance": "Menggunakan data dari tabel agregasi untuk waktu respon < 300ms.",
+        "features": "Card project menampilkan nama, simbol, badge jaringan, dan metrik indikator tren."
+    },
+    "acceptance_criteria": [
+        "Menampilkan Top 10 Trending Projects di Homepage.",
+        "Gating posting aktif di sisi database (RLS).",
+        "Job agregasi berjalan periodik dan konsisten memperbarui data.",
+        "Endpoint API memberikan respon cepat di bawah 300ms."
+    ]
+}

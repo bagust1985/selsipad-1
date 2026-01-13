@@ -1,0 +1,114 @@
+{
+    "project": "SELSIPAD v3",
+    
+  "module": "Modul 2 - Presale + Developer Compliance (EVM & Solana)",
+    
+  "generated_date": "2026-01-05",
+    
+  "description": "Spesifikasi pipeline presale yang ketat mencakup Developer KYC, SC Scan gate, dan Presale Create Wizard dengan kewajiban vesting.",
+    
+  "core_compliance_rules": {
+        "developer_kyc": "Wajib per project (video liveness, selfie pegang ID, ID CMO & CTO)",
+        
+    "kyc_fee": "Wajib dibayar ke treasury launchpad dan diverifikasi on-chain",
+        
+    "sc_scan_gate": "Wajib PASS/OVERRIDDEN_PASS sebelum konfigurasi presale",
+        
+    "investor_vesting": "Wajib untuk semua token presale (Modul 6)",
+        
+    "team_vesting": "Wajib masuk vesting vault (Modul 6, kind=TEAM)",
+        
+    "liquidity_lock": "Wajib, minimal 12 bulan (Modul 5)",
+        
+    "investor_kyc": "Default: tidak perlu (opsional per round)"
+    },
+    "developer_kyc_details": {
+        "submission_requirements": [
+            "Video liveness (5-10 detik) dengan instruksi gerak kepala",
+            
+      "Selfie pegang ID + kertas tulisan tangan (Tanggal + SELSIPAD)",
+            
+      "Identitas dan dokumen ID CMO serta CTO"
+        ],
+        "payment_verification": {
+            "action": "DEV_KYC_FEE_PAY",
+            
+      "idempotency_key": "DEV_KYC_FEE_PAY:{projectId}:{networkType}:{chainRef}",
+            
+      "minimum_status_to_proceed": "CONFIRMED"
+        },
+        "badge_logic": "Issue DEV_KYC_VERIFIED per project; badge ditutup saat project FINALIZED"
+    },
+    "sc_scan_gate": {
+        "workflow_status": [
+            "PENDING",
+            "RUNNING",
+            "PASS",
+            "FAIL",
+            "NEEDS_REVIEW"
+        ],
+        
+    "admin_actions": "Override PASS/FAIL dengan catatan wajib dan audit log",
+        
+    "evm_checks": [
+            "reentrancy",
+            "owner backdoor",
+            "proxy abuse",
+            "unchecked calls"
+        ],
+        
+    "solana_checks": [
+            "signer checks",
+            "account validation",
+            "PDA derivation",
+            "CPI escalation"
+        ] 
+    },
+    "presale_create_wizard": {
+        "step_1": "Presale Basics",
+        
+    "step_2": "Sale Parameters",
+        
+    "step_3": "Anti-bot Config",
+        
+    "step_4": "Vesting Investor Setup (WAJIB)",
+        
+    "step_5": "Vesting Team Setup (WAJIB - default 10%/bulan)",
+        
+    "step_6": "LP Lock Setup (WAJIB - min 12 bulan)",
+        
+    "step_7": "Fees & Referral (opsional)",
+        
+    "step_8": "Review & Submit for Admin Approval",
+        
+    "step_9": "Deploy (setelah approved)"
+    },
+    "data_model_extensions": {
+        "presale_rounds": "Menautkan vesting_investor_schedule_id dan vesting_team_schedule_id",
+        
+    "vesting_schedules": "Field kind: INVESTOR atau TEAM (Extension Modul 6)"
+    },
+    "integrations": {
+        "modul_1": "Tx Manager, Indexer, RPC Pool, Admin Dashboard, Supabase RLS",
+        
+    "modul_5": "LP lock plan minimal 12 bulan sebagai syarat approval",
+        
+    "modul_6": "Kewajiban vesting investor dan team",
+        
+    "modul_10": "Pencatatan data referral saat join/buy (opsional MVP)",
+        
+    "modul_11": "Badge DEV_KYC_VERIFIED dan SC_AUDIT_PASS per project"
+    },
+    "admin_dashboard_updates": [
+        "Presale review queue",
+        
+    "Validasi syarat kepatuhan (vesting & lock) sebelum approval",
+        
+    "Audit log untuk semua tindakan admin"
+    ],
+    "done_definition": [
+        "Wizard memaksa vesting investor/team dan LP lock >= 12 bulan",
+        
+    "Workflow admin approval berjalan dengan catatan audit log lengkap"
+    ]
+}

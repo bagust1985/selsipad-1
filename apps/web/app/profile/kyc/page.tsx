@@ -141,9 +141,12 @@ export default async function KYCStatusPage() {
                   </p>
                 </div>
 
-                <button className="w-full mt-4 px-4 py-2 bg-primary-main text-primary-text rounded-md text-body-sm font-medium hover:bg-primary-hover transition-colors">
+                <a
+                  href="/profile/kyc/submit"
+                  className="block w-full mt-4 px-4 py-2 bg-primary-main text-primary-text rounded-md text-body-sm font-medium hover:bg-primary-hover transition-colors text-center"
+                >
                   Resubmit Documents
-                </button>
+                </a>
               </CardContent>
             </Card>
           </>
@@ -191,9 +194,12 @@ export default async function KYCStatusPage() {
                   🔒 Your data is encrypted and securely stored. We never share your information
                   with third parties.
                 </p>
-                <button className="w-full px-4 py-2 bg-primary-main text-primary-text rounded-md text-body-sm font-medium hover:bg-primary-hover transition-colors">
+                <a
+                  href="/profile/kyc/submit"
+                  className="block w-full px-4 py-2 bg-primary-main text-primary-text rounded-md text-body-sm font-medium hover:bg-primary-hover transition-colors text-center"
+                >
                   Start KYC Verification
-                </button>
+                </a>
               </CardContent>
             </Card>
           </>

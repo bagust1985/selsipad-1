@@ -10,6 +10,7 @@ import {
   calculateReferralStatistics,
   getClaimableForChainAsset,
 } from '../utils/referral';
+import type { ReferralLedger } from '../types/fase6';
 
 describe('FASE 6: Fee Split Calculation', () => {
   it('should calculate exact 70/30 split', () => {
@@ -62,7 +63,7 @@ describe('FASE 6: Claim Eligibility Checks', () => {
     const mockLedger = [
       { status: 'CLAIMABLE', amount: '1000000', chain: 'ethereum', asset: 'USDT' },
     ];
-    const result = checkClaimEligibility('ACTIVE', 5, mockLedger as any);
+    const result = checkClaimEligibility('ACTIVE', 5, mockLedger as unknown as ReferralLedger[]);
     expect(result.can_claim).toBe(true);
     expect(result.reasons).toHaveLength(0);
   });
@@ -71,7 +72,7 @@ describe('FASE 6: Claim Eligibility Checks', () => {
     const mockLedger = [
       { status: 'CLAIMABLE', amount: '1000000', chain: 'ethereum', asset: 'USDT' },
     ];
-    const result = checkClaimEligibility('REVOKED', 5, mockLedger as any);
+    const result = checkClaimEligibility('REVOKED', 5, mockLedger as unknown as ReferralLedger[]);
     expect(result.can_claim).toBe(false);
   });
 });
@@ -84,7 +85,7 @@ describe('FASE 6: Referral Statistics', () => {
       { status: 'CLAIMED', amount: '5000000', chain: 'ethereum', asset: 'USDT' },
     ];
 
-    const stats = calculateReferralStatistics(10, 8, mockLedger as any);
+    const stats = calculateReferralStatistics(10, 8, mockLedger as unknown as ReferralLedger[]);
 
     expect(stats.total_referrals).toBe(10);
     expect(stats.active_referrals).toBe(8);
@@ -103,7 +104,11 @@ describe('FASE 6: Get Claimable by Chain/Asset', () => {
       { id: '4', status: 'CLAIMED', amount: '1000000', chain: 'ethereum', asset: 'USDT' },
     ];
 
-    const result = getClaimableForChainAsset(mockLedger as any, 'ethereum', 'USDT');
+    const result = getClaimableForChainAsset(
+      mockLedger as unknown as ReferralLedger[],
+      'ethereum',
+      'USDT'
+    );
 
     expect(result.total_amount).toBe(3000000n);
     expect(result.entry_ids).toHaveLength(2);
@@ -116,7 +121,11 @@ describe('FASE 6: Get Claimable by Chain/Asset', () => {
       { id: '1', status: 'CLAIMABLE', amount: '1000000', chain: 'ethereum', asset: 'USDT' },
     ];
 
-    const result = getClaimableForChainAsset(mockLedger as any, 'polygon', 'USDC');
+    const result = getClaimableForChainAsset(
+      mockLedger as unknown as ReferralLedger[],
+      'polygon',
+      'USDC'
+    );
     expect(result.total_amount).toBe(0n);
     expect(result.entry_ids).toHaveLength(0);
   });

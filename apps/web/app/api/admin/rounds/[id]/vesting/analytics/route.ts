@@ -79,7 +79,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       percent_vested: stats.percent_vested,
       unique_claimants: uniqueClaimants.size,
       total_claims: claims?.length || 0,
-      confirmed_claims: confirmedClaims.length,
+      confirmed_claims: confirmClaims.length,
       schedule_status: schedule.status,
       total_allocations: allocations?.length || 0,
     });

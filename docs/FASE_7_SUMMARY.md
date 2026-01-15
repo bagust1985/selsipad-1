@@ -90,6 +90,13 @@ supabase/migrations/010_fase7_bonding_curve.sql
 - `bonding_events` (5 columns)
 - `dex_migrations` (16 columns)
 
+```
+supabase/migrations/011_fase7_admin_pause.sql
+```
+
+- Adds `PAUSED` status to bonding_pools check constraint
+- Updates status transition validation
+
 ### TypeScript Shared Package
 
 ```
@@ -121,9 +128,33 @@ services/worker/jobs/bonding-graduation-detector.ts
 services/worker/package.json (updated)
 ```
 
+### Admin Endpoints (New)
+
+```
+apps/web/app/api/admin/bonding/
+├── pools/route.ts        (GET)
+├── stats/route.ts        (GET)
+├── [pool_id]/pause/route.ts (POST)
+└── [pool_id]/resume/route.ts (POST)
+```
+
 ---
 
 ## 🔄 API Flow Examples
+
+### Admin Emergency Pause
+
+```
+1. POST /api/admin/bonding/:pool_id/pause
+   Body: {} (Auth: Admin Token)
+   → Pool status: LIVE → PAUSED
+   → Event: POOL_PAUSED { paused_by: admin_id }
+
+2. POST /api/admin/bonding/:pool_id/resume
+   Body: {}
+   → Pool status: PAUSED → LIVE
+   → Event: POOL_RESUMED { resumed_by: admin_id }
+```
 
 ### Deploy Flow
 

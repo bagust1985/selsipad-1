@@ -76,10 +76,12 @@ export async function getFeedPosts(limit = 20): Promise<Post[]> {
       return {
         id: post.id,
         author: {
-          id: post.author_id,
-          username: author.username || 'Anonymous',
-          avatar_url: author.avatar_url,
-          bluecheck: author.bluecheck_status === 'ACTIVE' || author.bluecheck_status === 'VERIFIED',
+          id: post.author_id, // Use author_id (user_id) for ownership check
+          username: (author as any).username || 'Anonymous',
+          avatar_url: (author as any).avatar_url,
+          bluecheck:
+            (author as any).bluecheck_status === 'ACTIVE' ||
+            (author as any).bluecheck_status === 'VERIFIED',
         },
         content: post.content,
         project_id: post.project_id,
@@ -145,10 +147,12 @@ export async function getProjectPosts(projectId: string): Promise<Post[]> {
       return {
         id: post.id,
         author: {
-          id: post.author_id,
-          username: author.username || 'Anonymous',
-          avatar_url: author.avatar_url,
-          bluecheck: author.bluecheck_status === 'ACTIVE' || author.bluecheck_status === 'VERIFIED',
+          id: post.author_id, // Use author_id (user_id) for ownership check
+          username: (author as any).username || 'Anonymous',
+          avatar_url: (author as any).avatar_url,
+          bluecheck:
+            (author as any).bluecheck_status === 'ACTIVE' ||
+            (author as any).bluecheck_status === 'VERIFIED',
         },
         content: post.content,
         project_id: post.project_id,
@@ -344,5 +348,97 @@ function mapPostType(dbType: string): 'text' | 'update' | 'quote' {
     case 'TEXT':
     default:
       return 'text';
+  }
+}
+
+/**
+ * Get Following Feed
+ *
+ * Fetches posts only from users that the current user follows
+ */
+export async function getFollowingFeed(limit = 20): Promise<Post[]> {
+  const supabase = createClient();
+
+  try {
+    // Get current user
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.warn('User not authenticated');
+      return [];
+    }
+
+    // Get list of users that current user follows
+    const { data: following } = await supabase
+      .from('user_follows')
+      .select('following_id')
+      .eq('follower_id', user.id);
+
+    if (!following || following.length === 0) {
+      return [];
+    }
+
+    const followingIds = following.map((f) => f.following_id);
+
+    // Fetch posts from followed users
+    const { data, error } = await supabase
+      .from('posts')
+      .select('id, author_id, content, project_id, type, created_at')
+      .in('author_id', followingIds)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching following feed:', error);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Fetch author profiles
+    const authorIds = [...new Set(data.map((p) => p.author_id))];
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, username, avatar_url, bluecheck_status')
+      .in('user_id', authorIds);
+
+    const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
+
+    const postIds = data.map((p) => p.id);
+    const likesData = await getPostLikeCounts(postIds, user?.id);
+
+    return data.map((post: any) => {
+      const author = profileMap.get(post.author_id) || {};
+      const likes = likesData[post.id] || { count: 0, userLiked: false };
+
+      return {
+        id: post.id,
+        author: {
+          id: post.author_id,
+          username: (author as any).username || 'Anonymous',
+          avatar_url: (author as any).avatar_url,
+          bluecheck:
+            (author as any).bluecheck_status === 'ACTIVE' ||
+            (author as any).bluecheck_status === 'VERIFIED',
+        },
+        content: post.content,
+        project_id: post.project_id,
+        project_name: undefined,
+        type: mapPostType(post.type),
+        created_at: post.created_at,
+        likes: likes.count,
+        replies: 0,
+        is_liked: likes.userLiked,
+      };
+    });
+  } catch (err) {
+    console.error('Unexpected error in getFollowingFeed:', err);
+    return [];
   }
 }

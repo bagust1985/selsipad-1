@@ -16,14 +16,18 @@ import {
   getReferralStats,
   claimReward,
   claimAllRewards,
+  getClaimRequirements,
   type Reward,
   type ReferralStats,
+  type ClaimRequirements,
 } from '@/lib/data/rewards';
+import { RequirementsCard } from '@/components/rewards/RequirementsCard';
 import { formatDistance } from 'date-fns';
 
 export default function RewardsPage() {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [stats, setStats] = useState<ReferralStats | null>(null);
+  const [requirements, setRequirements] = useState<ClaimRequirements | null>(null);
   const [loading, setLoading] = useState(true);
   const [claimingAll, setClaimingAll] = useState(false);
   const [referralSheetOpen, setReferralSheetOpen] = useState(false);
@@ -31,11 +35,14 @@ export default function RewardsPage() {
 
   // Load data
   useState(() => {
-    Promise.all([getClaimableRewards(), getReferralStats()]).then(([rewardsData, statsData]) => {
-      setRewards(rewardsData);
-      setStats(statsData);
-      setLoading(false);
-    });
+    Promise.all([getClaimableRewards(), getReferralStats(), getClaimRequirements()]).then(
+      ([rewardsData, statsData, reqsData]) => {
+        setRewards(rewardsData);
+        setStats(statsData);
+        setRequirements(reqsData);
+        setLoading(false);
+      }
+    );
   });
 
   const totalClaimable = rewards.reduce((sum, r) => sum + r.amount, 0);
@@ -98,6 +105,9 @@ export default function RewardsPage() {
       <PageHeader title="Rewards" />
 
       <PageContainer className="py-4 space-y-6">
+        {/* Requirements Card */}
+        <RequirementsCard requirements={requirements} loading={loading} />
+
         {/* Claimable Summary */}
         <Card variant="bordered" className="border-l-4 border-primary-main">
           <CardContent className="space-y-4">
@@ -109,8 +119,19 @@ export default function RewardsPage() {
                 </p>
               </div>
               {rewards.length > 0 && (
-                <Button onClick={handleClaimAll} isLoading={claimingAll}>
-                  Claim All
+                <Button
+                  onClick={handleClaimAll}
+                  isLoading={claimingAll}
+                  disabled={!requirements?.canClaim}
+                  title={
+                    !requirements?.canClaim
+                      ? requirements?.blockedReason || 'Requirements not met'
+                      : ''
+                  }
+                >
+                  {requirements?.canClaim
+                    ? 'Claim All'
+                    : requirements?.blockedReason || 'Claim All'}
                 </Button>
               )}
             </div>
@@ -124,6 +145,7 @@ export default function RewardsPage() {
               <div className="flex items-center justify-between">
                 <h3 className="text-heading-lg">Referral Program</h3>
                 <button
+                  data-share-referral
                   onClick={() => setReferralSheetOpen(true)}
                   className="px-3 py-1.5 bg-primary-soft/20 text-primary-main rounded-md text-caption font-medium hover:bg-primary-soft/30 transition-colors"
                 >

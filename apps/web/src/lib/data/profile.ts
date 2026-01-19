@@ -23,6 +23,8 @@ export interface UserProfile {
   kyc_submitted_at?: string;
   total_contributions: number;
   total_claimed: number;
+  follower_count: number;
+  following_count: number;
   wallets: Wallet[];
 }
 
@@ -64,21 +66,40 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 
     // Map to frontend format
     return {
-      id: profile.id,
+      id: profile.user_id, // Use user_id for ownership checks (matches post.author.id)
       username: profile.username,
       avatar_url: profile.avatar_url,
       bio: profile.bio,
       bluecheck_status: mapBlueCheckStatus(profile.bluecheck_status),
       bluecheck_expires_at: undefined, // TODO: Add to DB schema
-      kyc_status: 'not_started', // TODO: Query from kyc_submissions
-      kyc_submitted_at: undefined,
+      kyc_status: mapKYCStatus(profile.kyc_status),
+      kyc_submitted_at: profile.kyc_submitted_at,
       total_contributions: stats.totalContributions,
       total_claimed: stats.totalClaimed,
+      follower_count: profile.follower_count || 0,
+      following_count: profile.following_count || 0,
       wallets,
     };
   } catch (err) {
     console.error('Unexpected error in getUserProfile:', err);
     return null; // Return null instead of re-throwing
+  }
+}
+
+// Helper function for KYC status mapping
+function mapKYCStatus(
+  dbStatus: string | null
+): 'verified' | 'pending' | 'rejected' | 'not_started' {
+  switch (dbStatus) {
+    case 'verified':
+      return 'verified';
+    case 'pending':
+      return 'pending';
+    case 'rejected':
+      return 'rejected';
+    case 'not_started':
+    default:
+      return 'not_started';
   }
 }
 
@@ -385,6 +406,48 @@ function createDefaultProfile(userId: string, email?: string): UserProfile {
     kyc_status: 'not_started',
     total_contributions: 0,
     total_claimed: 0,
+    follower_count: 0,
+    following_count: 0,
     wallets: [],
   };
+}
+
+/**
+ * Get User Active Badges
+ * Returns list of active badges for a user
+ */
+export async function getUserActiveBadges(userId: string) {
+  const supabase = createClient();
+
+  try {
+    const { data, error } = await supabase
+      .from('badge_instances')
+      .select(
+        `
+        badge_id,
+        status,
+        awarded_at,
+        badge_definitions:badge_id (
+          badge_key,
+          name,
+          description,
+          icon_url,
+          badge_type
+        )
+      `
+      )
+      .eq('user_id', userId)
+      .eq('status', 'ACTIVE')
+      .order('awarded_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user badges:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('Unexpected error in getUserActiveBadges:', err);
+    return [];
+  }
 }

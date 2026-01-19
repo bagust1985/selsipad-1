@@ -9,7 +9,11 @@ import { type Post } from '@/lib/data/feed';
  * Creates a new post in the social feed
  * Requires Blue Check status for posting
  */
-export async function createPost(content: string, projectId?: string): Promise<Post> {
+export async function createPost(
+  content: string,
+  imageUrls?: string[],
+  projectId?: string
+): Promise<Post> {
   try {
     // Get authenticated session (wallet-only auth)
     const { getSession } = await import('@/lib/auth/session');
@@ -52,6 +56,7 @@ export async function createPost(content: string, projectId?: string): Promise<P
         content,
         project_id: projectId,
         type: 'POST', // Changed from TEXT to POST to match schema
+        image_urls: imageUrls || [],
       })
       .select()
       .single();

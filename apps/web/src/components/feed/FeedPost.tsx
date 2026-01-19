@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Eye } from 'lucide-react';
+import { MessageCircle, Repeat2, Heart, BarChart3, Share2, MoreHorizontal } from 'lucide-react';
 import { LikeButton } from './LikeButton';
-import { ReactionPicker } from './ReactionPicker';
-import { CommentSection } from './CommentSection';
-import { ShareButton } from './ShareButton';
 import { PostMenu } from './PostMenu';
+import { UserBadges } from '@/components/badges/UserBadges';
+import { CommentModal } from './CommentModal';
 
 interface FeedPostProps {
   post: {
@@ -37,15 +36,17 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const [saving, setSaving] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [reposting, setReposting] = useState(false);
+  const [reposted, setReposted] = useState(false);
 
   const isAuthor = currentUserId === post.author.id;
 
-  console.log('[FeedPost] Author check:', {
-    postId: post.id,
-    currentUserId,
-    authorId: post.author.id,
-    isAuthor,
-  });
+  // Prevent hydration mismatch for dates
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Track view on mount
   useEffect(() => {
@@ -68,7 +69,6 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
       const { editPost } = await import('../../../app/feed/interactions');
       await editPost(post.id, editContent);
       setIsEditing(false);
-      // Optionally refresh post data
     } catch (error) {
       console.error('Failed to edit post:', error);
       alert('Failed to save changes');
@@ -77,87 +77,195 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
     }
   };
 
+  const handleRepost = async () => {
+    if (reposting) return;
+
+    if (reposted) {
+      if (!confirm('Remove this repost?')) return;
+      setReposting(true);
+      try {
+        const response = await fetch(`/api/feed/repost/${post.id}`, { method: 'DELETE' });
+        if (response.ok) setReposted(false);
+        else alert('Failed to remove repost');
+      } catch (error) {
+        alert('Failed to remove repost');
+      } finally {
+        setReposting(false);
+      }
+    } else {
+      if (!confirm('Repost this to your followers?')) return;
+      setReposting(true);
+      try {
+        const response = await fetch(`/api/feed/repost/${post.id}`, { method: 'POST' });
+        if (response.ok) setReposted(true);
+        else {
+          const data = await response.json();
+          alert(data.error || 'Failed to repost');
+        }
+      } catch (error) {
+        alert('Failed to repost');
+      } finally {
+        setReposting(false);
+      }
+    }
+  };
+
+  // Format time ago (Twitter style)
+  const getTimeAgo = () => {
+    if (!mounted) return '';
+    const now = new Date();
+    const postDate = new Date(post.created_at);
+    const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return `${diffInSeconds}s`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d`;
+
+    return postDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Format counts (1000 -> 1K, 1000000 -> 1M)
+  const formatCount = (count: number) => {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count.toString();
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex gap-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex-shrink-0" />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-900">{post.author.username}</span>
-              {post.author.bluecheck && <span className="text-blue-500 text-lg">✓</span>}
-              {post.project_name && (
-                <span className="text-sm text-gray-600">→ {post.project_name}</span>
+    <div className="bg-white border-b border-gray-200 p-4 hover:bg-gray-50/50 transition-colors cursor-pointer">
+      <div className="flex gap-3">
+        {/* Avatar */}
+        <div className="flex-shrink-0">
+          {post.author.avatar_url ? (
+            <img
+              src={post.author.avatar_url}
+              alt={post.author.username}
+              className="w-12 h-12 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
+              {post.author.username[0]?.toUpperCase()}
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="font-bold text-gray-900 hover:underline">
+                {post.author.username}
+              </span>
+              {post.author.bluecheck && (
+                <span className="text-blue-500" title="Verified">
+                  ✓
+                </span>
+              )}
+              <UserBadges userId={post.author.id} compact maxDisplay={3} />
+              <span className="text-gray-500">·</span>
+              <span className="text-gray-500 text-sm">{getTimeAgo()}</span>
+              {post.edit_count && post.edit_count > 0 && (
+                <span className="text-gray-500 text-xs">(edited)</span>
               )}
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>
-                {new Date(post.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </span>
-              {post.edit_count && post.edit_count > 0 && <span className="text-xs">(edited)</span>}
+            <PostMenu
+              postId={post.id}
+              isAuthor={isAuthor}
+              onEdit={() => setIsEditing(true)}
+              onDelete={onDelete}
+            />
+          </div>
+
+          {/* Post Content */}
+          {isEditing ? (
+            <div className="mt-2 space-y-2">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={3}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={saving || !editContent.trim()}
+                  className="px-4 py-1.5 bg-blue-500 text-white text-sm font-semibold rounded-full hover:bg-blue-600 disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditContent(post.content);
+                  }}
+                  className="px-4 py-1.5 bg-gray-200 text-gray-700 text-sm font-semibold rounded-full hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
+          ) : (
+            <p className="mt-1 text-gray-900 text-[15px] leading-normal whitespace-pre-wrap break-words">
+              {post.content}
+            </p>
+          )}
+
+          {/* Engagement Bar */}
+          <div className="mt-3 flex items-center justify-between max-w-md">
+            {/* Comments */}
+            <button
+              onClick={() => setCommentModalOpen(true)}
+              className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors group"
+            >
+              <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
+                <MessageCircle className="w-[18px] h-[18px]" />
+              </div>
+              <span className="text-sm">{post.replies > 0 ? formatCount(post.replies) : ''}</span>
+            </button>
+
+            {/* Repost */}
+            <button
+              onClick={handleRepost}
+              disabled={reposting}
+              className={`flex items-center gap-2 transition-colors group ${
+                reposted ? 'text-green-500' : 'text-gray-500 hover:text-green-500'
+              }`}
+            >
+              <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
+                <Repeat2 className="w-[18px] h-[18px]" />
+              </div>
+              <span className="text-sm">{reposting ? '...' : ''}</span>
+            </button>
+
+            {/* Like */}
+            <LikeButton postId={post.id} initialLiked={post.is_liked} initialCount={post.likes} />
+
+            {/* Views */}
+            <button className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors group">
+              <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
+                <BarChart3 className="w-[18px] h-[18px]" />
+              </div>
+              <span className="text-sm">
+                {post.view_count && post.view_count > 0 ? formatCount(post.view_count) : ''}
+              </span>
+            </button>
+
+            {/* Share */}
+            <button className="p-2 text-gray-500 hover:text-blue-500 rounded-full hover:bg-blue-500/10 transition-colors">
+              <Share2 className="w-[18px] h-[18px]" />
+            </button>
           </div>
         </div>
-        <PostMenu
-          postId={post.id}
-          isAuthor={isAuthor}
-          onEdit={() => setIsEditing(true)}
-          onDelete={onDelete}
-        />
       </div>
 
-      {/* Content */}
-      {isEditing ? (
-        <div className="space-y-2">
-          <textarea
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={3}
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={handleSaveEdit}
-              disabled={saving || !editContent.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-            <button
-              onClick={() => {
-                setIsEditing(false);
-                setEditContent(post.content);
-              }}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <p className="text-gray-900 whitespace-pre-wrap">{post.content}</p>
-      )}
-
-      {/* Engagement Stats */}
-      {post.view_count !== undefined && post.view_count > 0 && (
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Eye className="w-4 h-4" />
-          <span>{post.view_count.toLocaleString()} views</span>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
-        <LikeButton postId={post.id} initialLiked={post.is_liked} initialCount={post.likes} />
-        <ReactionPicker postId={post.id} />
-        <CommentSection postId={post.id} />
-        <ShareButton postId={post.id} postContent={post.content} />
-      </div>
+      {/* Comment Modal */}
+      <CommentModal
+        postId={post.id}
+        isOpen={commentModalOpen}
+        onClose={() => setCommentModalOpen(false)}
+      />
     </div>
   );
 }

@@ -176,7 +176,139 @@ export default async function HomePage() {
         </section>
 
         {/* Quick Actions */}
-        <section className="grid grid-cols-2 gap-4">
+        <section className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <Link href="/feed">
+            <Card hover className="h-full">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <svg
+                  className="w-12 h-12 text-primary-main mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                  />
+                </svg>
+                <h3 className="text-heading-sm">SelsiFeed</h3>
+                <p className="text-caption text-text-secondary mt-1">Social updates</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/presales">
+            <Card hover className="h-full">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <svg
+                  className="w-12 h-12 text-primary-main mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                  />
+                </svg>
+                <h3 className="text-heading-sm">Presales</h3>
+                <p className="text-caption text-text-secondary mt-1">Token presales</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/fairlaunch">
+            <Card hover className="h-full">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <svg
+                  className="w-12 h-12 text-emerald-500 mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                  />
+                </svg>
+                <h3 className="text-heading-sm">Fairlaunch</h3>
+                <p className="text-caption text-text-secondary mt-1">No hardcap sales</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/bonding-curve">
+            <Card hover className="h-full">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <svg
+                  className="w-12 h-12 text-cyan-500 mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                  />
+                </svg>
+                <h3 className="text-heading-sm">Bonding Curve</h3>
+                <p className="text-caption text-text-secondary mt-1">Permissionless SOL pools</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/ama">
+            <Card hover className="h-full">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <svg
+                  className="w-12 h-12 text-primary-main mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                <h3 className="text-heading-sm">Developer AMA</h3>
+                <p className="text-caption text-text-secondary mt-1">Ask developers</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/create/presale">
+            <Card hover className="h-full">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <svg
+                  className="w-12 h-12 text-primary-main mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                  />
+                </svg>
+                <h3 className="text-heading-sm">Create Presale</h3>
+                <p className="text-caption text-text-secondary mt-1">Launch your token</p>
+              </CardContent>
+            </Card>
+          </Link>
+
           <Link href="/explore">
             <Card hover className="h-full">
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
@@ -217,6 +349,94 @@ export default async function HomePage() {
                 </svg>
                 <h3 className="text-heading-sm">Portfolio</h3>
                 <p className="text-caption text-text-secondary mt-1">Your investments</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/rewards">
+            <Card hover className="h-full">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <svg
+                  className="w-12 h-12 text-primary-main mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <h3 className="text-heading-sm">Rewards</h3>
+                <p className="text-caption text-text-secondary mt-1">Earn tokens</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/portfolio">
+            <Card hover className="h-full">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <svg
+                  className="w-12 h-12 text-green-500 mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <h3 className="text-heading-sm">Vesting</h3>
+                <p className="text-caption text-text-secondary mt-1">Claim tokens</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/explore?filter=locked">
+            <Card hover className="h-full">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <svg
+                  className="w-12 h-12 text-blue-500 mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                <h3 className="text-heading-sm">LP Lock</h3>
+                <p className="text-caption text-text-secondary mt-1">Lock transparency</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/staking/sbt">
+            <Card hover className="h-full">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <svg
+                  className="w-12 h-12 text-purple-500 mb-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
+                </svg>
+                <h3 className="text-heading-sm">SBT Staking</h3>
+                <p className="text-caption text-text-secondary mt-1">Proof of Human</p>
               </CardContent>
             </Card>
           </Link>

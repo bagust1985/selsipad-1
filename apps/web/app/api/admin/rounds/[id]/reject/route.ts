@@ -41,12 +41,37 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // Validate status
-    if (round.status !== 'SUBMITTED') {
-      return NextResponse.json({ error: 'Can only reject SUBMITTED rounds' }, { status: 400 });
+    if (round.status !== 'SUBMITTED_FOR_REVIEW') {
+      return NextResponse.json(
+        { error: 'Can only reject SUBMITTED_FOR_REVIEW rounds' },
+        { status: 400 }
+      );
     }
 
     // Validate request body
     const body = await request.json();
+
+    // Require rejection reason (min 10 chars)
+    if (!body.rejection_reason || typeof body.rejection_reason !== 'string') {
+      return NextResponse.json({ error: 'rejection_reason is required' }, { status: 400 });
+    }
+
+    const reason = body.rejection_reason.trim();
+    if (reason.length < 10) {
+      return NextResponse.json(
+        { error: 'Rejection reason must be at least 10 characters' },
+        { status: 400 }
+      );
+    }
+
+    if (reason.length > 500) {
+      return NextResponse.json(
+        { error: 'Rejection reason must not exceed 500 characters' },
+        { status: 400 }
+      );
+    }
+
+    // Validate using shared validator if needed
     let rejectData;
     try {
       rejectData = validateRejectPool(body);
@@ -57,12 +82,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       throw err;
     }
 
-    // Update to REJECTED
+    // Update to REJECTED with review tracking
     const { data: updated, error: updateError } = await supabase
       .from('launch_rounds')
       .update({
         status: 'REJECTED',
-        rejection_reason: rejectData.rejection_reason,
+        rejection_reason: reason,
+        reviewed_by: user.id,
+        reviewed_at: new Date().toISOString(),
       })
       .eq('id', params.id)
       .select()

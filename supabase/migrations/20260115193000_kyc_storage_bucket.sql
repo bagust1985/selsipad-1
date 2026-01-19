@@ -12,22 +12,7 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Disable RLS (we handle auth at application level)
-ALTER TABLE storage.objects DISABLE ROW LEVEL SECURITY;
-
--- Alternative: If RLS must be enabled, use this policy instead
--- (Commented out since we're using wallet-only auth without auth.uid())
-/*
-CREATE POLICY "Authenticated users can upload KYC docs"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'kyc-documents');
-
-CREATE POLICY "Users can view own KYC docs"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (
-  bucket_id = 'kyc-documents' AND
-  (storage.foldername(name))[1] = auth.uid()::text
-);
-*/
+-- RLS Policies for kyc-documents bucket
+-- Note: These are applied in 20260115193937_kyc_storage_policies.sql
+-- For wallet-only auth (Pattern 68), we use service role client in the upload action
+-- to bypass RLS since auth.uid() is NULL for wallet-authenticated users (Pattern 81)

@@ -17,7 +17,7 @@ export default async function KYCStatusPage() {
 
   return (
     <div className="min-h-screen bg-bg-page pb-20">
-      <PageHeader showBack title="KYC Verification" />
+      <PageHeader showBack title="Developer KYC Verification" />
 
       <PageContainer className="py-4 space-y-6">
         {/* Status Header Card */}
@@ -40,8 +40,10 @@ export default async function KYCStatusPage() {
                   {isVerified ? '✓' : isPending ? '⏳' : isRejected ? '✗' : '📋'}
                 </div>
                 <div>
-                  <h2 className="text-heading-lg">KYC Verification</h2>
-                  <p className="text-caption text-text-secondary">Identity verification</p>
+                  <h2 className="text-heading-lg">Developer KYC Verification</h2>
+                  <p className="text-caption text-text-secondary">
+                    Developer identity verification
+                  </p>
                 </div>
               </div>
               <StatusBadge

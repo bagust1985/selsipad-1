@@ -12,7 +12,7 @@ import {
   Banner,
 } from '@/components/ui';
 import { PageHeader, PageContainer, BottomSheet } from '@/components/layout';
-import { getFeedPosts, createPost, type Post } from '@/lib/data/feed';
+import { getFeedPosts, getFollowingFeed, createPost, type Post } from '@/lib/data/feed';
 import { getUserProfile } from '@/lib/data/profile';
 import { formatDistance } from 'date-fns';
 import { useToast } from '@/components/ui';
@@ -24,16 +24,34 @@ export default function FeedPage() {
   const [newPostContent, setNewPostContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [userEligible, setUserEligible] = useState(false);
+  const [feedFilter, setFeedFilter] = useState<'all' | 'following'>('all');
   const { showToast } = useToast();
 
   // Load data
   useState(() => {
-    Promise.all([getFeedPosts(), getUserProfile()]).then(([postsData, profile]) => {
+    loadFeed('all');
+  });
+
+  const loadFeed = async (filter: 'all' | 'following') => {
+    setLoading(true);
+    try {
+      const [postsData, profile] = await Promise.all([
+        filter === 'following' ? getFollowingFeed() : getFeedPosts(),
+        getUserProfile(),
+      ]);
       setPosts(postsData);
       setUserEligible(profile?.bluecheck_status === 'active');
+    } catch (error) {
+      console.error('Error loading feed:', error);
+    } finally {
       setLoading(false);
-    });
-  });
+    }
+  };
+
+  const handleFeedFilterChange = (filter: 'all' | 'following') => {
+    setFeedFilter(filter);
+    loadFeed(filter);
+  };
 
   const handleFabClick = () => {
     if (!userEligible) {
@@ -81,7 +99,40 @@ export default function FeedPage() {
     <div className="min-h-screen bg-bg-page pb-20">
       <PageHeader title="Feed" />
 
+      {/* Feed Filter Tabs */}
+      <div className="sticky top-14 z-20 bg-bg-page border-b border-border-subtle">
+        <div className="flex gap-4 px-4 py-2">
+          <button
+            onClick={() => handleFeedFilterChange('all')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              feedFilter === 'all'
+                ? 'bg-primary-main text-primary-text'
+                : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+            }`}
+          >
+            For You
+          </button>
+          <button
+            onClick={() => handleFeedFilterChange('following')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+              feedFilter === 'following'
+                ? 'bg-primary-main text-primary-text'
+                : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+            }`}
+          >
+            Following
+          </button>
+        </div>
+      </div>
+
       <PageContainer className="py-4 space-y-4">
+        {feedFilter === 'following' ? (
+          <Banner
+            type="info"
+            message="Following Feed"
+            submessage="Showing posts only from users you follow"
+          />
+        ) : null}
         {/* Info Banner for non-eligible users */}
         {!userEligible && (
           <Banner

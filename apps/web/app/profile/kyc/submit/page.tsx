@@ -11,17 +11,28 @@ export default async function KYCSubmitPage() {
     redirect('/');
   }
 
+  // Check if user already submitted KYC
+  const { getUserProfile } = await import('@/lib/data/profile');
+  const profile = await getUserProfile();
+
+  // Prevent duplicate submissions - redirect if already pending or verified
+  if (profile?.kyc_status === 'pending' || profile?.kyc_status === 'verified') {
+    redirect('/profile/kyc');
+  }
+
   const userProjects = await getUserProjects();
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <PageHeader title="KYC Verification" backUrl="/profile/kyc" />
+      <PageHeader title="Developer KYC Verification" backUrl="/profile/kyc" />
 
       <PageContainer className="py-6">
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-xl border border-gray-200 p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Submit KYC Documents</h2>
-            <p className="text-gray-600 mb-6">Verify your identity to access all features</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Submit Developer KYC Documents
+            </h2>
+            <p className="text-gray-600 mb-6">Verify your identity to create launchpad projects</p>
 
             <KYCSubmitForm userProjects={userProjects} />
           </div>

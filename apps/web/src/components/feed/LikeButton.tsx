@@ -14,7 +14,8 @@ export function LikeButton({ postId, initialLiked, initialCount }: LikeButtonPro
   const [count, setCount] = useState(initialCount);
   const [loading, setLoading] = useState(false);
 
-  const handleLike = async () => {
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (loading) return;
 
     const previousLiked = liked;
@@ -41,22 +42,33 @@ export function LikeButton({ postId, initialLiked, initialCount }: LikeButtonPro
     }
   };
 
+  // Format counts (1000 -> 1K, 1000000 -> 1M)
+  const formatCount = (count: number) => {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count.toString();
+  };
+
   return (
     <button
       onClick={handleLike}
       disabled={loading}
-      className={`
-        flex items-center gap-2 px-3 py-1.5 rounded-full transition-all
-        ${
-          liked
-            ? 'text-red-500 bg-red-50 hover:bg-red-100'
-            : 'text-gray-600 bg-gray-50 hover:bg-gray-100'
-        }
-        ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-      `}
+      className={`flex items-center gap-2 transition-colors group ${loading ? 'opacity-50' : ''}`}
     >
-      <Heart className={`w-5 h-5 transition-transform ${liked ? 'fill-current scale-110' : ''}`} />
-      <span className="text-sm font-medium">{count}</span>
+      <div
+        className={`p-2 rounded-full transition-colors ${
+          liked
+            ? 'text-red-500 group-hover:bg-red-500/10'
+            : 'text-gray-500 group-hover:text-red-500 group-hover:bg-red-500/10'
+        }`}
+      >
+        <Heart
+          className={`w-[18px] h-[18px] transition-transform ${liked ? 'fill-current scale-110' : ''}`}
+        />
+      </div>
+      <span className={`text-sm ${liked ? 'text-red-500' : 'text-gray-500'}`}>
+        {count > 0 ? formatCount(count) : ''}
+      </span>
     </button>
   );
 }

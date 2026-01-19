@@ -8,7 +8,7 @@ const supabase = createClient(
 
 /**
  * GET /api/rounds/[id]/refund/quote
- * Check refund eligibility and amount
+ * Get refund eligibility and quote amount
  */
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -28,62 +28,77 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get round
-    const { data: round, error: roundError } = await supabase
+    // Get round details
+    const { data: round, error: fetchError } = await supabase
       .from('launch_rounds')
-      .select('*, projects(owner_user_id)')
+      .select('*')
       .eq('id', params.id)
       .single();
 
-    if (roundError || !round) {
+    if (fetchError || !round) {
       return NextResponse.json({ error: 'Round not found' }, { status: 404 });
     }
 
-    // Check if round is finalized and failed
-    if (round.status !== 'FINALIZED' || round.result !== 'FAILED') {
+    // Check if refund is available
+    const refundableResults = ['FAILED', 'CANCELED'];
+    if (!refundableResults.includes(round.result)) {
       return NextResponse.json({
-        refund_amount: 0,
         is_eligible: false,
-        reason: 'Refunds only available for FAILED rounds',
+        refund_amount: 0,
+        reason: `Refunds only available for FAILED or CANCELED rounds (current: ${round.result})`,
         primary_wallet: null,
       });
     }
 
-    // Get user's refund record
-    const { data: refund, error: refundError } = await supabase
+    // Get user's confirmed contributions
+    const { data: contributions } = await supabase
+      .from('contributions')
+      .select('*')
+      .eq('round_id', params.id)
+      .eq('user_id', user.id)
+      .eq('status', 'CONFIRMED');
+
+    if (!contributions || contributions.length === 0) {
+      return NextResponse.json({
+        is_eligible: false,
+        refund_amount: 0,
+        reason: 'No confirmed contributions found',
+        primary_wallet: null,
+      });
+    }
+
+    // Calculate total refund amount
+    const totalRefundAmount = contributions.reduce(
+      (sum, c) => sum + parseFloat(c.amount.toString()),
+      0
+    );
+
+    // Check if already refunded
+    const { data: existingRefund } = await supabase
       .from('refunds')
       .select('*')
       .eq('round_id', params.id)
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (refundError || !refund) {
+    if (existingRefund && ['COMPLETED', 'PROCESSING'].includes(existingRefund.status)) {
       return NextResponse.json({
-        refund_amount: 0,
         is_eligible: false,
-        reason: 'No refund available for this user',
-        primary_wallet: null,
+        refund_amount: 0,
+        reason: `Refund already ${existingRefund.status.toLowerCase()}`,
+        primary_wallet: existingRefund.wallet_address || contributions[0].wallet_address,
       });
     }
 
-    // Check if already claimed
-    if (refund.status === 'COMPLETED') {
-      return NextResponse.json({
-        refund_amount: 0,
-        is_eligible: false,
-        reason: 'Refund already claimed',
-        primary_wallet: null,
-      });
-    }
-
-    // Get user's primary wallet for this chain
-    // TODO: Implement wallet lookup from user profile
-    const primaryWallet = null; // Placeholder
+    // Get primary wallet (most recent contribution)
+    const primaryWallet = contributions.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0].wallet_address;
 
     return NextResponse.json({
-      refund_amount: Number(refund.amount),
       is_eligible: true,
-      reason: refund.status === 'PROCESSING' ? 'Refund in progress' : undefined,
+      refund_amount: totalRefundAmount,
+      reason: null,
       primary_wallet: primaryWallet,
     });
   } catch (err) {

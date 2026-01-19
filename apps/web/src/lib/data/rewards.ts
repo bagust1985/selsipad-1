@@ -264,3 +264,40 @@ function getDefaultReferralStats(): ReferralStats {
     referral_code: '', // TODO: Generate unique code
   };
 }
+
+export interface ClaimRequirements {
+  canClaim: boolean;
+  blockedReason: string | null;
+  requirements: {
+    blueCheck: {
+      met: boolean;
+      status: string;
+    };
+    activeReferrals: {
+      met: boolean;
+      count: number;
+      required: number;
+    };
+  };
+}
+
+/**
+ * Get Claim Requirements
+ *
+ * Check if user meets referral claim requirements
+ */
+export async function getClaimRequirements(): Promise<ClaimRequirements | null> {
+  try {
+    const response = await fetch('/api/v1/referral/claim-requirements');
+    if (!response.ok) {
+      console.error('Failed to fetch claim requirements');
+      return null;
+    }
+
+    const data = await response.json();
+    return data.success ? data.data : null;
+  } catch (error) {
+    console.error('Error fetching claim requirements:', error);
+    return null;
+  }
+}

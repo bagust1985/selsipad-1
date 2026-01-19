@@ -1,0 +1,347 @@
+/**
+ * Presale Wizard Validators
+ * Step-by-step validation schemas for the Create Presale Wizard
+ */
+
+import { z } from 'zod';
+
+// ============================================
+// Types & Schemas
+// ============================================
+
+/**
+ * Step 1: Basic Information
+ */
+export const presaleBasicsSchema = z.object({
+  name: z
+    .string()
+    .min(3, 'Project name must be at least 3 characters')
+    .max(100, 'Project name cannot exceed 100 characters'),
+  description: z
+    .string()
+    .min(50, 'Description must be at least 50 characters')
+    .max(2000, 'Description cannot exceed 2000 characters'),
+  logo_url: z.string().url('Invalid logo URL').optional(),
+  banner_url: z.string().url('Invalid banner URL').optional(),
+  network: z.enum(['solana', 'ethereum', 'bsc', 'polygon', 'avalanche'], {
+    errorMap: () => ({ message: 'Please select a valid network' }),
+  }),
+});
+
+export type PresaleBasics = z.infer<typeof presaleBasicsSchema>;
+
+/**
+ * Step 2: Sale Parameters
+ */
+export const presaleSaleParamsSchema = z
+  .object({
+    token_address: z.string().min(1, 'Token address is required'),
+    total_tokens: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+      message: 'Total tokens must be greater than 0',
+    }),
+    price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+      message: 'Price must be greater than 0',
+    }),
+    softcap: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+      message: 'Softcap must be greater than 0',
+    }),
+    hardcap: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+      message: 'Hardcap must be greater than 0',
+    }),
+    min_contribution: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+      message: 'Minimum contribution must be greater than 0',
+    }),
+    max_contribution: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+      message: 'Maximum contribution must be greater than 0',
+    }),
+    start_at: z.string().datetime('Invalid start date'),
+    end_at: z.string().datetime('Invalid end date'),
+    payment_token: z.enum(['NATIVE', 'USDC', 'USDT'], {
+      errorMap: () => ({ message: 'Please select a valid payment token' }),
+    }),
+  })
+  .refine(
+    (data) => {
+      const softcap = Number(data.softcap);
+      const hardcap = Number(data.hardcap);
+      return softcap <= hardcap;
+    },
+    {
+      message: 'Softcap cannot exceed hardcap',
+      path: ['softcap'],
+    }
+  )
+  .refine(
+    (data) => {
+      const min = Number(data.min_contribution);
+      const max = Number(data.max_contribution);
+      return min <= max;
+    },
+    {
+      message: 'Minimum contribution cannot exceed maximum',
+      path: ['min_contribution'],
+    }
+  )
+  .refine(
+    (data) => {
+      const start = new Date(data.start_at);
+      const end = new Date(data.end_at);
+      return start < end;
+    },
+    {
+      message: 'End date must be after start date',
+      path: ['end_at'],
+    }
+  )
+  .refine(
+    (data) => {
+      const start = new Date(data.start_at);
+      const now = new Date();
+      const minStartTime = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+      return start >= minStartTime;
+    },
+    {
+      message: 'Start date must be at least 1 hour in the future',
+      path: ['start_at'],
+    }
+  );
+
+export type PresaleSaleParams = z.infer<typeof presaleSaleParamsSchema>;
+
+/**
+ * Step 3: Anti-Bot Configuration (Optional)
+ */
+export const presaleAntiBotSchema = z.object({
+  whitelist_enabled: z.boolean().default(false),
+  whitelist_addresses: z.array(z.string()).optional(),
+  max_buy_per_wallet: z.string().optional(),
+});
+
+export type PresaleAntiBot = z.infer<typeof presaleAntiBotSchema>;
+
+/**
+ * Vesting Schedule Entry
+ */
+export const vestingEntrySchema = z.object({
+  month: z.number().min(0, 'Month cannot be negative'),
+  percentage: z
+    .number()
+    .min(0, 'Percentage cannot be negative')
+    .max(100, 'Percentage cannot exceed 100'),
+});
+
+export type VestingEntry = z.infer<typeof vestingEntrySchema>;
+
+/**
+ * Step 4 & 5: Vesting Configuration
+ */
+export const vestingScheduleSchema = z
+  .array(vestingEntrySchema)
+  .min(1, 'At least one vesting entry is required')
+  .refine(
+    (schedule) => {
+      const total = schedule.reduce((sum, entry) => sum + entry.percentage, 0);
+      return Math.abs(total - 100) < 0.01; // Allow for floating point precision
+    },
+    {
+      message: 'Total vesting percentage must equal 100%',
+    }
+  )
+  .refine(
+    (schedule) => {
+      const months = schedule.map((s) => s.month);
+      const uniqueMonths = new Set(months);
+      return months.length === uniqueMonths.size;
+    },
+    {
+      message: 'Duplicate months are not allowed',
+    }
+  );
+
+export const investorVestingSchema = z.object({
+  tge_percentage: z
+    .number()
+    .min(0, 'TGE percentage cannot be negative')
+    .max(100, 'TGE percentage cannot exceed 100'),
+  cliff_months: z.number().min(0, 'Cliff duration cannot be negative'),
+  schedule: vestingScheduleSchema,
+});
+
+export type InvestorVesting = z.infer<typeof investorVestingSchema>;
+
+export const teamVestingSchema = z.object({
+  team_allocation: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
+    message: 'Team allocation must be a valid number',
+  }),
+  schedule: vestingScheduleSchema,
+});
+
+export type TeamVesting = z.infer<typeof teamVestingSchema>;
+
+/**
+ * Step 6: LP Lock Configuration
+ */
+export const lpLockSchema = z
+  .object({
+    duration_months: z.number().min(12, 'LP lock duration must be at least 12 months'),
+    percentage: z
+      .number()
+      .min(1, 'LP lock percentage must be at least 1%')
+      .max(100, 'LP lock percentage cannot exceed 100%'),
+    platform: z.enum(['UNICRYPT', 'TEAM_FINANCE', 'PINKSALE', 'CUSTOM'], {
+      errorMap: () => ({ message: 'Please select a valid LP lock platform' }),
+    }),
+    custom_platform_address: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.platform === 'CUSTOM') {
+        return !!data.custom_platform_address;
+      }
+      return true;
+    },
+    {
+      message: 'Custom platform address is required when platform is CUSTOM',
+      path: ['custom_platform_address'],
+    }
+  );
+
+export type LpLock = z.infer<typeof lpLockSchema>;
+
+/**
+ * Step 7: Fees & Referral
+ */
+export const feesReferralSchema = z.object({
+  platform_fee_bps: z.number().min(0).max(1000).default(500), // Default 5%
+  referral_enabled: z.boolean().default(true),
+  referral_reward_bps: z.number().min(0).max(500).default(100), // Default 1%
+});
+
+export type FeesReferral = z.infer<typeof feesReferralSchema>;
+
+/**
+ * Full Presale Configuration
+ */
+export const fullPresaleConfigSchema = z.object({
+  basics: presaleBasicsSchema,
+  sale_params: presaleSaleParamsSchema,
+  anti_bot: presaleAntiBotSchema,
+  investor_vesting: investorVestingSchema,
+  team_vesting: teamVestingSchema,
+  lp_lock: lpLockSchema,
+  fees_referral: feesReferralSchema,
+  terms_accepted: z.boolean().refine((val) => val === true, {
+    message: 'You must accept the terms and conditions',
+  }),
+});
+
+export type FullPresaleConfig = z.infer<typeof fullPresaleConfigSchema>;
+
+// ============================================
+// Helper Functions
+// ============================================
+
+/**
+ * Validate EVM address format
+ */
+export function isValidEvmAddress(address: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
+/**
+ * Validate Solana address format
+ */
+export function isValidSolanaAddress(address: string): boolean {
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
+}
+
+/**
+ * Validate token address based on network
+ */
+export function validateTokenAddress(address: string, network: string): boolean {
+  if (network === 'solana') {
+    return isValidSolanaAddress(address);
+  }
+  return isValidEvmAddress(address);
+}
+
+/**
+ * Create linear vesting schedule
+ * @param totalMonths Total duration in months
+ * @param tgePercentage Percentage unlocked at TGE (month 0)
+ * @returns Vesting schedule array
+ */
+export function createLinearVesting(
+  totalMonths: number,
+  tgePercentage: number = 0
+): VestingEntry[] {
+  const schedule: VestingEntry[] = [];
+
+  if (tgePercentage > 0) {
+    schedule.push({ month: 0, percentage: tgePercentage });
+  }
+
+  const remainingPercentage = 100 - tgePercentage;
+  const monthlyPercentage = remainingPercentage / totalMonths;
+
+  for (let i = 1; i <= totalMonths; i++) {
+    schedule.push({
+      month: i,
+      percentage: Number(monthlyPercentage.toFixed(2)),
+    });
+  }
+
+  // Adjust last month to ensure total is exactly 100%
+  const total = schedule.reduce((sum, s) => sum + s.percentage, 0);
+  if (Math.abs(total - 100) > 0.01) {
+    schedule[schedule.length - 1].percentage += 100 - total;
+    schedule[schedule.length - 1].percentage = Number(
+      schedule[schedule.length - 1].percentage.toFixed(2)
+    );
+  }
+
+  return schedule;
+}
+
+/**
+ * Validate compliance gates
+ */
+export interface ComplianceStatus {
+  kyc_status: 'PENDING' | 'SUBMITTED' | 'CONFIRMED' | 'REJECTED';
+  sc_scan_status: 'NOT_REQUESTED' | 'PENDING' | 'PASS' | 'FAIL' | 'OVERRIDE_PASS';
+  investor_vesting_valid: boolean;
+  team_vesting_valid: boolean;
+  lp_lock_valid: boolean;
+}
+
+export function validateComplianceGates(compliance: ComplianceStatus): {
+  valid: boolean;
+  violations: string[];
+} {
+  const violations: string[] = [];
+
+  if (compliance.kyc_status !== 'CONFIRMED') {
+    violations.push('Developer KYC must be confirmed');
+  }
+
+  if (!['PASS', 'OVERRIDE_PASS'].includes(compliance.sc_scan_status)) {
+    violations.push('Smart contract scan must pass');
+  }
+
+  if (!compliance.investor_vesting_valid) {
+    violations.push('Investor vesting schedule must be configured');
+  }
+
+  if (!compliance.team_vesting_valid) {
+    violations.push('Team vesting schedule must be configured');
+  }
+
+  if (!compliance.lp_lock_valid) {
+    violations.push('LP lock must be at least 12 months');
+  }
+
+  return {
+    valid: violations.length === 0,
+    violations,
+  };
+}

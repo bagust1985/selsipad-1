@@ -19,9 +19,6 @@ export interface KYCSubmission {
   updated_at: string;
 }
 
-/**
- * Submit KYC Documents
- */
 export async function submitKYC(data: {
   submission_type: KYCSubmissionType;
   documents_url: string; // Upload handled separately
@@ -35,6 +32,21 @@ export async function submitKYC(data: {
   }
 
   const supabase = createClient();
+
+  // Check for duplicate submission - prevent if already pending or verified
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('kyc_status')
+    .eq('user_id', session.userId)
+    .single();
+
+  if (existingProfile?.kyc_status === 'pending') {
+    throw new Error('You already have a pending KYC submission under review');
+  }
+
+  if (existingProfile?.kyc_status === 'verified') {
+    throw new Error('Your KYC is already verified');
+  }
 
   // Create KYC submission
   const { data: submission, error } = await supabase
@@ -50,6 +62,20 @@ export async function submitKYC(data: {
     .single();
 
   if (error) throw error;
+
+  // Update profile kyc_status to 'pending' and set submission timestamp
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      kyc_status: 'pending',
+      kyc_submitted_at: new Date().toISOString(),
+    })
+    .eq('user_id', session.userId);
+
+  if (profileError) {
+    console.error('Failed to update profile kyc_status:', profileError);
+    // Don't throw - submission was successful, profile update is secondary
+  }
 
   return submission;
 }
@@ -79,9 +105,6 @@ export async function getKYCStatus(): Promise<KYCSubmission | null> {
   return submission;
 }
 
-/**
- * Upload KYC Documents to Supabase Storage
- */
 export async function uploadKYCDocuments(files: { name: string; data: string }[]): Promise<string> {
   const { getSession } = await import('@/lib/auth/session');
   const session = await getSession();
@@ -90,7 +113,11 @@ export async function uploadKYCDocuments(files: { name: string; data: string }[]
     throw new Error('Authentication required');
   }
 
-  const supabase = createClient();
+  // Use service role client to bypass RLS for wallet-only auth (Pattern 81)
+  // Regular authenticated client uses auth.uid() which is NULL for wallet-only users
+  const { createServiceRoleClient } = await import('@/lib/supabase/service-role');
+  const supabase = createServiceRoleClient();
+
   const timestamp = Date.now();
   const uploadedUrls: string[] = [];
 

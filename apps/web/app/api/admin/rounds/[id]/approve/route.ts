@@ -44,8 +44,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // Validate status
-    if (round.status !== 'SUBMITTED') {
-      return NextResponse.json({ error: 'Can only approve SUBMITTED rounds' }, { status: 400 });
+    if (round.status !== 'SUBMITTED_FOR_REVIEW') {
+      return NextResponse.json(
+        { error: 'Can only approve SUBMITTED_FOR_REVIEW rounds' },
+        { status: 400 }
+      );
     }
 
     // Validate request body
@@ -59,13 +62,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       throw err;
     }
 
-    // Update to APPROVED
+    // Update to APPROVED_TO_DEPLOY with review tracking
     const { data: updated, error: updateError } = await supabase
       .from('launch_rounds')
       .update({
-        status: 'APPROVED',
-        approved_by: user.id,
-        approved_at: new Date().toISOString(),
+        status: 'APPROVED_TO_DEPLOY',
+        reviewed_by: user.id,
+        reviewed_at: new Date().toISOString(),
+        rejection_reason: null, // Clear any previous rejection
       })
       .eq('id', params.id)
       .select()

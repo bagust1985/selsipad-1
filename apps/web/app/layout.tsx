@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import '../src/styles/globals.css';
-import { BottomNav } from '@/components/layout';
+import { ConditionalBottomNav } from '@/components/layout/ConditionalBottomNav';
 import { ToastProvider } from '@/components/ui';
 import { MultiChainWalletProvider } from '@/lib/wallet/MultiChainWalletProvider';
 
@@ -23,7 +23,7 @@ export default function RootLayout({
         <MultiChainWalletProvider>
           <ToastProvider>
             {children}
-            <BottomNav />
+            <ConditionalBottomNav />
           </ToastProvider>
         </MultiChainWalletProvider>
       </body>

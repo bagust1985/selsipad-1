@@ -42,6 +42,14 @@ export function ProfileClientContent({ initialProfile }: ProfileClientContentPro
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border-subtle">
               <div>
+                <p className="text-caption text-text-secondary">Followers</p>
+                <p className="text-heading-md">{profile.follower_count || 0}</p>
+              </div>
+              <div>
+                <p className="text-caption text-text-secondary">Following</p>
+                <p className="text-heading-md">{profile.following_count || 0}</p>
+              </div>
+              <div>
                 <p className="text-caption text-text-secondary">Total Contributed</p>
                 <p className="text-heading-md">{profile.total_contributions} SOL</p>
               </div>
@@ -53,9 +61,14 @@ export function ProfileClientContent({ initialProfile }: ProfileClientContentPro
           </CardContent>
         </Card>
 
-        {/* Verification Status */}
+        {/* Badge Collection */}
         <div className="space-y-3">
-          <h3 className="text-heading-md text-text-primary">Verification Status</h3>
+          <div>
+            <h3 className="text-heading-md text-text-primary">Badge Collection</h3>
+            <p className="text-caption text-text-secondary mt-1">
+              Your earned badges and achievements
+            </p>
+          </div>
 
           {/* Blue Check Status */}
           <Link href="/profile/blue-check">
@@ -99,11 +112,11 @@ export function ProfileClientContent({ initialProfile }: ProfileClientContentPro
                       {profile.kyc_status === 'verified' ? '✓' : '📋'}
                     </div>
                     <div>
-                      <h4 className="text-heading-sm">KYC Verification</h4>
+                      <h4 className="text-heading-sm">Developer KYC</h4>
                       <p className="text-caption text-text-secondary">
                         {profile.kyc_status === 'verified'
-                          ? 'Identity verified'
-                          : 'Verify your identity'}
+                          ? 'Identity verified for project creation'
+                          : 'Required for project creators'}
                       </p>
                     </div>
                   </div>

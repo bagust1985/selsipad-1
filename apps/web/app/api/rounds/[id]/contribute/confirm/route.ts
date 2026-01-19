@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import {
-  validateContributionConfirm,
-  PoolValidationError,
-  isPoolLive,
-  type LaunchRound,
-} from '@selsipad/shared';
+import { validateContributionConfirm, PoolValidationError } from '@selsipad/shared';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,7 +9,7 @@ const supabase = createClient(
 
 /**
  * POST /api/rounds/[id]/contribute/confirm
- * Confirm contribution with transaction hash
+ * Confirm contribution with transaction hash (step 2 of 2-step flow)
  */
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -34,23 +29,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check idempotency key
-    const idempotencyKey = request.headers.get('idempotency-key');
-    if (!idempotencyKey) {
-      return NextResponse.json({ error: 'Idempotency-Key header required' }, { status: 400 });
-    }
-
-    // Check if contribution already exists with this idempotency key
-    // (In production, would store idempotency keys in separate table)
-
-    // Validate request body
+    // Parse and validate request body
     const body = await request.json();
-    let confirmData;
+    let validatedData;
     try {
-      confirmData = validateContributionConfirm({
-        ...body,
-        round_id: params.id,
-      });
+      validatedData = validateContributionConfirm(body);
     } catch (err) {
       if (err instanceof PoolValidationError) {
         return NextResponse.json({ error: err.message, field: err.field }, { status: 400 });
@@ -59,71 +42,83 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     // Get round
-    const { data: round, error: roundError } = await supabase
+    const { data: round, error: fetchError } = await supabase
       .from('launch_rounds')
       .select('*')
       .eq('id', params.id)
       .single();
 
-    if (roundError || !round) {
+    if (fetchError || !round) {
       return NextResponse.json({ error: 'Round not found' }, { status: 404 });
     }
 
-    // Check if round is still live
-    if (!isPoolLive(round as LaunchRound)) {
-      return NextResponse.json({ error: 'Round is not currently live' }, { status: 400 });
-    }
-
-    // Check for duplicate tx_hash
-    const { data: existing } = await supabase
+    // Check for duplicate transaction hash
+    const { data: existingTx } = await supabase
       .from('contributions')
       .select('id')
       .eq('chain', round.chain)
-      .eq('tx_hash', confirmData.tx_hash)
+      .eq('tx_hash', validatedData.tx_hash)
       .maybeSingle();
 
-    if (existing) {
-      return NextResponse.json({ error: 'Transaction hash already used' }, { status: 400 });
+    if (existingTx) {
+      return NextResponse.json({ error: 'Transaction hash already recorded' }, { status: 409 });
     }
 
-    // Create contribution (in PENDING status)
-    // Note: Actual on-chain verification would be done by Tx Manager/Indexer
-    const { data: contribution, error: createError } = await supabase
+    // Find pending contribution for this user/round
+    const { data: pendingContribution } = await supabase
       .from('contributions')
-      .insert({
-        round_id: params.id,
-        user_id: user.id,
-        wallet_address: confirmData.wallet_address,
-        amount: confirmData.amount,
-        chain: round.chain,
-        tx_hash: confirmData.tx_hash,
-        status: 'PENDING', // Will be updated to CONFIRMED by Tx Manager
-      })
-      .select()
-      .single();
+      .select('*')
+      .eq('round_id', params.id)
+      .eq('user_id', user.id)
+      .eq('wallet_address', validatedData.wallet_address)
+      .eq('status', 'PENDING')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (createError) {
-      console.error('Error creating contribution:', createError);
+    if (pendingContribution) {
+      // Update existing pending contribution
+      const { data: updated, error: updateError } = await supabase
+        .from('contributions')
+        .update({
+          tx_hash: validatedData.tx_hash,
+          status: 'CONFIRMED',
+          confirmed_at: new Date().toISOString(),
+        })
+        .eq('id', pendingContribution.id)
+        .select()
+        .single();
 
-      // Check if it's a unique constraint violation
-      if (createError.code === '23505') {
-        return NextResponse.json({ error: 'Contribution already exists' }, { status: 400 });
+      if (updateError) {
+        console.error('Error updating contribution:', updateError);
+        return NextResponse.json({ error: 'Failed to confirm contribution' }, { status: 500 });
       }
 
-      return NextResponse.json({ error: 'Failed to create contribution' }, { status: 500 });
+      return NextResponse.json({ contribution: updated });
+    } else {
+      // Create new contribution (if user submitted tx directly without intent)
+      const { data: newContribution, error: createError } = await supabase
+        .from('contributions')
+        .insert({
+          round_id: params.id,
+          user_id: user.id,
+          wallet_address: validatedData.wallet_address,
+          amount: validatedData.amount,
+          chain: round.chain,
+          tx_hash: validatedData.tx_hash,
+          status: 'CONFIRMED',
+          confirmed_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating contribution:', createError);
+        return NextResponse.json({ error: 'Failed to record contribution' }, { status: 500 });
+      }
+
+      return NextResponse.json({ contribution: newContribution });
     }
-
-    // TODO: Trigger Tx Manager to verify transaction on-chain
-    // For MVP, we'll assume transaction is valid and update to CONFIRMED immediately
-    // In production, this would be handled by indexer/worker
-
-    return NextResponse.json(
-      {
-        contribution,
-        message: 'Contribution submitted. Verification in progress.',
-      },
-      { status: 202 }
-    ); // 202 Accepted
   } catch (err) {
     console.error('Unexpected error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

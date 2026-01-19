@@ -9,7 +9,7 @@ const supabase = createClient(
 
 /**
  * POST /api/rounds/[id]/refund/claim
- * Claim refund for failed round
+ * Claim refund for failed or canceled round
  */
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -29,19 +29,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check idempotency key
-    const idempotencyKey = request.headers.get('idempotency-key');
-    if (!idempotencyKey) {
-      return NextResponse.json({ error: 'Idempotency-Key header required' }, { status: 400 });
-    }
-
-    // Validate request body
+    // Parse and validate request body
     const body = await request.json();
     try {
-      validateRefundClaim({
-        ...body,
-        round_id: params.id,
-      });
+      validateRefundClaim(body);
     } catch (err) {
       if (err instanceof PoolValidationError) {
         return NextResponse.json({ error: err.message, field: err.field }, { status: 400 });
@@ -49,81 +40,126 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       throw err;
     }
 
-    // Get round
-    const { data: round, error: roundError } = await supabase
+    // Get round details
+    const { data: round, error: fetchError } = await supabase
       .from('launch_rounds')
       .select('*')
       .eq('id', params.id)
       .single();
 
-    if (roundError || !round) {
+    if (fetchError || !round) {
       return NextResponse.json({ error: 'Round not found' }, { status: 404 });
     }
 
-    // Verify round is finalized and failed
-    if (round.status !== 'FINALIZED' || round.result !== 'FAILED') {
+    // Verify round is in refundable state
+    const refundableResults = ['FAILED', 'CANCELED'];
+    if (!refundableResults.includes(round.result)) {
       return NextResponse.json(
-        { error: 'Refunds only available for FAILED rounds' },
+        { error: `Round must be FAILED or CANCELED to claim refund (current: ${round.result})` },
         { status: 400 }
       );
     }
 
-    // Get user's refund record
-    const { data: refund, error: refundError } = await supabase
+    // Get user's total contributions
+    const { data: contributions } = await supabase
+      .from('contributions')
+      .select('*')
+      .eq('round_id', params.id)
+      .eq('user_id', user.id)
+      .eq('status', 'CONFIRMED');
+
+    if (!contributions || contributions.length === 0) {
+      return NextResponse.json(
+        { error: 'No confirmed contributions found for this round' },
+        { status: 404 }
+      );
+    }
+
+    const totalRefundAmount = contributions.reduce(
+      (sum, c) => sum + parseFloat(c.amount.toString()),
+      0
+    );
+
+    // Check for existing refund
+    const { data: existingRefund } = await supabase
       .from('refunds')
       .select('*')
       .eq('round_id', params.id)
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (refundError || !refund) {
-      return NextResponse.json({ error: 'No refund available' }, { status: 404 });
+    if (existingRefund) {
+      if (existingRefund.status === 'COMPLETED') {
+        return NextResponse.json({ error: 'Refund already completed' }, { status: 409 });
+      }
+      if (existingRefund.status === 'PROCESSING') {
+        return NextResponse.json(
+          { error: 'Refund already in progress', refund: existingRefund },
+          { status: 409 }
+        );
+      }
     }
 
-    // Check if already claimed
-    if (refund.status === 'COMPLETED') {
-      return NextResponse.json({ error: 'Refund already claimed' }, { status: 400 });
+    // Get primary wallet from most recent contribution
+    const primaryWallet = contributions.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0].wallet_address;
+
+    // Create idempotency key
+    const idempotencyKey = `REFUND:${params.id}:${user.id}`;
+
+    // Create or update refund record
+    const refundData = {
+      round_id: params.id,
+      user_id: user.id,
+      amount: totalRefundAmount,
+      status: 'PENDING',
+      chain: round.chain,
+      idempotency_key: idempotencyKey,
+    };
+
+    let refund;
+    if (existingRefund) {
+      const { data: updated, error: updateError } = await supabase
+        .from('refunds')
+        .update({ status: 'PENDING' })
+        .eq('id', existingRefund.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating refund:', updateError);
+        return NextResponse.json({ error: 'Failed to process refund' }, { status: 500 });
+      }
+      refund = updated;
+    } else {
+      const { data: created, error: createError } = await supabase
+        .from('refunds')
+        .insert(refundData)
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating refund:', createError);
+
+        // Check if it's a duplicate key error
+        if (createError.code === '23505') {
+          return NextResponse.json({ error: 'Refund request already exists' }, { status: 409 });
+        }
+
+        return NextResponse.json({ error: 'Failed to create refund request' }, { status: 500 });
+      }
+      refund = created;
     }
 
-    // Check if already in progress
-    if (refund.status === 'PROCESSING') {
-      return NextResponse.json({
-        refund,
-        message: 'Refund already in progress',
-      });
-    }
-
-    // Update status to PROCESSING
-    const { data: updated, error: updateError } = await supabase
-      .from('refunds')
-      .update({
-        status: 'PROCESSING',
-        idempotency_key: idempotencyKey,
-      })
-      .eq('id', refund.id)
-      .eq('status', 'PENDING') // Optimistic locking
-      .select()
-      .single();
-
-    if (updateError || !updated) {
-      // If update failed, likely because status changed (race condition)
-      return NextResponse.json(
-        { error: 'Refund claim failed. Please try again.' },
-        { status: 409 }
-      );
-    }
-
-    // TODO: Trigger Tx Manager to process refund transaction
-    // For MVP, we return success immediately
-    // In production, this would queue a refund transaction
-
-    return NextResponse.json(
-      {
-        refund: updated,
-        message: 'Refund claim submitted. Processing will complete shortly.',
-      },
-      { status: 202 }
-    ); // 202 Accepted
+    // In production, this would create a transaction intent for the user to sign
+    // For now, we return the refund record
+    return NextResponse.json({
+      refund,
+      wallet_address: primaryWallet,
+      amount: totalRefundAmount,
+      message: 'Refund request created. Please sign the transaction.',
+    });
   } catch (err) {
     console.error('Unexpected error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

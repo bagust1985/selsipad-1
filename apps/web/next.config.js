@@ -4,6 +4,23 @@ const path = require('path');
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@selsipad/ui', '@selsipad/sdk'],
+
+  // Redirects for common URL patterns
+  async redirects() {
+    return [
+      {
+        source: '/presale',
+        destination: '/presales',
+        permanent: true,
+      },
+      {
+        source: '/presale/:path*',
+        destination: '/presales/:path*',
+        permanent: true,
+      },
+    ];
+  },
+
   webpack: (config, { webpack }) => {
     // Path to our empty stub module
     const emptyStubPath = path.resolve(__dirname, 'src/lib/stubs/empty-wallet-sdk.js');

@@ -32,13 +32,7 @@ export default async function CreateBondingCurvePage() {
   if (!solanaAddress) {
     return (
       <div className="min-h-screen bg-bg-page py-8">
-        <SolanaWalletPrompt
-          feature="Bonding Curve"
-          onConnected={() => {
-            // Reload page after wallet linked
-            // This is handled client-side
-          }}
-        />
+        <SolanaWalletPrompt feature="Bonding Curve" />
       </div>
     );
   }

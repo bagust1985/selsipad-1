@@ -1,16 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { Card, CardContent } from '@/components/ui';
 import { signMessageSolana } from '@/lib/wallet/signMessage';
+import { useRouter } from 'next/navigation'; // Assuming Next.js for useRouter
 
 interface SolanaWalletPromptProps {
   /** Feature name that requires Solana */
   feature: string;
-  /** Callback when wallet successfully linked */
-  onConnected: () => void;
+  /** Optional callback when wallet successfully linked */
+  onConnected?: () => void;
 }
 
 /**
@@ -20,17 +22,6 @@ interface SolanaWalletPromptProps {
 export function SolanaWalletPrompt({ feature, onConnected }: SolanaWalletPromptProps) {
   const [isLinking, setIsLinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const { publicKey, signMessage, connected } = useWallet();
-
-  const handleLink = async () => {
-    if (!publicKey || !signMessage) {
-      setError('Please connect your Solana wallet first');
-      return;
-    }
-
-    setIsLinking(true);
-    setError(null);
 
     try {
       // 1. Sign authentication message
@@ -47,16 +38,23 @@ export function SolanaWalletPrompt({ feature, onConnected }: SolanaWalletPromptP
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to link wallet');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[SolanaWallet] Linked successfully:', data);
+        
+        // Call callback or reload page
+        if (onConnected) {
+          onConnected();
+        } else {
+          // Auto-reload page to show feature
+          window.location.reload();
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to link wallet');
       }
-
-      // Success - notify parent
-      onConnected();
     } catch (err: any) {
-      console.error('Error linking Solana wallet:', err);
+      console.error('[SolanaWallet] Link error:', err);
       setError(err.message || 'Failed to link Solana wallet');
     } finally {
       setIsLinking(false);

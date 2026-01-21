@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Card, CardContent, StatusBadge, Avatar } from '@/components/ui';
 import { PageHeader, PageContainer } from '@/components/layout';
 import type { UserProfile } from '@/lib/data/profile';
@@ -86,8 +87,20 @@ export function ProfileClientContent({ initialProfile }: ProfileClientContentPro
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-bg-elevated rounded-full flex items-center justify-center">
-                      {profile.bluecheck_status === 'active' ? '✓' : '○'}
+                    <div className="w-12 h-12 flex items-center justify-center">
+                      {profile.bluecheck_status === 'active' ? (
+                        <Image
+                          src="/bluecheck-badge.png"
+                          alt="Blue Check"
+                          width={40}
+                          height={40}
+                          className="object-contain"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-bg-elevated rounded-full flex items-center justify-center text-text-tertiary">
+                          ○
+                        </div>
+                      )}
                     </div>
                     <div>
                       <h4 className="text-heading-sm">Blue Check</h4>

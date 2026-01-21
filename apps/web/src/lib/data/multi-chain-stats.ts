@@ -74,11 +74,43 @@ export async function getUserStatsMultiChain(userId: string): Promise<UserStatsM
       return acc;
     }, [] as RewardStats[]);
 
+    // Calculate USD estimates using price oracle
+    let totalContributedUSD = 0;
+    let totalRewardsUSD = 0;
+
+    // Get all unique tokens for batch price fetch
+    const contributionTokens = contributionsByChain.map((c) => c.nativeToken);
+    const rewardTokens = rewardsByChain.map((r) => r.token);
+    const allTokens = [...new Set([...contributionTokens, ...rewardTokens])];
+
+    try {
+      // Dynamically import price oracle (server-side only)
+      const { getMultipleTokenPrices } = await import('@/lib/services/price-oracle');
+      const prices = await getMultipleTokenPrices(allTokens);
+
+      // Add USD estimates to contributions
+      contributionsByChain.forEach((contrib) => {
+        const price = prices[contrib.nativeToken] || 0;
+        contrib.usdEstimate = contrib.totalContributed * price;
+        totalContributedUSD += contrib.usdEstimate;
+      });
+
+      // Add USD estimates to rewards
+      rewardsByChain.forEach((reward) => {
+        const price = prices[reward.token] || 0;
+        reward.usdEstimate = reward.amount * price;
+        totalRewardsUSD += reward.usdEstimate;
+      });
+    } catch (error) {
+      console.error('Error calculating USD estimates:', error);
+      // Continue without USD estimates
+    }
+
     return {
       contributions: contributionsByChain,
       rewards: rewardsByChain,
-      totalContributedUSD: 0, // TODO: Calculate with price oracle
-      totalRewardsUSD: 0, // TODO: Calculate with price oracle
+      totalContributedUSD,
+      totalRewardsUSD,
     };
   } catch (error) {
     console.error('Error fetching multi-chain stats:', error);

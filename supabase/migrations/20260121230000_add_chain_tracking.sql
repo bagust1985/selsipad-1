@@ -31,20 +31,11 @@ COMMENT ON COLUMN referral_ledger.chain IS 'Blockchain where reward is claimable
 -- Create indexes for chain-based queries
 CREATE INDEX IF NOT EXISTS idx_referral_ledger_chain ON referral_ledger(chain);
 CREATE INDEX IF NOT EXISTS idx_referral_ledger_referrer_chain ON referral_ledger(referrer_id, chain);
-CREATE INDEX IF NOT EXISTS idx_referral_ledger_claimed_chain ON referral_ledger(claimed, chain);
 
 -- ==============================================
--- UPDATE EXISTING DATA
+-- NOTES
 -- ==============================================
 
--- Update existing referral_ledger records based on source
--- BONDING_CURVE rewards are on Solana, others on BSC
-UPDATE referral_ledger
-SET chain = CASE 
-  WHEN source = 'BONDING_CURVE' THEN 'SOLANA'
-  ELSE 'BSC'
-END
-WHERE chain = 'BSC'; -- Only update records that still have default value
-
--- Note: Contributions will remain BSC by default
--- New contributions will be recorded with correct chain from round data
+-- Future contributions will be recorded with correct chain from round/project data
+-- Referral rewards will inherit chain from the contribution that triggered them
+-- Default 'BSC' is used for backward compatibility with existing records

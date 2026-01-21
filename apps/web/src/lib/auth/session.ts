@@ -58,38 +58,44 @@ export async function logout() {
  * Returns null if not authenticated or session expired
  */
 export async function getServerSession(): Promise<Session | null> {
-  const sessionToken = cookies().get('session_token')?.value;
+  const cookieStore = cookies();
+  const sessionToken = cookieStore.get('session_token')?.value;
+
+  console.log('[getServerSession] Cookie check:', {
+    hasSessionToken: !!sessionToken,
+    sessionToken: sessionToken?.substring(0, 10) + '...',
+    allCookies: cookieStore.getAll().map((c) => c.name),
+  });
 
   if (!sessionToken) {
-    console.log('[Session] No session token cookie');
+    console.log('[getServerSession] No session token found');
     return null;
   }
 
   const supabase = createClient();
 
-  // Step 1: Get session from auth_sessions
+  // Query the session from auth_sessions table
   const { data: session, error } = await supabase
     .from('auth_sessions')
-    .select('*')
+    .select('*, wallets(*)')
     .eq('session_token', sessionToken)
-    .gt('expires_at', new Date().toISOString())
     .single();
 
+  console.log('[getServerSession] Session query result:', {
+    found: !!session,
+    error: error?.message,
+    sessionId: session?.id,
+    walletId: session?.wallet_id,
+  });
+
   if (error || !session) {
-    console.log('[Session] Session lookup failed:', error?.message);
+    console.error('[getServerSession] Session not found or error:', error);
     return null;
   }
 
-  // Step 2: Get wallet info
-  const { data: wallet, error: walletError } = await supabase
-    .from('wallets')
-    .select('id, user_id, address, chain')
-    .eq('address', session.wallet_address)
-    .eq('chain', session.chain)
-    .single();
-
-  if (walletError || !wallet) {
-    console.log('[Session] Wallet lookup failed:', walletError?.message);
+  // Check if session is expired
+  if (new Date(session.expires_at) < new Date()) {
+    console.log('[getServerSession] Session expired');
     return null;
   }
 

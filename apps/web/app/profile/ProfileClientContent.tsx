@@ -18,7 +18,17 @@ export function ProfileClientContent({ initialProfile }: ProfileClientContentPro
 
   return (
     <div className="min-h-screen bg-bg-page pb-20">
-      <PageHeader title="Profile" />
+      <PageHeader
+        title="Profile"
+        actions={
+          <Link
+            href="/profile/edit"
+            className="px-4 py-2 bg-primary-main text-white rounded-lg hover:bg-primary-hover transition-colors text-body-sm font-medium"
+          >
+            Edit Profile
+          </Link>
+        }
+      />
 
       <PageContainer className="py-4 space-y-6">
         {/* Profile Card */}

@@ -1,5 +1,5 @@
-import { getServerSession } from '@/lib/auth/session';
 'use server';
+import { getServerSession } from '@/lib/auth/session';
 
 import { createClient } from '@/lib/supabase/server';
 

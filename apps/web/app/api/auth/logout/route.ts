@@ -1,19 +1,18 @@
+import { logout } from '@/lib/auth/session';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 /**
- * Logout - Delete session
+ * API Route: POST /api/auth/logout
+ * Calls server action to delete session from database
  */
 export async function POST() {
-  const { deleteSession } = await import('@/lib/auth/session');
+  try {
+    // Call server action to delete session & redirect
+    await logout();
 
-  const sessionToken = cookies().get('session_token')?.value;
-
-  if (sessionToken) {
-    await deleteSession(sessionToken);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[Logout API] Error:', error);
+    return NextResponse.json({ error: 'Logout failed' }, { status: 500 });
   }
-
-  cookies().delete('session_token');
-
-  return NextResponse.json({ success: true, message: 'Logged out successfully' });
 }

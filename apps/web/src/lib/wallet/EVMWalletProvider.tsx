@@ -3,7 +3,7 @@
 import { createWeb3Modal } from '@web3modal/wagmi/react';
 import { walletConnect, injected, coinbaseWallet } from 'wagmi/connectors';
 import { createConfig, http } from 'wagmi';
-import { mainnet, polygon, bsc, arbitrum, optimism, base } from 'wagmi/chains';
+import { mainnet, bsc, base, sepolia, baseSepolia, bscTestnet } from 'wagmi/chains';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ReactNode } from 'react';
@@ -12,8 +12,17 @@ interface EVMWalletProviderProps {
   children: ReactNode;
 }
 
-// Configure chains
-const chains = [bsc, polygon, mainnet, arbitrum, optimism, base] as const;
+// Configure chains - Mainnet + Testnet
+const chains = [
+  // Mainnets
+  base,
+  mainnet,
+  bsc,
+  // Testnets
+  baseSepolia,
+  sepolia,
+  bscTestnet,
+] as const;
 
 // Get project ID from environment
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'selsipad-default-id';
@@ -27,12 +36,14 @@ const wagmiConfig = createConfig({
     coinbaseWallet({ appName: 'SELSIPAD' }),
   ],
   transports: {
-    [mainnet.id]: http(),
-    [polygon.id]: http(),
-    [bsc.id]: http(),
-    [arbitrum.id]: http(),
-    [optimism.id]: http(),
+    // Mainnets
     [base.id]: http(),
+    [mainnet.id]: http(),
+    [bsc.id]: http(),
+    // Testnets
+    [baseSepolia.id]: http(),
+    [sepolia.id]: http(),
+    [bscTestnet.id]: http(),
   },
   ssr: true,
 });

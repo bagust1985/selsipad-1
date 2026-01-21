@@ -28,13 +28,10 @@ CREATE POLICY "Authenticated users can upload" ON storage.objects
 CREATE POLICY "Users can update own files" ON storage.objects
   FOR UPDATE
   TO authenticated
-  USING (bucket_id = 'public-files' AND owner = auth.uid());
+  USING (bucket_id = 'public-files' AND owner::uuid = auth.uid());
 
 -- Allow users to delete their own files
 CREATE POLICY "Users can delete own files" ON storage.objects
   FOR DELETE
   TO authenticated
-  USING (bucket_id = 'public-files' AND auth.uid()::text = owner);
-
-COMMENT ON POLICY "Public Access" ON storage.objects IS 'Allow public read access to all files in public-files bucket';
-COMMENT ON POLICY "Authenticated users can upload" ON storage.objects IS 'Allow authenticated users to upload files to public-files bucket';
+  USING (bucket_id = 'public-files' AND owner::uuid = auth.uid());

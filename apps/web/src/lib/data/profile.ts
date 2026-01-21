@@ -32,6 +32,7 @@ export interface UserProfile {
  * Get User Profile
  *
  * Fetches authenticated user's profile with wallets and stats
+ * WALLET ISOLATION: Only returns data for the current connected wallet
  */
 export async function getUserProfile(): Promise<UserProfile | null> {
   try {
@@ -45,7 +46,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 
     const supabase = createClient();
 
-    // Fetch profile
+    // Fetch profile (shared across all wallets for same user)
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
@@ -58,11 +59,17 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       return null;
     }
 
-    // Fetch wallets
-    const wallets = await getUserWallets();
+    // WALLET ISOLATION: Only fetch current wallet
+    const { data: currentWallet } = await supabase
+      .from('wallets')
+      .select('*')
+      .eq('id', session.walletId)
+      .single();
 
-    // Calculate stats from transactions and allocations
-    const stats = await getUserStats(session.userId);
+    const wallets = currentWallet ? [currentWallet] : [];
+
+    // WALLET ISOLATION: Calculate stats based on current wallet only
+    const stats = await getUserStats(session.userId, session.walletId);
 
     // Map to frontend format
     return {
@@ -78,7 +85,14 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       total_claimed: stats.totalClaimed,
       follower_count: profile.follower_count || 0,
       following_count: profile.following_count || 0,
-      wallets,
+      wallets: wallets.map((w) => ({
+        id: w.id,
+        address: w.address,
+        network: mapChainToNetwork(w.chain),
+        is_primary: w.is_primary,
+        label: undefined,
+        created_at: w.created_at,
+      })),
     };
   } catch (err) {
     console.error('Unexpected error in getUserProfile:', err);
@@ -354,20 +368,41 @@ function mapNetworkToChain(network: 'SOL' | 'EVM'): string {
   return 'EVM_56'; // Default to BSC, could be made configurable
 }
 
-async function getUserStats(userId: string): Promise<{
+async function getUserStats(
+  userId: string,
+  walletId?: string
+): Promise<{
   totalContributions: number;
   totalClaimed: number;
 }> {
   const supabase = createClient();
 
   try {
+    // WALLET ISOLATION: Get current wallet address if walletId provided
+    let walletAddress: string | undefined;
+    if (walletId) {
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('address')
+        .eq('id', walletId)
+        .single();
+      walletAddress = wallet?.address;
+    }
+
     // Get total contributions from transactions
-    const { data: transactions } = await supabase
+    // WALLET ISOLATION: Filter by wallet_address if provided
+    const transactionsQuery = supabase
       .from('transactions')
       .select('metadata')
       .eq('user_id', userId)
       .eq('type', 'CONTRIBUTE')
       .eq('status', 'CONFIRMED');
+
+    if (walletAddress) {
+      transactionsQuery.eq('wallet_address', walletAddress);
+    }
+
+    const { data: transactions } = await transactionsQuery;
 
     const totalContributions = (transactions || []).reduce((sum, tx) => {
       const amount = tx.metadata?.amount || 0;
@@ -375,11 +410,18 @@ async function getUserStats(userId: string): Promise<{
     }, 0);
 
     // Get total claimed from vesting_claims
-    const { data: claims } = await supabase
+    // WALLET ISOLATION: Filter by wallet_address if provided
+    const claimsQuery = supabase
       .from('vesting_claims')
       .select('claim_amount')
       .eq('user_id', userId)
       .eq('status', 'CONFIRMED');
+
+    if (walletAddress) {
+      claimsQuery.eq('wallet_address', walletAddress);
+    }
+
+    const { data: claims } = await claimsQuery;
 
     const totalClaimed = (claims || []).reduce((sum, claim) => {
       return sum + parseFloat(claim.claim_amount || '0');

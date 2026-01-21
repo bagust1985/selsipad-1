@@ -5,7 +5,7 @@ import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl } from '@solana/web3.js';
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, useEffect, type ReactNode } from 'react';
 
 // Import wallet adapter CSS
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -24,13 +24,40 @@ interface SolanaWalletProviderProps {
  * Wrap your app with this provider in the root layout
  */
 export function SolanaWalletProvider({ children }: SolanaWalletProviderProps) {
-  // Determine network from environment or default to Devnet
-  const network =
-    (process.env.NEXT_PUBLIC_SOLANA_NETWORK as WalletAdapterNetwork) || WalletAdapterNetwork.Devnet;
+  // Get network from localStorage (set by NetworkSelector)
+  const [network, setNetwork] = useState<WalletAdapterNetwork>(WalletAdapterNetwork.Mainnet);
 
-  // Get RPC endpoint
+  useEffect(() => {
+    // Read selected network from localStorage
+    const savedNetwork = localStorage.getItem('selectedNetwork');
+
+    if (savedNetwork === 'devnet') {
+      setNetwork(WalletAdapterNetwork.Devnet);
+    } else if (savedNetwork === 'mainnet-beta') {
+      setNetwork(WalletAdapterNetwork.Mainnet);
+    } else {
+      // Default to mainnet if EVM network is selected or no selection
+      setNetwork(WalletAdapterNetwork.Mainnet);
+    }
+
+    // Listen for storage changes (network selector updates)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'selectedNetwork') {
+        if (e.newValue === 'devnet') {
+          setNetwork(WalletAdapterNetwork.Devnet);
+        } else if (e.newValue === 'mainnet-beta') {
+          setNetwork(WalletAdapterNetwork.Mainnet);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Get RPC endpoint based on selected network
   const endpoint = useMemo(() => {
-    // Use custom RPC if provided, otherwise use public cluster
+    // Use custom RPC if provided
     if (process.env.NEXT_PUBLIC_SOLANA_RPC_URL) {
       return process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
     }

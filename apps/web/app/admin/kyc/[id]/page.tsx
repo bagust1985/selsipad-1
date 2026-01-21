@@ -7,20 +7,44 @@ async function getSubmission(id: string) {
 
   const { data: submission, error } = await supabase
     .from('kyc_submissions')
-    .select(
-      `
-      *,
-      profiles(wallet_address, username)
-    `
-    )
+    .select('*')
     .eq('id', id)
     .single();
 
   if (error || !submission) {
+    console.error('KYC submission not found:', error);
     return null;
   }
 
-  return submission;
+  // Fetch wallet for this user
+  const { data: wallet } = await supabase
+    .from('wallets')
+    .select('address, chain')
+    .eq('user_id', submission.user_id)
+    .eq('is_primary', true)
+    .single();
+
+  // If no primary wallet, get any wallet
+  if (!wallet) {
+    const { data: anyWallet } = await supabase
+      .from('wallets')
+      .select('address, chain')
+      .eq('user_id', submission.user_id)
+      .limit(1)
+      .single();
+
+    return {
+      ...submission,
+      wallet_address: anyWallet?.address || 'N/A',
+      chain: anyWallet?.chain || 'N/A',
+    };
+  }
+
+  return {
+    ...submission,
+    wallet_address: wallet.address,
+    chain: wallet.chain,
+  };
 }
 
 export default async function KYCReviewDetailPage({ params }: { params: { id: string } }) {

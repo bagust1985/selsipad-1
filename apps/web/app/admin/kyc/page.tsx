@@ -5,22 +5,56 @@ import Link from 'next/link';
 async function getKYCSubmissions() {
   const supabase = createClient();
 
+  // Fetch KYC submissions
   const { data: submissions, error } = await supabase
     .from('kyc_submissions')
-    .select(
-      `
-      *,
-      profiles(wallet_address, username)
-    `
-    )
-    .order('created_at', { ascending: true });
+    .select('*')
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Failed to fetch KYC submissions:', error);
     return [];
   }
 
-  return submissions || [];
+  if (!submissions || submissions.length === 0) {
+    return [];
+  }
+
+  // Get unique user_ids
+  const userIds = [...new Set(submissions.map((s) => s.user_id))];
+
+  // Fetch wallets for all user_ids
+  const { data: wallets } = await supabase
+    .from('wallets')
+    .select('user_id, address, chain, is_primary')
+    .in('user_id', userIds);
+
+  // Create map of user_id to primary wallet
+  const walletMap = new Map();
+  (wallets || []).forEach((wallet) => {
+    if (wallet.is_primary && !walletMap.has(wallet.user_id)) {
+      walletMap.set(wallet.user_id, wallet);
+    }
+  });
+
+  // If no primary wallet found, use any wallet
+  (wallets || []).forEach((wallet) => {
+    if (!walletMap.has(wallet.user_id)) {
+      walletMap.set(wallet.user_id, wallet);
+    }
+  });
+
+  // Transform submissions to include wallet_address
+  const transformed = submissions.map((sub) => {
+    const wallet = walletMap.get(sub.user_id);
+    return {
+      ...sub,
+      wallet_address: wallet?.address || 'N/A',
+      chain: wallet?.chain || 'N/A',
+    };
+  });
+
+  return transformed;
 }
 
 function getStatusBadge(status: string) {
@@ -109,8 +143,9 @@ export default async function KYCReviewPage() {
                   >
                     <td className="p-4">
                       <span className="font-mono text-white">
-                        {submission.wallet_address.slice(0, 6)}...
-                        {submission.wallet_address.slice(-4)}
+                        {submission.wallet_address && submission.wallet_address !== 'N/A'
+                          ? `${submission.wallet_address.slice(0, 6)}...${submission.wallet_address.slice(-4)}`
+                          : submission.wallet_address || 'N/A'}
                       </span>
                     </td>
                     <td className="p-4 text-gray-300 capitalize">{submission.document_type}</td>
@@ -160,8 +195,9 @@ export default async function KYCReviewPage() {
                   <tr key={submission.id} className="border-b border-gray-800">
                     <td className="p-4">
                       <span className="font-mono text-white">
-                        {submission.wallet_address.slice(0, 6)}...
-                        {submission.wallet_address.slice(-4)}
+                        {submission.wallet_address && submission.wallet_address !== 'N/A'
+                          ? `${submission.wallet_address.slice(0, 6)}...${submission.wallet_address.slice(-4)}`
+                          : submission.wallet_address || 'N/A'}
                       </span>
                     </td>
                     <td className="p-4 text-gray-300 capitalize">{submission.document_type}</td>

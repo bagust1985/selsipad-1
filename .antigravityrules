@@ -1,0 +1,9 @@
+# DATABASE GUIDELINES
+
+Before generating any SQL code or database migrations:
+
+1. **ALWAYS READ** `docs/DATABASE_SCHEMA.md` first to understand existing table structures, types (UUID vs INT), and naming conventions.
+2. **VERIFY via MCP** if you are unsure about the latest state of the live database.
+3. **RELATIONSHIPS:** Ensure new tables map correctly to existing `users` (auth.users) or `projects` tables using proper Foreign Keys.
+4. **NAMING:** Use snake_case for tables and columns.
+5. **RLS:** Always suggest RLS policies for new tables.

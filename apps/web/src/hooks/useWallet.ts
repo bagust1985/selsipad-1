@@ -40,10 +40,24 @@ export function useWallet() {
     }
   };
 
-  const disconnect = () => {
+  const disconnect = async () => {
+    // Client-side cleanup
     setAddress(null);
     setIsConnected(false);
     localStorage.removeItem('wallet_address');
+
+    // Server-side session cleanup (deletes from DB + clears cookies)
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      if (response.ok) {
+        // Redirect handled by server
+        window.location.href = '/';
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if server fails, force redirect
+      window.location.href = '/';
+    }
   };
 
   return {

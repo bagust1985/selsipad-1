@@ -105,13 +105,49 @@ export function KYCReviewClient({ submission }: KYCReviewClientProps) {
         {/* Document Preview */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           <h2 className="text-xl font-semibold text-white mb-4">Documents</h2>
-          <div className="bg-gray-800 rounded-lg p-4 text-center">
-            <FileText className="w-12 h-12 text-gray-600 mx-auto mb-2" />
-            <p className="text-gray-500 text-sm">Document preview not available</p>
-            <p className="text-gray-600 text-xs mt-1">
-              Check Supabase Storage for submission documents
-            </p>
-          </div>
+
+          {submission.documents_url ? (
+            <div className="space-y-4">
+              {/* Document URL */}
+              <div className="bg-gray-800 rounded-lg p-4">
+                <p className="text-gray-400 text-sm mb-2">Document URL:</p>
+                <p className="text-white font-mono text-xs break-all mb-3">
+                  {submission.documents_url}
+                </p>
+
+                {/* View/Download Button */}
+                <a
+                  href={submission.documents_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
+                >
+                  <FileText className="w-4 h-4" />
+                  View Document
+                </a>
+              </div>
+
+              {/* Image Preview (if it's an image) */}
+              {submission.documents_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) && (
+                <div className="bg-gray-800 rounded-lg p-4">
+                  <p className="text-gray-400 text-sm mb-2">Document Preview:</p>
+                  <img
+                    src={submission.documents_url}
+                    alt="KYC Document"
+                    className="w-full rounded-lg border border-gray-700"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-gray-800 rounded-lg p-4 text-center">
+              <FileText className="w-12 h-12 text-gray-600 mx-auto mb-2" />
+              <p className="text-gray-500 text-sm">No documents uploaded</p>
+            </div>
+          )}
         </div>
       </div>
 

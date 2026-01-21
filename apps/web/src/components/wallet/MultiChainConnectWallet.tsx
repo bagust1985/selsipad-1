@@ -11,11 +11,13 @@ import {
   verifyAndCreateSession,
 } from '@/lib/wallet/signMessage';
 import { useRouter } from 'next/navigation';
+import { NetworkSelector, useSelectedNetwork } from './NetworkSelector';
 
 /**
  * Multi-Chain Connect Wallet Button with Auto Sign-In
  *
  * Automatically triggers sign-in flow after wallet connection
+ * Includes network selector for choosing blockchain network
  */
 export function MultiChainConnectWallet() {
   const [mounted, setMounted] = useState(false);
@@ -30,6 +32,9 @@ export function MultiChainConnectWallet() {
   const { open } = useWeb3Modal();
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
+
+  // Network selector
+  const selectedNetwork = useSelectedNetwork();
 
   const router = useRouter();
 
@@ -158,7 +163,10 @@ export function MultiChainConnectWallet() {
   return (
     <div className="flex flex-col items-end gap-2">
       <div className="flex items-center gap-2">
-        {/* Solana Wallet Button */}
+        {/* Network Selector - determines active network for each chain */}
+        <NetworkSelector compact />
+
+        {/* Solana Wallet Button - Always visible */}
         <WalletMultiButton
           style={{
             backgroundColor: 'hsl(var(--primary-main))',
@@ -173,7 +181,7 @@ export function MultiChainConnectWallet() {
           disabled={isAuthenticating}
         />
 
-        {/* EVM Wallet Button - Web3Modal */}
+        {/* EVM Wallet Button - Always visible */}
         <button
           onClick={() => open()}
           style={{
@@ -188,9 +196,14 @@ export function MultiChainConnectWallet() {
           }}
           disabled={isAuthenticating}
         >
-          {isConnected && address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'EVM'}
+          {isConnected && address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connect EVM'}
         </button>
       </div>
+
+      {/* Network Info - Show selected network */}
+      <p className="text-xs text-text-secondary">
+        Network: {selectedNetwork.icon} {selectedNetwork.name}
+      </p>
 
       {/* Status Messages */}
       {isAuthenticating && (

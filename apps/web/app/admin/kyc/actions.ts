@@ -26,17 +26,17 @@ export async function approveKYC(submissionId: string): Promise<ActionResult> {
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')
-      .eq('wallet_address', session.address)
+      .eq('user_id', session.userId)
       .single();
 
     if (!profile?.is_admin) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Get submission to find wallet
+    // Get submission
     const { data: submission, error: fetchError } = await supabase
       .from('kyc_submissions')
-      .select('wallet_address, status')
+      .select('user_id, status')
       .eq('id', submissionId)
       .single();
 
@@ -53,7 +53,7 @@ export async function approveKYC(submissionId: string): Promise<ActionResult> {
       .from('kyc_submissions')
       .update({
         status: 'APPROVED',
-        reviewed_by: session.address,
+        reviewed_by: session.userId, // Use userId instead of address
         reviewed_at: new Date().toISOString(),
       })
       .eq('id', submissionId);
@@ -66,14 +66,14 @@ export async function approveKYC(submissionId: string): Promise<ActionResult> {
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ kyc_verified: true })
-      .eq('wallet_address', submission.wallet_address);
+      .eq('user_id', submission.user_id);
 
     if (profileError) {
       console.error('Failed to update profile:', profileError);
     }
 
     // TODO: Log admin action to audit log
-    // await logAdminAction('KYC_APPROVE', session.address, { submissionId });
+    // await logAdminAction('KYC_APPROVE', session.userId, { submissionId });
 
     revalidatePath('/admin/kyc');
     return { success: true };
@@ -103,7 +103,7 @@ export async function rejectKYC(submissionId: string, reason: string): Promise<A
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')
-      .eq('wallet_address', session.address)
+      .eq('user_id', session.userId)
       .single();
 
     if (!profile?.is_admin) {
@@ -116,7 +116,7 @@ export async function rejectKYC(submissionId: string, reason: string): Promise<A
       .update({
         status: 'REJECTED',
         rejection_reason: reason.trim(),
-        reviewed_by: session.address,
+        reviewed_by: session.userId, // Use userId instead of address
         reviewed_at: new Date().toISOString(),
       })
       .eq('id', submissionId)
@@ -127,7 +127,7 @@ export async function rejectKYC(submissionId: string, reason: string): Promise<A
     }
 
     // TODO: Log admin action to audit log
-    // await logAdminAction('KYC_REJECT', session.address, { submissionId, reason });
+    // await logAdminAction('KYC_REJECT', session.userId, { submissionId, reason });
 
     revalidatePath('/admin/kyc');
     return { success: true };

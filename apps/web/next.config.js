@@ -21,6 +21,17 @@ const nextConfig = {
     ];
   },
 
+  // Allow images from Supabase storage
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'tkmlclijfinaqtphojkb.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
+
   webpack: (config, { webpack }) => {
     // Path to our empty stub module
     const emptyStubPath = path.resolve(__dirname, 'src/lib/stubs/empty-wallet-sdk.js');

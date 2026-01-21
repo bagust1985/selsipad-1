@@ -131,8 +131,20 @@ export function ProfileClientContent({ initialProfile }: ProfileClientContentPro
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-bg-elevated rounded-full flex items-center justify-center">
-                      {profile.kyc_status === 'verified' ? '✓' : '📋'}
+                    <div className="w-12 h-12 flex items-center justify-center">
+                      {profile.kyc_status === 'verified' ? (
+                        <Image
+                          src="/developer-kyc-badge.png"
+                          alt="Developer KYC"
+                          width={48}
+                          height={48}
+                          className="object-contain"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-bg-elevated rounded-full flex items-center justify-center text-text-tertiary">
+                          ○
+                        </div>
+                      )}
                     </div>
                     <div>
                       <h4 className="text-heading-sm">Developer KYC</h4>

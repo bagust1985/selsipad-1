@@ -99,20 +99,24 @@ export async function getServerSession(): Promise<Session | null> {
     return null;
   }
 
-  // Update last_used_at timestamp (fire and forget)
-  supabase
-    .from('auth_sessions')
-    .update({ last_used_at: new Date().toISOString() })
-    .eq('session_token', sessionToken)
-    .then(() => {});
+  // Check if session is expired
+  if (new Date(session.expires_at) < new Date()) {
+    console.log('[getServerSession] Session expired');
+    return null;
+  }
 
-  console.log('[Session] User authenticated:', wallet.user_id, 'wallet:', wallet.id);
+  console.log('[getServerSession] Valid session found!', {
+    userId: session.wallets.user_id,
+    address: session.wallet_address,
+    walletId: session.wallet_id,
+  });
 
   return {
-    userId: wallet.user_id,
-    address: wallet.address,
-    chain: wallet.chain,
-    walletId: wallet.id,
+    userId: session.wallets.user_id,
+    address: session.wallets.address,
+    chain: session.wallets.chain,
+    walletId: session.wallet_id,
+    profile: session.wallets.profiles,
   };
 }
 

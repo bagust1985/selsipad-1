@@ -2,6 +2,7 @@
 // Replaces stub data with Supabase queries
 
 import { createClient } from '@/lib/supabase/client';
+import { getServerSession } from '@/lib/auth/session';
 
 export interface Wallet {
   id: string;
@@ -37,7 +38,7 @@ export interface UserProfile {
 export async function getUserProfile(): Promise<UserProfile | null> {
   try {
     const { getSession } = await import('@/lib/auth/session');
-    const session = await getSession();
+    const session = await getServerSession();
 
     if (!session) {
       console.warn('User not authenticated');
@@ -125,7 +126,7 @@ function mapKYCStatus(
 export async function getUserWallets(): Promise<Wallet[]> {
   try {
     const { getSession } = await import('@/lib/auth/session');
-    const session = await getSession();
+    const session = await getServerSession();
 
     if (!session) {
       console.warn('User not authenticated');

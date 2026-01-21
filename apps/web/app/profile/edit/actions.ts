@@ -36,7 +36,8 @@ function validateNickname(nickname: string): { valid: boolean; error?: string } 
  * Upload avatar to Supabase Storage
  */
 async function uploadAvatar(userId: string, file: File): Promise<string> {
-  const supabase = createClient();
+  // Use admin client to bypass RLS for storage
+  const supabaseAdmin = createClient();
 
   // Validate file type
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -55,11 +56,13 @@ async function uploadAvatar(userId: string, file: File): Promise<string> {
   const ext = file.name.split('.').pop();
   const filename = `${userId}/${timestamp}.${ext}`;
 
-  // Upload to storage
-  const { error: uploadError } = await supabase.storage.from('avatars').upload(filename, file, {
-    contentType: file.type,
-    upsert: false,
-  });
+  // Upload to storage using service role
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from('avatars')
+    .upload(filename, file, {
+      contentType: file.type,
+      upsert: false,
+    });
 
   if (uploadError) {
     console.error('Upload error:', uploadError);
@@ -69,7 +72,7 @@ async function uploadAvatar(userId: string, file: File): Promise<string> {
   // Get public URL
   const {
     data: { publicUrl },
-  } = supabase.storage.from('avatars').getPublicUrl(filename);
+  } = supabaseAdmin.storage.from('avatars').getPublicUrl(filename);
 
   return publicUrl;
 }

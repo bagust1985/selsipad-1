@@ -34,7 +34,7 @@ const BLUECHECK_ABI = [
 // TODO: Replace with actual deployed contract address
 const BLUECHECK_CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000' as `0x${string}`;
 
-interface UseBl ueCheckPurchaseReturn {
+interface UseBlueCheckPurchaseReturn {
   requiredBNB: string;
   requiredBNBRaw: bigint;
   hasPurchased: boolean;

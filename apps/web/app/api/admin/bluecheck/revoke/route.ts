@@ -1,39 +1,96 @@
 /**
- * Admin: Revoke/Restore Blue Check
+ * Admin API: Revoke Blue Check
+ *
+ * Allows admins/moderators to revoke Blue Check from users
+ * Status changes to 'REVOKED' (can be restored later)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { validateRevokeBlueCheck } from '@selsipad/shared';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const supabase = await createClient();
+
+    // Check authentication
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser();
-    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const body = await request.json();
-    const validation = validateRevokeBlueCheck(body);
-    if (!validation.valid) {
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin or moderator
+    const { data: adminProfile } = await supabase
+      .from('profiles')
+      .select('is_admin, is_moderator')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!adminProfile?.is_admin && !adminProfile?.is_moderator) {
       return NextResponse.json(
-        { error: 'Validation failed', details: validation.errors },
+        { error: 'Forbidden: Admin or Moderator access required' },
+        { status: 403 }
+      );
+    }
+
+    // Parse request body
+    const { target_user_id, reason } = await request.json();
+
+    if (!target_user_id || !reason) {
+      return NextResponse.json(
+        { error: 'Missing required fields: target_user_id, reason' },
         { status: 400 }
       );
     }
 
-    // TODO: Check admin role (FASE 2)
-
-    await supabase
+    // Get target user info
+    const { data: targetProfile } = await supabase
       .from('profiles')
-      .update({ bluecheck_status: 'REVOKED' })
-      .eq('user_id', body.user_id);
+      .select('user_id, bluecheck_status, username')
+      .eq('user_id', target_user_id)
+      .single();
 
-    // TODO: Audit log
-    return NextResponse.json({ success: true, message: 'Blue Check revoked' });
+    if (!targetProfile) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (targetProfile.bluecheck_status !== 'ACTIVE') {
+      return NextResponse.json({ error: 'User does not have active Blue Check' }, { status: 400 });
+    }
+
+    // Revoke Blue Check
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        bluecheck_status: 'REVOKED',
+      })
+      .eq('user_id', target_user_id);
+
+    if (updateError) {
+      console.error('Error revoking Blue Check:', updateError);
+      return NextResponse.json({ error: 'Failed to revoke Blue Check' }, { status: 500 });
+    }
+
+    // Create audit log entry
+    await supabase.from('bluecheck_audit_log').insert({
+      action_type: 'REVOKE',
+      target_user_id: target_user_id,
+      admin_user_id: user.id,
+      reason: reason,
+      metadata: {
+        username: targetProfile.username,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Blue Check revoked from ${targetProfile.username}`,
+      target_user_id,
+    });
   } catch (error) {
+    console.error('Error in revoke Blue Check endpoint:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

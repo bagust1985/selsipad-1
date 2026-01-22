@@ -1,15 +1,29 @@
 -- Migration: Blue Check Lifetime Access
 -- Description: Update Blue Check to lifetime access, add audit logging, and prepare for smart contract integration
 
--- Add new columns for lifetime tracking
-ALTER TABLE profiles 
-  ADD COLUMN IF NOT EXISTS bluecheck_purchased_at timestamptz,
-  ADD COLUMN IF NOT EXISTS bluecheck_tx_hash text,
-  ADD COLUMN IF NOT EXISTS bluecheck_grant_type text DEFAULT 'PURCHASE'; -- 'PURCHASE' or 'MANUAL_GRANT'
+-- Add new columns for lifetime tracking (if they don't exist)
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='bluecheck_purchased_at') THEN
+    ALTER TABLE profiles ADD COLUMN bluecheck_purchased_at timestamptz;
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='bluecheck_tx_hash') THEN
+    ALTER TABLE profiles ADD COLUMN bluecheck_tx_hash text;
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='bluecheck_grant_type') THEN
+    ALTER TABLE profiles ADD COLUMN bluecheck_grant_type text DEFAULT 'PURCHASE';
+  END IF;
+END $$;
 
--- Make expiry nullable (keep for historical data)
-ALTER TABLE profiles 
-  ALTER COLUMN bluecheck_expires_at DROP NOT NULL;
+-- Make expiry nullable only if column exists (keep for historical data)
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='bluecheck_expires_at') THEN
+    ALTER TABLE profiles ALTER COLUMN bluecheck_expires_at DROP NOT NULL;
+  END IF;
+END $$;
 
 -- Create fee events tracking table
 CREATE TABLE IF NOT EXISTS fee_events (

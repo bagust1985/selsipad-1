@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { getServerSession } from '@/lib/auth/session';
 
 /**
  * Get current session info
  */
 export async function GET() {
-  const { getSession } = await import('@/lib/auth/session');
-
-  const session = await getSession();
+  const session = await getServerSession();
 
   if (!session) {
     return NextResponse.json({ authenticated: false });

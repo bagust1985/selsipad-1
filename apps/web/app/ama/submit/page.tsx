@@ -1,11 +1,11 @@
+import { getServerSession } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { AMASubmitForm } from '@/components/ama/AMASubmitForm';
 import { PageHeader, PageContainer } from '@/components/layout';
 import { redirect } from 'next/navigation';
 
 export default async function AMASubmitPage() {
-  const { getSession } = await import('@/lib/auth/session');
-  const session = await getSession();
+  const session = await getServerSession();
 
   if (!session) {
     redirect('/');

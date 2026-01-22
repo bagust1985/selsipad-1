@@ -2,6 +2,7 @@
 // Replaces stub data with Supabase queries
 
 import { createClient } from '@/lib/supabase/client';
+import { getServerSession } from '@/lib/auth/session';
 
 export interface Wallet {
   id: string;
@@ -36,8 +37,7 @@ export interface UserProfile {
  */
 export async function getUserProfile(): Promise<UserProfile | null> {
   try {
-    const { getSession } = await import('@/lib/auth/session');
-    const session = await getSession();
+    const session = await getServerSession();
 
     if (!session) {
       console.warn('User not authenticated');
@@ -74,7 +74,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
     // Map to frontend format
     return {
       id: profile.user_id, // Use user_id for ownership checks (matches post.author.id)
-      username: profile.username,
+      username: profile.username || profile.nickname, // Try username first, fallback to nickname
       avatar_url: profile.avatar_url,
       bio: profile.bio,
       bluecheck_status: mapBlueCheckStatus(profile.bluecheck_status),
@@ -124,8 +124,7 @@ function mapKYCStatus(
  */
 export async function getUserWallets(): Promise<Wallet[]> {
   try {
-    const { getSession } = await import('@/lib/auth/session');
-    const session = await getSession();
+    const session = await getServerSession();
 
     if (!session) {
       console.warn('User not authenticated');

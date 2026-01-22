@@ -2,6 +2,10 @@ import { getFeedPosts } from '@/lib/data/feed';
 import { getUserProfile } from '@/lib/data/profile';
 import FeedClientContent from './FeedClientContent';
 
+// Force dynamic rendering to always fetch fresh data
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * Feed Page (Server Component)
  *

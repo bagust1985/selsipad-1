@@ -1,10 +1,10 @@
+import { getServerSession } from '@/lib/auth/session';
 import { getMyAMAs } from '@/app/ama/actions';
 import { PageHeader, PageContainer } from '@/components/layout';
 import { redirect } from 'next/navigation';
 
 export default async function MyAMAsPage() {
-  const { getSession } = await import('@/lib/auth/session');
-  const session = await getSession();
+  const session = await getServerSession();
 
   if (!session) {
     redirect('/');

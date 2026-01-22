@@ -133,7 +133,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 p-4 hover:bg-gray-50/50 transition-colors cursor-pointer">
+    <div className="bg-transparent border-b border-border-subtle p-4 hover:bg-bg-elevated/50 transition-colors cursor-pointer">
       <div className="flex gap-3">
         {/* Avatar */}
         <div className="flex-shrink-0">
@@ -155,7 +155,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
           {/* Header */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-1 flex-wrap">
-              <span className="font-bold text-gray-900 hover:underline">
+              <span className="font-bold text-text-primary hover:underline">
                 {post.author.username}
               </span>
               {post.author.bluecheck && (
@@ -164,10 +164,10 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
                 </span>
               )}
               <UserBadges userId={post.author.id} compact maxDisplay={3} />
-              <span className="text-gray-500">·</span>
-              <span className="text-gray-500 text-sm">{getTimeAgo()}</span>
+              <span className="text-text-secondary">·</span>
+              <span className="text-text-secondary text-sm">{getTimeAgo()}</span>
               {post.edit_count && post.edit_count > 0 && (
-                <span className="text-gray-500 text-xs">(edited)</span>
+                <span className="text-text-secondary text-xs">(edited)</span>
               )}
             </div>
             <PostMenu
@@ -184,7 +184,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
               <textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-bg-elevated border border-border-subtle text-text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-main"
                 rows={3}
               />
               <div className="flex gap-2">
@@ -207,7 +207,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
               </div>
             </div>
           ) : (
-            <p className="mt-1 text-gray-900 text-[15px] leading-normal whitespace-pre-wrap break-words">
+            <p className="mt-1 text-text-primary text-[15px] leading-normal whitespace-pre-wrap break-words">
               {post.content}
             </p>
           )}
@@ -217,9 +217,9 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
             {/* Comments */}
             <button
               onClick={() => setCommentModalOpen(true)}
-              className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors group"
+              className="flex items-center gap-2 text-text-secondary hover:text-primary-main transition-colors group"
             >
-              <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
+              <div className="p-2 rounded-full group-hover:bg-primary-main/10 transition-colors">
                 <MessageCircle className="w-[18px] h-[18px]" />
               </div>
               <span className="text-sm">{post.replies > 0 ? formatCount(post.replies) : ''}</span>
@@ -230,7 +230,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
               onClick={handleRepost}
               disabled={reposting}
               className={`flex items-center gap-2 transition-colors group ${
-                reposted ? 'text-green-500' : 'text-gray-500 hover:text-green-500'
+                reposted ? 'text-green-500' : 'text-text-secondary hover:text-green-500'
               }`}
             >
               <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors">
@@ -243,8 +243,8 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
             <LikeButton postId={post.id} initialLiked={post.is_liked} initialCount={post.likes} />
 
             {/* Views */}
-            <button className="flex items-center gap-2 text-gray-500 hover:text-blue-500 transition-colors group">
-              <div className="p-2 rounded-full group-hover:bg-blue-500/10 transition-colors">
+            <button className="flex items-center gap-2 text-text-secondary hover:text-primary-main transition-colors group">
+              <div className="p-2 rounded-full group-hover:bg-primary-main/10 transition-colors">
                 <BarChart3 className="w-[18px] h-[18px]" />
               </div>
               <span className="text-sm">
@@ -253,7 +253,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
             </button>
 
             {/* Share */}
-            <button className="p-2 text-gray-500 hover:text-blue-500 rounded-full hover:bg-blue-500/10 transition-colors">
+            <button className="p-2 text-text-secondary hover:text-primary-main rounded-full hover:bg-primary-main/10 transition-colors">
               <Share2 className="w-[18px] h-[18px]" />
             </button>
           </div>

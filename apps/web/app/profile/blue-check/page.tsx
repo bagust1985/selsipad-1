@@ -1,7 +1,7 @@
 import { Card, CardContent, StatusBadge, Banner } from '@/components/ui';
 import { PageHeader, PageContainer } from '@/components/layout';
 import { getUserProfile } from '@/lib/data/profile';
-import { formatDistance } from 'date-fns';
+import { BlueCheckCheckout } from '@/components/bluecheck/BlueCheckCheckout';
 
 export default async function BlueCheckStatusPage() {
   const profile = await getUserProfile();
@@ -152,9 +152,7 @@ export default async function BlueCheckStatusPage() {
                   </li>
                 </ul>
 
-                <button className="w-full mt-4 px-4 py-2 bg-primary-main text-primary-text rounded-md text-body-sm font-medium hover:bg-primary-hover transition-colors">
-                  Apply for Blue Check
-                </button>
+                <BlueCheckCheckout />
               </CardContent>
             </Card>
           </>

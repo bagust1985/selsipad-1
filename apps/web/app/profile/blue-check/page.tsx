@@ -54,13 +54,8 @@ export default async function BlueCheckStatusPage() {
               />
             </div>
 
-            {isActive && profile.bluecheck_expires_at && (
-              <p className="text-body-sm text-text-secondary">
-                Expires{' '}
-                {formatDistance(new Date(profile.bluecheck_expires_at), new Date(), {
-                  addSuffix: true,
-                })}
-              </p>
+            {isActive && (
+              <p className="text-body-sm text-success-main font-medium">✓ Lifetime Access</p>
             )}
           </CardContent>
         </Card>
@@ -89,21 +84,6 @@ export default async function BlueCheckStatusPage() {
                     <span>Blue check badge on your profile</span>
                   </li>
                 </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="space-y-2">
-                <h3 className="text-heading-md">Renewal</h3>
-                <p className="text-body-sm text-text-secondary">
-                  Your Blue Check will expire on{' '}
-                  {profile.bluecheck_expires_at &&
-                    new Date(profile.bluecheck_expires_at).toLocaleDateString()}
-                  . You'll receive a notification 30 days before expiry.
-                </p>
-                <button className="mt-2 px-4 py-2 bg-primary-main text-primary-text rounded-md text-body-sm font-medium hover:bg-primary-hover transition-colors">
-                  Renew Now
-                </button>
               </CardContent>
             </Card>
           </>
@@ -166,7 +146,9 @@ export default async function BlueCheckStatusPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span>•</span>
-                    <span>Payment: 0.5 SOL (one-time fee for 1 year)</span>
+                    <span className="font-semibold text-primary-main">
+                      Payment: $10 USD (one-time fee for lifetime access)
+                    </span>
                   </li>
                 </ul>
 

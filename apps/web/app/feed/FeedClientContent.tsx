@@ -41,14 +41,14 @@ export default function FeedClientContent({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg-page">
       <PageHeader title="Feed" />
 
       {/* Feed Container */}
-      <div className="max-w-2xl mx-auto border-x border-gray-200 bg-white min-h-screen">
+      <div className="max-w-2xl mx-auto border-x border-border-subtle bg-bg-page min-h-screen">
         {/* Info Banner for non-eligible users */}
         {!userEligible && (
-          <div className="border-b border-gray-200 p-4">
+          <div className="border-b border-border-subtle p-4">
             <Banner
               type="info"
               message="Want to post on the feed?"
@@ -63,7 +63,7 @@ export default function FeedClientContent({
 
         {/* Post Composer */}
         {userEligible && (
-          <div className="border-b-8 border-gray-100">
+          <div className="border-b-8 border-bg-page">
             <PostComposer
               userProfile={userProfile}
               isEligible={userEligible}

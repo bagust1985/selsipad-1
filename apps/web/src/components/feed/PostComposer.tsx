@@ -301,7 +301,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
   const canPost = (content.trim() || images.length > 0) && !isOverLimit && isEligible;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+    <div className="bg-bg-elevated rounded-xl shadow-sm border border-border-subtle p-4">
       <div className="flex gap-3">
         {/* Avatar */}
         <div className="flex-shrink-0">
@@ -326,7 +326,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
             value={content}
             onChange={(e) => setContent(e.target.value)}
             disabled={!isEligible}
-            className="w-full min-h-[80px] text-gray-900 text-lg placeholder:text-gray-500 focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full min-h-[80px] bg-transparent text-text-primary text-lg placeholder:text-text-secondary focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
             maxLength={maxLength + 50}
           />
 
@@ -338,7 +338,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
                   <img
                     src={url}
                     alt={`Upload ${index + 1}`}
-                    className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                    className="w-full h-32 object-cover rounded-lg border border-border-subtle"
                   />
                   <button
                     onClick={() => handleRemoveImage(index)}
@@ -352,7 +352,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
           )}
 
           {/* Toolbar */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+          <div className="flex items-center justify-between pt-2 border-t border-border-subtle">
             {/* Media Icons */}
             <div className="flex items-center gap-1">
               <input
@@ -367,7 +367,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!isEligible || uploading}
-                className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 text-primary-main hover:bg-primary-main/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Add image"
               >
                 <Image className="w-5 h-5" />
@@ -377,7 +377,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
                   type="button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   disabled={!isEligible}
-                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 text-primary-main hover:bg-primary-main/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Add emoji"
                 >
                   <Smile className="w-5 h-5" />
@@ -385,14 +385,14 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
 
                 {/* Emoji Picker Dropdown */}
                 {showEmojiPicker && (
-                  <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-64 max-h-64 overflow-y-auto z-50">
+                  <div className="absolute bottom-full left-0 mb-2 bg-bg-elevated border border-border-subtle rounded-xl shadow-lg p-3 w-64 max-h-64 overflow-y-auto z-50">
                     <div className="grid grid-cols-8 gap-1">
                       {emojis.map((emoji, index) => (
                         <button
                           key={index}
                           type="button"
                           onClick={() => handleEmojiSelect(emoji)}
-                          className="p-2 hover:bg-gray-100 rounded text-xl transition-colors"
+                          className="p-2 hover:bg-bg-page rounded text-xl transition-colors"
                         >
                           {emoji}
                         </button>
@@ -408,7 +408,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
               {charCount > 0 && (
                 <span
                   className={`text-sm ${
-                    isOverLimit ? 'text-red-500 font-semibold' : 'text-gray-500'
+                    isOverLimit ? 'text-status-error-text font-semibold' : 'text-text-secondary'
                   }`}
                 >
                   {charCount}/{maxLength}
@@ -417,7 +417,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
               <button
                 onClick={handleSubmit}
                 disabled={!canPost || submitting}
-                className="px-5 py-2 bg-blue-500 text-white text-sm font-semibold rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-5 py-2 bg-primary-main text-primary-text text-sm font-semibold rounded-full hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {submitting ? 'Posting...' : 'Posting'}
               </button>

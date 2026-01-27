@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import NextImage from 'next/image';
 import {
   Card,
   CardContent,
@@ -8,424 +9,335 @@ import {
   EmptyIcon,
 } from '@/components/ui';
 import { PageContainer } from '@/components/layout';
-import { getTrendingProjects, getFeaturedProjects } from '@/lib/data/projects';
+import { getTrendingProjects } from '@/lib/data/projects';
 import { MultiChainConnectWallet } from '@/components/wallet/MultiChainConnectWallet';
+import { 
+  Globe, 
+  PlusCircle, 
+  MessageSquare, 
+  Lock, 
+  Gift, 
+  ShieldCheck, 
+  Cpu, 
+  Coins, 
+  Mic2, 
+  Timer,
+  TrendingUp as TrendingUpIcon
+} from 'lucide-react';
+
+const MENU_ITEMS = [
+  { 
+    label: 'Explore Project', 
+    description: 'All networks, live & upcoming',
+    href: '/explore', 
+    icon: Globe, 
+    image: '/assets/icons-3d/explore-globe.png',
+    color: 'text-blue-500', 
+    bg: 'bg-blue-500/10', 
+    border: 'hover:border-blue-500/50', 
+    shadow: 'hover:shadow-blue-500/20' 
+  },
+  { 
+    label: 'Create Project', 
+    description: 'Presale, Fairlaunch, Bonding',
+    href: '/create', 
+    icon: PlusCircle, 
+    image: '/assets/icons-3d/create-rocket.png',
+    color: 'text-green-500', 
+    bg: 'bg-green-500/10', 
+    border: 'hover:border-green-500/50', 
+    shadow: 'hover:shadow-green-500/20' 
+  },
+  { 
+    label: 'SelsiFeed', 
+    description: 'Social feed & updates',
+    href: '/feed', 
+    icon: MessageSquare, 
+    image: '/assets/icons-3d/feed-chat.png',
+    color: 'text-pink-500', 
+    bg: 'bg-pink-500/10', 
+    border: 'hover:border-pink-500/50', 
+    shadow: 'hover:shadow-pink-500/20' 
+  },
+  { 
+    label: 'Reward Referral', 
+    description: 'Invite & earn rewards',
+    href: '/rewards', 
+    icon: Gift, 
+    image: '/assets/icons-3d/reward-gift.png',
+    color: 'text-yellow-500', 
+    bg: 'bg-yellow-500/10', 
+    border: 'hover:border-yellow-500/50', 
+    shadow: 'hover:shadow-yellow-500/20' 
+  },
+  { 
+    label: 'Vesting', 
+    description: 'Manage token vesting',
+    href: '/vesting', 
+    icon: Timer, 
+    image: '/assets/icons-3d/vesting-timer.png',
+    color: 'text-orange-500', 
+    bg: 'bg-orange-500/10', 
+    border: 'hover:border-orange-500/50', 
+    shadow: 'hover:shadow-orange-500/20' 
+  },
+  { 
+    label: 'LP Lock', 
+    description: 'Secure liquidity locking',
+    href: '/explore?filter=locked', 
+    icon: Lock, 
+    image: '/assets/icons-3d/lock-security.png',
+    color: 'text-cyan-500', 
+    bg: 'bg-cyan-500/10', 
+    border: 'hover:border-cyan-500/50', 
+    shadow: 'hover:shadow-cyan-500/20' 
+  },
+  { 
+    label: 'SBT Staking', 
+    description: 'Stake for tier benefits',
+    href: '/staking/sbt', 
+    icon: ShieldCheck, 
+    image: '/assets/icons-3d/sbt-shield.png',
+    color: 'text-purple-500', 
+    bg: 'bg-purple-500/10', 
+    border: 'hover:border-purple-500/50', 
+    shadow: 'hover:shadow-purple-500/20' 
+  },
+  { 
+    label: 'AMA Developer', 
+    description: 'Ask developers anything',
+    href: '/ama', 
+    icon: Mic2, 
+    image: '/assets/icons-3d/ama-mic.png',
+    color: 'text-indigo-500', 
+    bg: 'bg-indigo-500/10', 
+    border: 'hover:border-indigo-500/50', 
+    shadow: 'hover:shadow-indigo-500/20' 
+  },
+  { 
+    label: 'Selsi Tech', 
+    description: 'Coming Soon',
+    href: '#', 
+    icon: Cpu, 
+    image: null,
+    color: 'text-gray-500', 
+    bg: 'bg-gray-500/10', 
+    border: 'hover:border-gray-500/50', 
+    shadow: 'hover:shadow-gray-500/20', 
+    disabled: true, 
+    badge: 'SOON' 
+  },
+  { 
+    label: 'Selsi Token Series A', 
+    description: 'Coming Soon',
+    href: '#', 
+    icon: Coins, 
+    image: null,
+    color: 'text-gray-500', 
+    bg: 'bg-gray-500/10', 
+    border: 'hover:border-gray-500/50', 
+    shadow: 'hover:shadow-gray-500/20', 
+    disabled: true, 
+    badge: 'SOON' 
+  },
+];
 
 export default async function HomePage() {
-  // Fetch data (server component)
-  const [trending, featured] = await Promise.all([getTrendingProjects(), getFeaturedProjects()]);
+  const trending = await getTrendingProjects();
+  const topTrending = trending.length > 0 ? trending[0] : null;
 
   return (
     <div className="min-h-screen bg-bg-page pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-bg-page border-b border-border-subtle safe-top">
+      <header className="sticky top-0 z-30 bg-bg-page/80 backdrop-blur-md border-b border-border-subtle safe-top">
         <PageContainer>
           <div className="flex items-center justify-between h-14">
-            <h1 className="text-heading-lg text-text-primary">SELSIPAD</h1>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              SELSIPAD
+            </h1>
 
             <div className="flex items-center gap-2">
-              {/* Profile Link */}
               <Link
                 href="/profile"
-                className="p-2 text-text-secondary hover:text-primary-main transition-colors"
+                className="hover:scale-105 transition-transform"
                 aria-label="Profile"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
+                <NextImage 
+                  src="/assets/user-avatar-3d.png" 
+                  alt="Profile" 
+                  width={40} 
+                  height={40} 
+                  className="w-10 h-10 rounded-full border border-white/10 hover:border-primary-main/50 transition-colors shadow-lg"
+                />
               </Link>
-
-              {/* Connect Wallet Button - Multi-chain Support (Solana + EVM) */}
               <MultiChainConnectWallet />
             </div>
           </div>
         </PageContainer>
       </header>
 
-      <PageContainer className="py-6 space-y-8">
+      <PageContainer className="py-8 space-y-10">
+        
         {/* Trending Section */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-heading-lg text-text-primary">🔥 Trending</h2>
-            <Link href="/explore" className="text-body-sm text-primary-main hover:underline">
-              Lihat Semua
-            </Link>
-          </div>
+        <div className="space-y-4">
+           {/* Section Header */}
+           <div className="flex items-center gap-3 px-1">
+              <div className="h-8 w-1.5 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full" />
+              <h2 className="text-2xl font-bold text-white tracking-tight">Trending Projects</h2>
+              <TrendingUpIcon className="w-6 h-6 text-indigo-400 animate-pulse" />
+           </div>
 
-          {trending.length === 0 ? (
-            <Card>
-              <CardContent>
-                <EmptyState
-                  icon={<EmptyIcon />}
-                  title="Belum ada project trending"
-                  description="Jelajahi project yang tersedia"
-                />
-              </CardContent>
-            </Card>
+           {/* Trending Card */}
+           {topTrending ? (
+            <Link href={`/project/${topTrending.id}`}>
+               <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950/50 via-gray-900/50 to-slate-950/50 backdrop-blur-xl border border-indigo-500/20 group hover:border-indigo-400/50 transition-all duration-500 hover:shadow-[0_0_50px_-10px_rgba(99,102,241,0.3)] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 transform">
+                  {/* Animated Background Mesh */}
+                  <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500 via-purple-500 to-transparent blur-3xl group-hover:opacity-30 transition-opacity duration-700" />
+                  
+                  <div className="relative p-6 md:p-10 flex flex-col md:flex-row items-center gap-8 z-10">
+                     {/* Logo / Image */}
+                     <div className="relative shrink-0">
+                        <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl flex items-center justify-center text-4xl shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-300">
+                           {topTrending.symbol.slice(0, 2)}
+                        </div>
+                        <div className="absolute -bottom-3 -right-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border border-orange-400/50 flex items-center gap-1 animate-bounce">
+                          🔥 #1 Hot
+                        </div>
+                     </div>
+
+                     {/* Content */}
+                     <div className="flex-1 text-center md:text-left space-y-3 w-full">
+                        <div className="flex items-center justify-center md:justify-start gap-4">
+                           <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-200 group-hover:to-purple-200 transition-all duration-300">
+                              {topTrending.name}
+                           </h2>
+                           <div className="hidden md:block transform group-hover:rotate-3 transition-transform">
+                              <StatusBadge status={topTrending.status} />
+                           </div>
+                        </div>
+                        
+                        <p className="text-indigo-200/70 line-clamp-2 max-w-2xl text-sm md:text-base font-medium group-hover:text-indigo-100 transition-colors">
+                          {topTrending.description}
+                        </p>
+
+                        <div className="pt-4 w-full max-w-lg">
+                           <div className="flex justify-between items-end mb-2">
+                              <span className="text-sm font-semibold text-gray-400">Total Raised</span>
+                              <span className="text-lg font-bold text-white">
+                                <span className="text-indigo-400">{topTrending.raised}</span> 
+                                <span className="text-gray-500 mx-1">/</span> 
+                                {topTrending.target} {topTrending.network}
+                              </span>
+                           </div>
+                           <div className="h-3 bg-gray-900/50 rounded-full overflow-hidden border border-white/5">
+                              <div 
+                                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 relative"
+                                style={{ width: `${(topTrending.raised / topTrending.target) * 100}%` }}
+                              >
+                                 <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </Link>
           ) : (
-            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4">
-              {trending.map((project) => (
-                <Link
-                  key={project.id}
-                  href={`/project/${project.id}`}
-                  className="flex-shrink-0 w-40"
-                >
-                  <Card hover className="h-full">
-                    <CardContent className="space-y-2">
-                      <div className="w-12 h-12 bg-bg-elevated rounded-lg flex items-center justify-center text-2xl">
-                        {project.symbol.slice(0, 2)}
-                      </div>
-                      <div>
-                        <h3 className="text-heading-sm truncate">{project.name}</h3>
-                        <StatusBadge status={project.status} />
-                      </div>
-                      <div className="text-caption text-text-secondary">
-                        {project.raised}/{project.target} {project.network}
-                      </div>
-                      <ProgressBar
-                        value={project.raised}
-                        max={project.target}
-                        showPercentage={false}
-                        size="sm"
-                      />
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+            <div className="relative overflow-hidden rounded-3xl bg-gray-900/20 backdrop-blur-xl border border-white/5 p-12 text-center group hover:border-white/10 transition-colors">
+               <div className="absolute inset-0 bg-gradient-to-r from-gray-900/50 to-transparent" />
+               <div className="relative z-10 flex flex-col items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                     <TrendingUpIcon className="w-8 h-8 text-gray-600 group-hover:text-gray-400 transition-colors" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-400 group-hover:text-gray-200 transition-colors">No Trending Projects</h3>
+                  <p className="text-gray-600 group-hover:text-gray-500 transition-colors">Be the first to create a hype!</p>
+               </div>
             </div>
           )}
-        </section>
+        </div>
 
-        {/* Featured Section */}
-        <section>
-          <h2 className="text-heading-lg text-text-primary mb-4">Featured Projects</h2>
+        {/* Explore Section */}
+        <div className="space-y-4">
+           {/* Section Header */}
+           <div className="flex items-center gap-3 px-1">
+              <div className="h-8 w-1.5 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full" />
+              <h2 className="text-2xl font-bold text-white tracking-tight">Explore SelsiPad</h2>
+           </div>
 
-          <div className="space-y-4">
-            {featured.map((project) => (
-              <Link key={project.id} href={`/project/${project.id}`}>
-                <Card hover>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 bg-bg-elevated rounded-lg flex items-center justify-center text-2xl flex-shrink-0">
-                        {project.symbol.slice(0, 2)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-heading-md">{project.name}</h3>
-                          <StatusBadge status={project.status} />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {MENU_ITEMS.map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <Link 
+                    key={idx} 
+                    href={item.disabled ? '#' : item.href}
+                    className={`relative group ${item.disabled ? 'cursor-not-allowed opacity-60' : 'active:scale-[0.96] transition-transform duration-200'}`}
+                  >
+                    <div className={`
+                      relative h-full overflow-hidden rounded-3xl border border-white/5 bg-gray-900/40 backdrop-blur-xl 
+                      transition-all duration-500 ease-out
+                      ${!item.disabled ? `group-hover:-translate-y-2 ${item.border} ${item.shadow} group-hover:shadow-2xl` : ''}
+                    `}>
+                      
+                      {/* Internal Glow Gradient */}
+                      <div className={`
+                        absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500
+                        bg-gradient-to-br from-white/5 to-transparent pointer-events-none
+                      `} />
+
+                      {/* Large Background 3D Icon or Fallback Icon */}
+                      {item.image ? (
+                         <div className="absolute inset-0 z-0 overflow-hidden rounded-3xl">
+                           <NextImage 
+                             src={item.image} 
+                             alt={item.label} 
+                             fill
+                             className="object-cover opacity-60 mix-blend-screen scale-110 group-hover:scale-125 transition-transform duration-700"
+                           />
+                           <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-900/80 to-gray-900/40" />
+                         </div>
+                      ) : (
+                         <div className={`absolute -right-4 -bottom-4 w-32 h-32 opacity-10 group-hover:opacity-20 transition-opacity ${item.color}`}>
+                            <Icon className="w-full h-full" />
+                         </div>
+                      )}
+
+                      <div className="relative p-6 flex flex-col justify-end min-h-[180px] md:min-h-[220px] z-10">
+                        <div className="space-y-3">
+                           <div>
+                             <h3 className="text-xl md:text-2xl font-black text-white/90 group-hover:text-white transition-colors leading-tight tracking-tight">
+                               {item.label}
+                             </h3>
+                             <p className="text-sm text-gray-400 group-hover:text-gray-300 font-medium leading-relaxed mt-2 max-w-[70%]">
+                               {item.description}
+                             </p>
+                           </div>
                         </div>
-                        <p className="text-body-sm text-text-secondary line-clamp-2">
-                          {project.description}
-                        </p>
+
+                        {item.badge && (
+                          <div className="absolute top-6 right-6">
+                             <span className="text-[10px] uppercase font-bold bg-white/10 text-white/70 px-2.5 py-1 rounded-lg border border-white/5 backdrop-blur-md">
+                               {item.badge}
+                             </span>
+                          </div>
+                        )}
                       </div>
                     </div>
+                  </Link>
+                );
+              })}
+            </div>
+        </div>
 
-                    <ProgressBar
-                      value={project.raised}
-                      max={project.target}
-                      label={`${project.raised}/${project.target} ${project.network} Raised`}
-                      showPercentage
-                    />
-
-                    <div className="flex gap-2">
-                      {project.kyc_verified && (
-                        <span className="px-2 py-1 bg-status-success-bg/50 text-status-success-text text-caption rounded-full border border-status-success-text/30">
-                          ✓ KYC
-                        </span>
-                      )}
-                      {project.audit_status === 'pass' && (
-                        <span className="px-2 py-1 bg-status-success-bg/50 text-status-success-text text-caption rounded-full border border-status-success-text/30">
-                          ✓ Audit
-                        </span>
-                      )}
-                      {project.lp_lock && (
-                        <span className="px-2 py-1 bg-status-success-bg/50 text-status-success-text text-caption rounded-full border border-status-success-text/30">
-                          🔒 LP Lock
-                        </span>
-                      )}
-                      <span className="px-2 py-1 bg-bg-elevated text-text-secondary text-caption rounded-full">
-                        {project.network}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* Quick Actions */}
-        <section className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <Link href="/feed">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-primary-main mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">SelsiFeed</h3>
-                <p className="text-caption text-text-secondary mt-1">Social updates</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/presales">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-primary-main mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">Presales</h3>
-                <p className="text-caption text-text-secondary mt-1">Token presales</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/fairlaunch">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-emerald-500 mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">Fairlaunch</h3>
-                <p className="text-caption text-text-secondary mt-1">No hardcap sales</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/bonding-curve">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-cyan-500 mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">Bonding Curve</h3>
-                <p className="text-caption text-text-secondary mt-1">Permissionless SOL pools</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/ama">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-primary-main mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">Developer AMA</h3>
-                <p className="text-caption text-text-secondary mt-1">Ask developers</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/create/presale">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-primary-main mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">Create Presale</h3>
-                <p className="text-caption text-text-secondary mt-1">Launch your token</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/explore">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-primary-main mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">Jelajahi Projects</h3>
-                <p className="text-caption text-text-secondary mt-1">Browse all projects</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/portfolio">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-primary-main mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">Portfolio</h3>
-                <p className="text-caption text-text-secondary mt-1">Your investments</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/rewards">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-primary-main mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">Rewards</h3>
-                <p className="text-caption text-text-secondary mt-1">Earn tokens</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/portfolio">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-green-500 mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">Vesting</h3>
-                <p className="text-caption text-text-secondary mt-1">Claim tokens</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/explore?filter=locked">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-blue-500 mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">LP Lock</h3>
-                <p className="text-caption text-text-secondary mt-1">Lock transparency</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/staking/sbt">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <svg
-                  className="w-12 h-12 text-purple-500 mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
-                <h3 className="text-heading-sm">SBT Staking</h3>
-                <p className="text-caption text-text-secondary mt-1">Proof of Human</p>
-              </CardContent>
-            </Card>
-          </Link>
-        </section>
+        {/* Disclaimer */}
+        <div className="pt-8 border-t border-white/5">
+          <p className="text-center text-[10px] md:text-xs text-gray-500 max-w-4xl mx-auto leading-relaxed">
+            <span className="font-semibold text-gray-400">Disclaimer:</span> Selsipad will never endorse or encourage that you invest in any of the projects listed and therefore, accept no liability for any loss occasioned. It is the user(s) responsibility to do their own research and seek financial advice from a professional. More information about (DYOR) can be found via <a href="https://academy.binance.com/en" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 transition-colors">Binance Academy</a>.
+          </p>
+        </div>
       </PageContainer>
     </div>
   );
 }
+
+

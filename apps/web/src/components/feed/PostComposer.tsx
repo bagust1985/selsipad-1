@@ -314,8 +314,8 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
   const maxLength = 500;
   const charCount = content.length;
   const isOverLimit = charCount > maxLength;
-  const hasEnoughHashtags = hashtagCount >= 20;
-  const canPost = (content.trim() || images.length > 0) && !isOverLimit && isEligible && hasEnoughHashtags;
+  // Removed hashtag requirement - trending is based on aggregation across posts, not per-post
+  const canPost = (content.trim() || images.length > 0) && !isOverLimit && isEligible;
 
   return (
     <div className="bg-bg-elevated rounded-xl shadow-sm border border-border-subtle p-4">
@@ -422,19 +422,13 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
 
             {/* Character Count and Post Button */}
             <div className="flex items-center gap-3">
-              {/* Hashtag Counter */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-text-secondary">#</span>
-                <span
-                  className={`text-sm font-semibold ${
-                    hashtagCount >= 20
-                      ? 'text-green-500'
-                      : 'text-status-warning-text'
-                  }`}
-                >
-                  {hashtagCount}/20
-                </span>
-              </div>
+              {/* Hashtag Counter - Info Only */}
+              {hashtagCount > 0 && (
+                <div className="flex items-center gap-1 text-xs text-gray-400">
+                  <span>#</span>
+                  <span>{hashtagCount}</span>
+                </div>
+              )}
               {charCount > 0 && (
                 <span
                   className={`text-sm ${
@@ -448,9 +442,8 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
                 onClick={handleSubmit}
                 disabled={!canPost || submitting}
                 className="px-5 py-2 bg-primary-main text-primary-text text-sm font-semibold rounded-full hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title={!hasEnoughHashtags ? 'Add at least 20 hashtags to post' : ''}
               >
-                {submitting ? 'Posting...' : 'Posting'}
+                {submitting ? 'Posting...' : 'Post'}
               </button>
             </div>
           </div>

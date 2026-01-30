@@ -9,7 +9,6 @@ import {
   EmptyIcon,
 } from '@/components/ui';
 import { PageContainer } from '@/components/layout';
-import { getTrendingProjects } from '@/lib/data/projects';
 import { MultiChainConnectWallet } from '@/components/wallet/MultiChainConnectWallet';
 import { 
   Globe, 
@@ -143,8 +142,34 @@ const MENU_ITEMS = [
 ];
 
 export default async function HomePage() {
-  const trending = await getTrendingProjects();
-  const topTrending = trending.length > 0 ? trending[0] : null;
+  // Fetch trending tokens from SelsiFeed (hashtags with 20+ mentions in 24h)
+  const trendingResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/feed/trending`, {
+    cache: 'no-store'
+  });
+  const trendingData = await trendingResponse.json();
+  const trendingTokens = trendingData?.trending || [];
+  const topTrending = trendingTokens.length > 0 ? trendingTokens[0] : null;
+
+  // If there's a trending token, try to find matching project by symbol
+  let trendingProject = null;
+  if (topTrending) {
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabase = createClient();
+    
+    // Remove # from hashtag to get symbol (e.g., #JMT2 -> JMT2)
+    const symbol = topTrending.hashtag.replace('#', '').toUpperCase();
+    
+    // Search for project with matching symbol in params
+    const { data: projects } = await supabase
+      .from('launch_rounds')
+      .select('id, params, round_type')
+      .ilike('params->token_symbol', symbol)
+      .limit(1);
+    
+    if (projects && projects.length > 0) {
+      trendingProject = projects[0];
+    }
+  }
 
   return (
     <div className="min-h-screen bg-bg-page pb-20">
@@ -183,65 +208,153 @@ export default async function HomePage() {
            {/* Section Header */}
            <div className="flex items-center gap-3 px-1">
               <div className="h-8 w-1.5 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full" />
-              <h2 className="text-2xl font-bold text-white tracking-tight">Trending Projects</h2>
+              <h2 className="text-2xl font-bold text-white tracking-tight">Trending Tokens</h2>
               <TrendingUpIcon className="w-6 h-6 text-indigo-400 animate-pulse" />
+              <span className="text-xs text-gray-400 bg-gray-800/50 px-2 py-1 rounded-full">via SelsiFeed</span>
            </div>
 
            {/* Trending Card */}
            {topTrending ? (
-            <Link href={`/project/${topTrending.id}`}>
-               <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950/50 via-gray-900/50 to-slate-950/50 backdrop-blur-xl border border-indigo-500/20 group hover:border-indigo-400/50 transition-all duration-500 hover:shadow-[0_0_50px_-10px_rgba(99,102,241,0.3)] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 transform">
-                  {/* Animated Background Mesh */}
-                  <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500 via-purple-500 to-transparent blur-3xl group-hover:opacity-30 transition-opacity duration-700" />
-                  
-                  <div className="relative p-6 md:p-10 flex flex-col md:flex-row items-center gap-8 z-10">
-                     {/* Logo / Image */}
-                     <div className="relative shrink-0">
-                        <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl flex items-center justify-center text-4xl shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-300">
-                           {topTrending.symbol.slice(0, 2)}
+            <>
+              {trendingProject ? (
+                <Link href={`/fairlaunch/${trendingProject.id}`}>
+                  <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950/50 via-gray-900/50 to-slate-950/50 backdrop-blur-xl border border-indigo-500/20 group hover:border-indigo-400/50 transition-all duration-500 hover:shadow-[0_0_50px_-10px_rgba(99,102,241,0.3)] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 transform cursor-pointer">
+                    {/* Animated Background Mesh */}
+                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500 via-purple-500 to-transparent blur-3xl group-hover:opacity-30 transition-opacity duration-700" />
+                    
+                    <div className="relative p-6 md:p-10 flex flex-col md:flex-row items-center gap-8 z-10">
+                      {/* Hashtag Icon */}
+                      <div className="relative shrink-0">
+                        <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center text-4xl md:text-5xl shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-300">
+                          <span className="font-black text-white">#</span>
                         </div>
                         <div className="absolute -bottom-3 -right-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border border-orange-400/50 flex items-center gap-1 animate-bounce">
                           🔥 #1 Hot
                         </div>
-                     </div>
+                      </div>
 
-                     {/* Content */}
-                     <div className="flex-1 text-center md:text-left space-y-3 w-full">
+                      {/* Content */}
+                      <div className="flex-1 text-center md:text-left space-y-3 w-full">
                         <div className="flex items-center justify-center md:justify-start gap-4">
-                           <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-200 group-hover:to-purple-200 transition-all duration-300">
-                              {topTrending.name}
-                           </h2>
-                           <div className="hidden md:block transform group-hover:rotate-3 transition-transform">
-                              <StatusBadge status={topTrending.status} />
-                           </div>
+                          <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-200 group-hover:to-purple-200 transition-all duration-300">
+                            {topTrending.hashtag}
+                          </h2>
+                          <div className="hidden md:block">
+                            <span className="px-3 py-1 bg-green-500/20 text-green-400 text-sm font-bold rounded-full border border-green-500/30">
+                              TRENDING
+                            </span>
+                          </div>
                         </div>
                         
-                        <p className="text-indigo-200/70 line-clamp-2 max-w-2xl text-sm md:text-base font-medium group-hover:text-indigo-100 transition-colors">
-                          {topTrending.description}
+                        <p className="text-indigo-200/70 text-sm md:text-base font-medium group-hover:text-indigo-100 transition-colors">
+                          Mentioned in <span className="text-indigo-300 font-bold">{topTrending.post_count_24h}</span> posts from <span className="text-purple-300 font-bold">{topTrending.project_count || 1}</span> {topTrending.project_count > 1 ? 'projects' : 'project'} in the last 24 hours
                         </p>
 
                         <div className="pt-4 w-full max-w-lg">
-                           <div className="flex justify-between items-end mb-2">
-                              <span className="text-sm font-semibold text-gray-400">Total Raised</span>
-                              <span className="text-lg font-bold text-white">
-                                <span className="text-indigo-400">{topTrending.raised}</span> 
-                                <span className="text-gray-500 mx-1">/</span> 
-                                {topTrending.target} {topTrending.network}
-                              </span>
-                           </div>
-                           <div className="h-3 bg-gray-900/50 rounded-full overflow-hidden border border-white/5">
-                              <div 
-                                className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 relative"
-                                style={{ width: `${(topTrending.raised / topTrending.target) * 100}%` }}
-                              >
-                                 <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                              </div>
-                           </div>
+                          <div className="flex justify-between items-end mb-2">
+                            <span className="text-sm font-semibold text-gray-400">Social Buzz Score</span>
+                            <span className="text-lg font-bold text-white">
+                              <span className="text-indigo-400">{topTrending.score}</span>
+                              <span className="text-gray-500 text-sm ml-1">pts</span>
+                            </span>
+                          </div>
+                          <div className="h-3 bg-gray-900/50 rounded-full overflow-hidden border border-white/5">
+                            <div 
+                              className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 relative"
+                              style={{ width: `${Math.min((topTrending.score / 100) * 100, 100)}%` }}
+                            >
+                              <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                            </div>
+                          </div>
+                          
+                          {/* Stats Row */}
+                          <div className="flex gap-4 mt-4">
+                            <div className="flex-1 bg-indigo-500/10 rounded-lg px-3 py-2 border border-indigo-500/20">
+                              <div className="text-xs text-gray-400">Posts</div>
+                              <div className="text-lg font-bold text-indigo-300">{topTrending.post_count_24h}</div>
+                            </div>
+                            <div className="flex-1 bg-purple-500/10 rounded-lg px-3 py-2 border border-purple-500/20">
+                              <div className="text-xs text-gray-400">Projects</div>
+                              <div className="text-lg font-bold text-purple-300">{topTrending.project_count || 1}</div>
+                            </div>
+                            <div className="flex-1 bg-pink-500/10 rounded-lg px-3 py-2 border border-pink-500/20">
+                              <div className="text-xs text-gray-400">Rank</div>
+                              <div className="text-lg font-bold text-pink-300">#{topTrending.rank}</div>
+                            </div>
+                          </div>
                         </div>
-                     </div>
+                      </div>
+                    </div>
                   </div>
-               </div>
-            </Link>
+                </Link>
+              ) : (
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950/50 via-gray-900/50 to-slate-950/50 backdrop-blur-xl border border-indigo-500/20 group hover:border-indigo-400/50 transition-all duration-500 hover:shadow-[0_0_50px_-10px_rgba(99,102,241,0.3)] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 transform">
+                  {/* Same content as above but without Link wrapper */}
+                  <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500 via-purple-500 to-transparent blur-3xl group-hover:opacity-30 transition-opacity duration-700" />
+                  
+                  <div className="relative p-6 md:p-10 flex flex-col md:flex-row items-center gap-8 z-10">
+                    <div className="relative shrink-0">
+                      <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center text-4xl md:text-5xl shadow-2xl border border-white/10 group-hover:scale-105 transition-transform duration-300">
+                        <span className="font-black text-white">#</span>
+                      </div>
+                      <div className="absolute -bottom-3 -right-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border border-orange-400/50 flex items-center gap-1 animate-bounce">
+                        🔥 #1 Hot
+                      </div>
+                    </div>
+
+                    <div className="flex-1 text-center md:text-left space-y-3 w-full">
+                      <div className="flex items-center justify-center md:justify-start gap-4">
+                        <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-200 group-hover:to-purple-200 transition-all duration-300">
+                          {topTrending.hashtag}
+                        </h2>
+                        <div className="hidden md:block">
+                          <span className="px-3 py-1 bg-green-500/20 text-green-400 text-sm font-bold rounded-full border border-green-500/30">
+                            TRENDING
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <p className="text-indigo-200/70 text-sm md:text-base font-medium group-hover:text-indigo-100 transition-colors">
+                        Mentioned in <span className="text-indigo-300 font-bold">{topTrending.post_count_24h}</span> posts from <span className="text-purple-300 font-bold">{topTrending.project_count || 1}</span> {topTrending.project_count > 1 ? 'projects' : 'project'} in the last 24 hours
+                      </p>
+
+                      <div className="pt-4 w-full max-w-lg">
+                        <div className="flex justify-between items-end mb-2">
+                          <span className="text-sm font-semibold text-gray-400">Social Buzz Score</span>
+                          <span className="text-lg font-bold text-white">
+                            <span className="text-indigo-400">{topTrending.score}</span>
+                            <span className="text-gray-500 text-sm ml-1">pts</span>
+                          </span>
+                        </div>
+                        <div className="h-3 bg-gray-900/50 rounded-full overflow-hidden border border-white/5">
+                          <div 
+                            className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 relative"
+                            style={{ width: `${Math.min((topTrending.score / 100) * 100, 100)}%` }}
+                          >
+                            <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-4 mt-4">
+                          <div className="flex-1 bg-indigo-500/10 rounded-lg px-3 py-2 border border-indigo-500/20">
+                            <div className="text-xs text-gray-400">Posts</div>
+                            <div className="text-lg font-bold text-indigo-300">{topTrending.post_count_24h}</div>
+                          </div>
+                          <div className="flex-1 bg-purple-500/10 rounded-lg px-3 py-2 border border-purple-500/20">
+                            <div className="text-xs text-gray-400">Projects</div>
+                            <div className="text-lg font-bold text-purple-300">{topTrending.project_count || 1}</div>
+                          </div>
+                          <div className="flex-1 bg-pink-500/10 rounded-lg px-3 py-2 border border-pink-500/20">
+                            <div className="text-xs text-gray-400">Rank</div>
+                            <div className="text-lg font-bold text-pink-300">#{topTrending.rank}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="relative overflow-hidden rounded-3xl bg-gray-900/20 backdrop-blur-xl border border-white/5 p-12 text-center group hover:border-white/10 transition-colors">
                <div className="absolute inset-0 bg-gradient-to-r from-gray-900/50 to-transparent" />
@@ -249,8 +362,14 @@ export default async function HomePage() {
                   <div className="w-16 h-16 rounded-full bg-gray-800/50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                      <TrendingUpIcon className="w-8 h-8 text-gray-600 group-hover:text-gray-400 transition-colors" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-400 group-hover:text-gray-200 transition-colors">No Trending Projects</h3>
-                  <p className="text-gray-600 group-hover:text-gray-500 transition-colors">Be the first to create a hype!</p>
+                  <h3 className="text-xl font-bold text-gray-400 group-hover:text-gray-200 transition-colors">No Trending Tokens</h3>
+                  <p className="text-gray-600 group-hover:text-gray-500 transition-colors">Post with hashtags on SelsiFeed to create a trend!</p>
+                  <Link 
+                    href="/feed" 
+                    className="mt-2 px-4 py-2 bg-indigo-500/20 text-indigo-300 rounded-full text-sm font-semibold hover:bg-indigo-500/30 transition-colors border border-indigo-500/30"
+                  >
+                    Go to Feed
+                  </Link>
                </div>
             </div>
           )}

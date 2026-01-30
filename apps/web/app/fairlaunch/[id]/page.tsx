@@ -28,11 +28,11 @@ export default async function FairlaunchDetailPage({ params }: { params: { id: s
     .from('launch_rounds')
     .select('*')
     .eq('id', params.id)
-    .eq('sale_type', 'fairlaunch')
+    .eq('type', 'FAIRLAUNCH')
     .single();
 
   if (error || !fairlaunch) {
-    redirect('/fairlaunch');
+    redirect('/explore');
   }
 
   return (

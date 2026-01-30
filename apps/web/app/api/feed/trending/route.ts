@@ -45,6 +45,7 @@ export async function GET() {
     });
 
     // Convert to array and sort by count
+    // Filter: Only show hashtags with >= 20 mentions (these become trending tokens)
     const trending = Object.entries(hashtagCounts)
       .map(([hashtag, data]) => ({
         hashtag,
@@ -52,8 +53,9 @@ export async function GET() {
         project_count: data.projectIds.size,
         score: data.count + data.projectIds.size * 2, // Weight projects higher
       }))
+      .filter((item) => item.count >= 20) // TRENDING TOKEN THRESHOLD: 20+ posts
       .sort((a, b) => b.score - a.score)
-      .slice(0, 10) // Top 10
+      .slice(0, 10) // Top 10 trending tokens
       .map((item, index) => ({
         rank: index + 1,
         hashtag: item.hashtag,

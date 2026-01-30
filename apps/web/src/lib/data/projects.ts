@@ -11,11 +11,12 @@ export interface Project {
   description: string;
   type: 'presale' | 'fairlaunch';
   network: 'SOL' | 'EVM';
+  chain?: string; // Specific chain ID (97, 56, 1, 11155111, 8453, 84532, etc.)
   status: 'live' | 'upcoming' | 'ended';
   raised: number;
   target: number;
   kyc_verified: boolean;
-  audit_status: 'pass' | 'pending' | null;
+  audit_status: 'pass' |'pending' | null;
   lp_lock: boolean;
 }
 
@@ -182,24 +183,57 @@ export async function getAllProjects(filters?: {
   const supabase = createClient();
 
   try {
-    let query = supabase.from('projects').select('*');
-
-    // Map frontend status to DB status
-    if (filters?.status) {
-      const dbStatus = mapFrontendStatusToDb(filters.status);
-      query = query.eq('status', dbStatus);
-    }
-
-    // Note: network and type are in metadata, would need JSONB query
-    // For now, fetch all and filter client-side
-    const { data, error } = await query.order('created_at', { ascending: false });
+    // Query projects with launch_rounds joined
+    const { data, error } = await supabase
+      .from('projects')
+      .select(`
+        *,
+        launch_rounds (
+          id,
+          type,
+          status,
+          chain,
+          start_at,
+          end_at,
+          params
+        )
+      `)
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching projects:', error);
       return [];
     }
 
-    let projects = mapProjectsToFrontend(data || []);
+    // Map each project with its launch_round data
+    let projects = (data || []).flatMap((project: any) => {
+      // If project has no launch_rounds, skip it
+      if (!project.launch_rounds || project.launch_rounds.length === 0) {
+        return [];
+      }
+
+      // Map each launch_round to a project entry
+      return project.launch_rounds.map((round: any) => {
+        const params = round.params || {};
+        
+        return {
+          id: round.id, // Use launch_round ID for correct detail page routing
+          name: params.project_name || project.name,
+          symbol: params.token_symbol || project.symbol || 'TBD',
+          logo: params.logo_url || project.logo_url || '/placeholder-logo.png',
+          description: params.project_description || project.description || '',
+          type: round.type?.toLowerCase() as 'presale' | 'fairlaunch',
+          network: mapChainToNetwork(round.chain),
+          chain: round.chain, // Add specific chain ID
+          status: mapLaunchRoundStatus(round.status),
+          raised: params.total_raised || 0,
+          target: params.softcap || params.hardcap || 1000,
+          kyc_verified: !!project.kyc_submission_id,
+          audit_status: project.scan_result_id ? 'pass' : null,
+          lp_lock: params.lp_lock || false,
+        };
+      });
+    });
 
     // Client-side filtering
     if (filters?.network) {
@@ -271,5 +305,30 @@ function mapFrontendStatusToDb(frontendStatus: 'live' | 'upcoming' | 'ended'): s
       return 'APPROVED';
     case 'ended':
       return 'ENDED';
+  }
+}
+
+// Map chain ID to network type (EVM or SOL)
+function mapChainToNetwork(chain: string): 'EVM' | 'SOL' {
+  if (chain === 'SOLANA') return 'SOL';
+  // All numeric chain IDs are EVM
+  return 'EVM';
+}
+
+// Map launch_round status to frontend status
+function mapLaunchRoundStatus(dbStatus: string): 'live' | 'upcoming' | 'ended' {
+  switch (dbStatus) {
+    case 'LIVE':
+    case 'ACTIVE':
+      return 'live';
+    case 'APPROVED':
+    case 'PENDING':
+      return 'upcoming';
+    case 'ENDED':
+    case 'COMPLETED':
+    case 'CANCELLED':
+      return 'ended';
+    default:
+      return 'upcoming';
   }
 }

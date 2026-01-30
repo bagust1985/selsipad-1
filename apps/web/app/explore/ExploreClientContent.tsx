@@ -26,6 +26,7 @@ export function ExploreClientContent({ initialProjects }: ExploreClientContentPr
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'live' | 'upcoming' | 'ended'>('all');
   const [chainFilter, setChainFilter] = useState<'all' | 'EVM' | 'SOL'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'presale' | 'fairlaunch' | 'bonding'>('all');
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   // Filter projects client-side
@@ -49,6 +50,15 @@ export function ExploreClientContent({ initialProjects }: ExploreClientContentPr
     // 3. Status Filter
     if (statusFilter !== 'all' && project.status !== statusFilter) {
       return false;
+    }
+
+    // 4. Type Filter (presale, fairlaunch, bonding curve)
+    if (typeFilter !== 'all') {
+      // Assuming project has a 'type' field from launch_rounds
+      const projectType = (project as any).type?.toLowerCase();
+      if (typeFilter === 'presale' && projectType !== 'presale') return false;
+      if (typeFilter === 'fairlaunch' && projectType !== 'fairlaunch') return false;
+      if (typeFilter === 'bonding' && projectType !== 'bonding_curve') return false;
     }
 
     return true;
@@ -136,6 +146,30 @@ export function ExploreClientContent({ initialProjects }: ExploreClientContentPr
                 </div>
              </div>
           </div>
+
+          {/* Project Type Selector */}
+          <div>
+            <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2 block">Project Type</label>
+            <div className="flex flex-wrap gap-2">
+              {(['all', 'presale', 'fairlaunch', 'bonding'] as const).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setTypeFilter(type)}
+                  className={`
+                    px-3.5 py-2 rounded-full text-sm font-medium border transition-all active:scale-95
+                    ${typeFilter === type
+                      ? 'bg-primary-main/10 border-primary-main text-primary-main'
+                      : 'bg-transparent border-border-subtle text-text-secondary hover:border-gray-500'}
+                  `}
+                >
+                  {type === 'all' ? 'All Types' : 
+                   type === 'presale' ? 'Presale' : 
+                   type === 'fairlaunch' ? 'Fairlaunch' :
+                   'Bonding Curve'}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Results */}
@@ -157,8 +191,16 @@ export function ExploreClientContent({ initialProjects }: ExploreClientContentPr
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredProjects.map((project) => (
-              <Link key={project.id} href={`/project/${project.id}`}>
+            {filteredProjects.map((project) => {
+              // Route based on project type
+              const detailPath = project.type === 'fairlaunch' 
+                ? `/fairlaunch/${project.id}` 
+                : project.type === 'presale'
+                ? `/presale/${project.id}`
+                : `/bonding/${project.id}`;
+              
+              return (
+              <Link key={project.id} href={detailPath}>
                 <Card hover className="h-full border-border-subtle group">
                   <CardContent className="space-y-4 p-5">
                     {/* Header: Logo & Status */}
@@ -175,12 +217,26 @@ export function ExploreClientContent({ initialProjects }: ExploreClientContentPr
 
                     {/* Title & Desc */}
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                            <h3 className="text-lg font-bold text-text-primary line-clamp-1 group-hover:text-primary-main transition-colors">{project.name}</h3>
                            {project.network === 'EVM' ? (
                               <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30">EVM</span>
                            ) : (
                               <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/30">SOL</span>
+                           )}
+                           {/* Chain-specific badge */}
+                           {project.network === 'EVM' && project.chain && (
+                             <>
+                               {(project.chain === '97' || project.chain === '56') && (
+                                 <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded border border-yellow-500/30 font-semibold">BNB</span>
+                               )}
+                               {(project.chain === '8453' || project.chain === '84532') && (
+                                 <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30 font-semibold">BASE</span>
+                               )}
+                               {(project.chain === '1' || project.chain === '11155111') && (
+                                 <span className="text-[10px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/30 font-semibold">ETH</span>
+                               )}
+                             </>
                            )}
                         </div>
                         <p className="text-sm text-text-secondary line-clamp-2 min-h-[40px]">
@@ -203,14 +259,19 @@ export function ExploreClientContent({ initialProjects }: ExploreClientContentPr
                           size="sm"
                         />
                         <div className="flex justify-between text-xs text-text-tertiary">
-                           <span>{project.raised} {project.network === 'SOL' ? 'SOL' : 'ETH/BNB'}</span>
-                           <span>Soft {project.target * 0.5}</span>
+                           <span>{project.raised} {
+                             project.network === 'SOL' ? 'SOL' : 
+                             (project.chain === '97' || project.chain === '56') ? 'BNB' : 
+                             'ETH'
+                           }</span>
+                           <span>Soft {project.target}</span>
                         </div>
                     </div>
                   </CardContent>
                 </Card>
               </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </PageContainer>

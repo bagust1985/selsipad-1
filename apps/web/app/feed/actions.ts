@@ -55,11 +55,6 @@ export async function createPost(
     };
 
     const hashtags = extractHashtags(content);
-    
-    // Validate minimum 20 hashtags for trending
-    if (hashtags.length < 20) {
-      throw new Error(`Minimum 20 hashtags required for posting (found ${hashtags.length})`);
-    }
 
     console.log('[createPost] Extracted hashtags:', { count: hashtags.length, hashtags });
 

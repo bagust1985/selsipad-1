@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Globe, Twitter, Send, MessageCircle, Shield, CheckCircle, Copy, Clock, TrendingUp, Lock, Users } from 'lucide-react';
 import { NetworkBadge } from '@/components/presale/NetworkBadge';
 import { StatusPill } from '@/components/presale/StatusPill';
+import { Countdown } from '@/components/ui/Countdown';
 
 interface Fairlaunch {
   id: string;
@@ -23,6 +24,42 @@ interface FairlaunchDetailProps {
   userAddress?: string;
 }
 
+// Helper to get display network name from chain ID or network name
+function getNetworkDisplay(networkName?: string, chainId?: string): string {
+  if (networkName) {
+    const nameMap: Record<string, string> = {
+      'bsc_testnet': 'BSC Testnet',
+      'sepolia': 'Sepolia',
+      'base_sepolia': 'Base Sepolia',
+      'ethereum': 'Ethereum',
+      'bnb': 'BNB Chain',
+      'base': 'Base',
+    };
+    return nameMap[networkName] || networkName;
+  }
+  
+  // Fallback to chain ID mapping
+  const chainMap: Record<string, string> = {
+    '97': 'BSC Testnet',
+    '56': 'BNB Chain',
+    '11155111': 'Sepolia',
+    '1': 'Ethereum',
+    '8453': 'Base',
+    '84532': 'Base Sepolia',
+  };
+  return chainMap[chainId || ''] || 'Unknown';
+}
+
+// Helper to get native currency symbol from network name
+function getNativeCurrency(networkName?: string, chainId?: string): string {
+  if (networkName?.includes('bsc') || networkName?.includes('bnb') || chainId === '97' || chainId === '56') {
+    return 'BNB';
+  }
+  if (networkName?.includes('base') || chainId === '8453' || chainId === '84532') {
+    return 'ETH';
+  }
+  return 'ETH'; // Default
+}
 type TabType = 'overview' | 'contribute' | 'claim' | 'refund' | 'transactions';
 
 export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailProps) {
@@ -74,9 +111,25 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
               <p className="text-gray-400 mb-3">
                 {fairlaunch.params?.project_description || 'No description'}
               </p>
-              <div className="flex items-center gap-3">
-                <NetworkBadge network={fairlaunch.network} />
-                <StatusPill status={fairlaunch.status} />
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* Security Badges */}
+                {fairlaunch.params?.token_source === 'factory' && fairlaunch.params?.security_badges?.length > 0 && (
+                  <>
+                    {fairlaunch.params.security_badges.includes('SAFU') && (
+                      <span className="px-3 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded-full text-xs font-medium text-yellow-400 flex items-center gap-1">
+                        <Shield className="w-3 h-3" />
+                        SAFU
+                      </span>
+                    )}
+                    {fairlaunch.params.security_badges.includes('SC_PASS') && (
+                      <span className="px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-xs font-medium text-green-400 flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        SC Pass
+                      </span>
+                    )}
+                  </>
+                )}
+
                 {fairlaunch.params?.token_symbol && (
                   <span className="text-sm text-gray-500">
                     Token:{' '}
@@ -86,8 +139,124 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
                   </span>
                 )}
               </div>
+              
+              {/* Social Media Links */}
+              {fairlaunch.params?.social_links && Object.keys(fairlaunch.params.social_links).length > 0 && (
+                <div className="flex items-center gap-2 mt-3">
+                  {fairlaunch.params.social_links.website && (
+                    <a
+                      href={fairlaunch.params.social_links.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                      title="Website"
+                    >
+                      <Globe className="w-4 h-4 text-gray-400" />
+                    </a>
+                  )}
+                  {fairlaunch.params.social_links.twitter && (
+                    <a
+                      href={fairlaunch.params.social_links.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                      title="Twitter"
+                    >
+                      <Twitter className="w-4 h-4 text-gray-400" />
+                    </a>
+                  )}
+                  {fairlaunch.params.social_links.telegram && (
+                    <a
+                      href={fairlaunch.params.social_links.telegram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                      title="Telegram"
+                    >
+                      <Send className="w-4 h-4 text-gray-400" />
+                    </a>
+                  )}
+                  {fairlaunch.params.social_links.discord && (
+                    <a
+                      href={fairlaunch.params.social_links.discord}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                      title="Discord"
+                    >
+                      <MessageCircle className="w-4 h-4 text-gray-400" />
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
+        </div>
+
+        {/* Timeline Section */}
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 mb-4">
+          {/* Current Status */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-gray-400 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Status
+            </span>
+            {(() => {
+              const status = getTimeStatus(fairlaunch.start_at, fairlaunch.end_at);
+              const colors = {
+                upcoming: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
+                live: 'bg-green-500/10 border-green-500/30 text-green-400',
+                ended: 'bg-gray-500/10 border-gray-500/30 text-gray-400',
+              };
+              return (
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold border uppercase ${colors[status]}`}>
+                  {status === 'live' ? '🟢 Live' : status === 'upcoming' ? '⏰ Upcoming' : '⏹️ Ended'}
+                </span>
+              );
+            })()}
+          </div>
+
+          {/* Timeline Bar */}
+          <div className="relative h-2 bg-gray-700 rounded-full mb-3">
+            <div
+              className="absolute h-full bg-green-500 rounded-full transition-all"
+              style={{ width: `${calculateTimeProgress(fairlaunch.start_at, fairlaunch.end_at)}%` }}
+            />
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+            <div>
+              <div className="text-gray-400">Start</div>
+              <div className="text-white font-medium" suppressHydrationWarning>
+                {new Date(fairlaunch.start_at).toLocaleString()}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-gray-400">End</div>
+              <div className="text-white font-medium" suppressHydrationWarning>
+                {new Date(fairlaunch.end_at).toLocaleString()}
+              </div>
+            </div>
+          </div>
+
+          {/* Countdown */}
+          {getTimeStatus(fairlaunch.start_at, fairlaunch.end_at) === 'live' && (
+            <div className="mt-3 text-center bg-green-500/5 border border-green-500/20 rounded-lg py-2">
+              <div className="text-gray-400 text-xs mb-1">Time Remaining</div>
+              <div className="text-xl font-bold text-green-400">
+                <Countdown targetDate={fairlaunch.end_at} />
+              </div>
+            </div>
+          )}
+          {getTimeStatus(fairlaunch.start_at, fairlaunch.end_at) === 'upcoming' && (
+            <div className="mt-3 text-center bg-blue-500/5 border border-blue-500/20 rounded-lg py-2">
+              <div className="text-gray-400 text-xs mb-1">Starts In</div>
+              <div className="text-xl font-bold text-blue-400">
+                <Countdown targetDate={fairlaunch.start_at} />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Progress Bar */}
@@ -195,59 +364,429 @@ function OverviewTab({ fairlaunch, finalPrice }: { fairlaunch: Fairlaunch; final
         </div>
       </div>
 
-      {/* Liquidity Plan */}
+      {/* Token Information */}
       <div>
-        <h3 className="text-lg font-semibold text-white mb-3">💧 Liquidity & LP Lock</h3>
+        <h3 className="text-lg font-semibold text-white mb-3">🪙 Token Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 bg-gray-800 rounded-lg">
-            <div className="text-sm text-gray-400 mb-1">LP Allocation</div>
-            <div className="text-xl font-bold text-white">
-              {fairlaunch.params?.liquidity_percent || 0}%
-            </div>
-            <div className="text-xs text-gray-500 mt-1">of raised funds to liquidity</div>
+            <div className="text-sm text-gray-400 mb-1">Token Name</div>
+            <div className="text-white font-medium">{fairlaunch.params?.token_name || 'N/A'}</div>
           </div>
           <div className="p-4 bg-gray-800 rounded-lg">
-            <div className="text-sm text-gray-400 mb-1">LP Lock Duration</div>
-            <div className="text-xl font-bold text-white">
-              {fairlaunch.params?.lp_lock?.duration_months || 0} months
-            </div>
-            <div className="text-xs text-gray-500 mt-1">minimum lock period</div>
+            <div className="text-sm text-gray-400 mb-1">Symbol</div>
+            <div className="text-white font-medium">{fairlaunch.params?.token_symbol || 'N/A'}</div>
           </div>
+          <div className="p-4 bg-gray-800 rounded-lg col-span-full">
+            <div className="text-sm text-gray-400 mb-1">Contract Address</div>
+            <div className="flex items-center gap-2">
+              <code className="text-white font-mono text-sm">{fairlaunch.params?.token_address || 'N/A'}</code>
+              {fairlaunch.params?.token_address && (
+                <button
+                  onClick={() => navigator.clipboard.writeText(fairlaunch.params.token_address)}
+                  className="p-1 hover:bg-gray-700 rounded transition-colors"
+                  title="Copy address"
+                >
+                  <Copy className="w-4 h-4 text-gray-400" />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-lg">
+            <div className="text-sm text-gray-400 mb-1">Decimals</div>
+            <div className="text-white font-medium">{fairlaunch.params?.token_decimals || 18}</div>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-lg">
+            <div className="text-sm text-gray-400 mb-1">Total Supply</div>
+            <div className="text-white font-medium">{(fairlaunch.params?.token_total_supply || 0).toLocaleString()}</div>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-lg">
+            <div className="text-sm text-gray-400 mb-1">Network</div>
+            <div className="text-white font-medium">{getNetworkDisplay(fairlaunch.params?.network_name, fairlaunch.network)}</div>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-lg">
+            <div className="text-sm text-gray-400 mb-1">Tokens for Sale</div>
+            <div className="text-white font-medium">{tokensForSale.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sale Parameters */}
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-3">💰 Sale Parameters</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 bg-gray-800 rounded-lg">
+            <div className="text-sm text-gray-400 mb-1">Softcap</div>
+            <div className="text-white font-medium">{fairlaunch.params?.softcap || 0} {getNativeCurrency(fairlaunch.params?.network_name, fairlaunch.network)}</div>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-lg">
+            <div className="text-sm text-gray-400 mb-1">Hardcap</div>
+            <div className="text-white font-medium">No Hardcap</div>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-lg">
+            <div className="text-sm text-gray-400 mb-1">Min Contribution</div>
+            <div className="text-white font-medium">{fairlaunch.params?.min_contribution || 0} {getNativeCurrency(fairlaunch.params?.network_name, fairlaunch.network)}</div>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-lg">
+            <div className="text-sm text-gray-400 mb-1">Max Contribution</div>
+            <div className="text-white font-medium">{fairlaunch.params?.max_contribution || 0} {getNativeCurrency(fairlaunch.params?.network_name, fairlaunch.network)}</div>
+          </div>
+          <div className="p-4 bg-gray-800 rounded-lg">
+            <div className="text-sm text-gray-400 mb-1">Listing On</div>
+            <div className="text-white font-medium capitalize">{fairlaunch.params?.dex_platform || 'PancakeSwap'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tokenomics */}
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-3">📊 Tokenomics</h3>
+        <div className="bg-gray-800 rounded-lg p-6">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            {/* Donut Chart */}
+            <div className="relative w-48 h-48 flex-shrink-0">
+              <svg viewBox="0 0 100 100" className="transform -rotate-90">
+                {(() => {
+                  const totalSupply = fairlaunch.params?.token_total_supply || 1;
+                  const presalePercent = ((tokensForSale / totalSupply) * 100);
+                  const teamPercent = ((parseFloat(fairlaunch.params?.team_allocation || '0') / totalSupply) * 100);
+                  const unlockedPercent = 100 - presalePercent - teamPercent;
+                  
+                  // Calculate segments
+                  const radius = 40;
+                  const circumference = 2 * Math.PI * radius;
+                  
+                  const presaleLength = (presalePercent / 100) * circumference;
+                  const teamLength = (teamPercent / 100) * circumference;
+                  const unlockedLength = (unlockedPercent / 100) * circumference;
+                  
+                  let offset = 0;
+                  
+                  return (
+                    <>
+                      {/* Presale - Green */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r={radius}
+                        fill="none"
+                        stroke="#10b981"
+                        strokeWidth="16"
+                        strokeDasharray={`${presaleLength} ${circumference}`}
+                        strokeDashoffset={-offset}
+                        className="transition-all"
+                      />
+                      {/* Team - Blue */}
+                      {teamPercent > 0 && (
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r={radius}
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth="16"
+                          strokeDasharray={`${teamLength} ${circumference}`}
+                          strokeDashoffset={-(offset + presaleLength)}
+                          className="transition-all"
+                        />
+                      )}
+                      {/* Unlocked - Gray */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r={radius}
+                        fill="none"
+                        stroke="#6b7280"
+                        strokeWidth="16"
+                        strokeDasharray={`${unlockedLength} ${circumference}`}
+                        strokeDashoffset={-(offset + presaleLength + teamLength)}
+                        className="transition-all"
+                      />
+                    </>
+                  );
+                })()}
+              </svg>
+              {/* Center text */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-white">
+                  {fairlaunch.params?.token_total_supply ? (fairlaunch.params.token_total_supply / 1000000).toFixed(1) : 0}M
+                </div>
+                <div className="text-xs text-gray-400">Total Supply</div>
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex-1 space-y-3 w-full">
+              {/* Presale */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span className="text-gray-400">Presale</span>
+                </div>
+                <span className="text-white font-semibold">
+                  {tokensForSale.toLocaleString()} ({fairlaunch.params?.token_total_supply ? ((tokensForSale / fairlaunch.params.token_total_supply) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+
+              {/* Team */}
+              {parseFloat(fairlaunch.params?.team_allocation || '0') > 0 && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <span className="text-gray-400">Team</span>
+                  </div>
+                  <span className="text-white font-semibold">
+                    {parseFloat(fairlaunch.params.team_allocation).toLocaleString()} ({fairlaunch.params?.token_total_supply ? ((parseFloat(fairlaunch.params.team_allocation) / fairlaunch.params.token_total_supply) * 100).toFixed(1) : 0}%)
+                  </span>
+                </div>
+              )}
+
+              {/* Unlocked/Burned */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-gray-500"></div>
+                  <span className="text-gray-400">Unlocked</span>
+                </div>
+                <span className="text-white font-semibold">
+                  {fairlaunch.params?.token_total_supply ? (
+                    (fairlaunch.params.token_total_supply - tokensForSale - parseFloat(fairlaunch.params?.team_allocation || '0')).toLocaleString()
+                  ) : 0} ({fairlaunch.params?.token_total_supply ? (((fairlaunch.params.token_total_supply - tokensForSale - parseFloat(fairlaunch.params?.team_allocation || '0')) / fairlaunch.params.token_total_supply) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+
+              {/* Pool Contract Address */}
+              <div className="pt-3 border-t border-gray-700">
+                <div className="text-xs text-gray-500 mb-1">Pool Contract</div>
+                <div className="flex items-center gap-2">
+                  <code className="text-sm text-blue-400 font-mono flex-1 truncate">
+                    {fairlaunch.id}
+                  </code>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(fairlaunch.id)}
+                    className="p-1.5 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+                    title="Copy pool address"
+                  >
+                    <Copy className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* DEX Listing */}
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-5">
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-green-400" />
+          DEX Listing
+        </h3>
+
+        <div className="space-y-3">
+          {/* Platform */}
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400">Platform</span>
+            <div className="flex items-center gap-2">
+              <span className="text-white font-medium capitalize">
+                {getDexName(fairlaunch.params?.dex_platform || 'pancakeswap')}
+              </span>
+            </div>
+          </div>
+
+          {/* Listing Price */}
+          {fairlaunch.params?.listing_price && (
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Listing Price</span>
+              <span className="text-white font-semibold">
+                {fairlaunch.params.listing_price} {getNativeCurrency(fairlaunch.params?.network_name, fairlaunch.network)}
+              </span>
+            </div>
+          )}
+
+          {/* Premium */}
+          {fairlaunch.params?.listing_premium_bps && (
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Price Premium</span>
+              <span className="text-green-400 font-semibold">
+                +{fairlaunch.params.listing_premium_bps / 100}%
+              </span>
+            </div>
+          )}
+
+          {/* Liquidity */}
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400">Liquidity</span>
+            <span className="text-white font-semibold">
+              {fairlaunch.params?.liquidity_percent || 0}%
+            </span>
+          </div>
+
+          {/* TGE Date */}
+          {fairlaunch.params?.tge_timestamp && (
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">TGE Date</span>
+              <span className="text-white" suppressHydrationWarning>
+                {new Date(fairlaunch.params.tge_timestamp * 1000).toLocaleString()}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* LP Lock */}
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-5">
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Lock className="w-5 h-5 text-yellow-400" />
+          Liquidity Lock
+        </h3>
+
+        <div className="space-y-4">
+          {/* Lock Duration */}
+          <div className="bg-gray-900 rounded-lg p-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-400">Lock Duration</span>
+              <span className="text-2xl font-bold text-white">
+                {fairlaunch.params?.lp_lock_months || 0} months
+              </span>
+            </div>
+
+            {/* Unlock Date */}
+            {fairlaunch.params?.tge_timestamp && fairlaunch.params?.lp_lock_months && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Unlock Date</span>
+                <span className="text-green-400 font-medium" suppressHydrationWarning>
+                  {new Date(
+                    (fairlaunch.params.tge_timestamp + fairlaunch.params.lp_lock_months * 30 * 24 * 3600) * 1000
+                  ).toLocaleString()}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Countdown to Unlock (if LP is locked) */}
+          {fairlaunch.status === "FINALIZED_SUCCESS" && fairlaunch.params?.tge_timestamp && fairlaunch.params?.lp_lock_months && (
+            <div className="text-center p-3 bg-yellow-500/10 border border-yellow-500/30 rounded">
+              <div className="text-xs text-yellow-400 mb-1">Unlocks in</div>
+              <div className="text-lg font-bold text-yellow-300">
+                <Countdown targetDate={new Date((fairlaunch.params.tge_timestamp + fairlaunch.params.lp_lock_months * 30 * 24 * 3600) * 1000)} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Team Vesting */}
-      {fairlaunch.params?.team_vesting && (
-        <div>
-          <h3 className="text-lg font-semibold text-white mb-3">👥 Team Vesting</h3>
-          <div className="p-4 bg-gray-800 rounded-lg">
-            <div className="text-sm text-gray-400 mb-2">
-              TGE: {fairlaunch.params.team_vesting.tge_percent}% • Cliff:{' '}
-              {fairlaunch.params.team_vesting.cliff_months}mo
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-5">
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Users className="w-5 h-5 text-blue-400" />
+          Team Vesting
+        </h3>
+
+        {parseFloat(fairlaunch.params?.team_allocation || '0') > 0 ? (
+          <div className="space-y-4">
+            {/* Allocation */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Team Allocation</span>
+              <span className="text-white font-semibold">
+                {parseFloat(fairlaunch.params.team_allocation).toLocaleString()} tokens
+              </span>
             </div>
-            {fairlaunch.params.team_vesting.schedule && (
-              <div className="text-xs text-gray-500">
-                {fairlaunch.params.team_vesting.schedule.length} vesting milestones configured
+
+            {/* Vesting Schedule */}
+            {fairlaunch.params?.team_vesting && (
+              <>
+                <div className="bg-gray-900 rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">TGE Unlock</span>
+                    <span className="text-green-400 font-medium">
+                      {fairlaunch.params.team_vesting.tge_percent}%
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Cliff Period</span>
+                    <span className="text-white">
+                      {fairlaunch.params.team_vesting.cliff_months} months
+                    </span>
+                  </div>
+
+                  {fairlaunch.params.team_vesting.linear_months && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Vesting Period</span>
+                      <span className="text-white">
+                        {fairlaunch.params.team_vesting.linear_months} months (linear)
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Visual Timeline */}
+                <div className="relative h-16 bg-gray-900 rounded-lg p-3">
+                  <div className="flex items-center justify-between h-full">
+                    {/* TGE */}
+                    <div className="flex flex-col items-center">
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                      <span className="text-xs text-gray-400 mt-1">TGE</span>
+                      <span className="text-xs text-green-400">
+                        {fairlaunch.params.team_vesting.tge_percent}%
+                      </span>
+                    </div>
+
+                    {/* Cliff */}
+                    <div className="flex-1 h-0.5 bg-gray-700 mx-2" />
+                    <div className="flex flex-col items-center">
+                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                      <span className="text-xs text-gray-400 mt-1">Cliff End</span>
+                      <span className="text-xs text-yellow-400">
+                        {fairlaunch.params.team_vesting.cliff_months}m
+                      </span>
+                    </div>
+
+                    {/* Vesting */}
+                    {fairlaunch.params.team_vesting.linear_months && (
+                      <>
+                        <div className="flex-1 h-0.5 bg-gradient-to-r from-yellow-500 to-blue-500 mx-2" />
+                        <div className="flex flex-col items-center">
+                          <div className="w-3 h-3 rounded-full bg-blue-500" />
+                          <span className="text-xs text-gray-400 mt-1">Fully Vested</span>
+                          <span className="text-xs text-blue-400">100%</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Contract Address */}
+            {fairlaunch.params?.vesting_vault_address && (
+              <div className="pt-3 border-t border-gray-700">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400 text-sm">Vesting Contract</span>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs text-blue-400 font-mono">
+                      {fairlaunch.params.vesting_vault_address.slice(0, 6)}...
+                      {fairlaunch.params.vesting_vault_address.slice(-4)}
+                    </code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(fairlaunch.params.vesting_vault_address)}
+                      className="p-1 hover:bg-gray-700 rounded transition-colors"
+                      title="Copy address"
+                    >
+                      <Copy className="w-4 h-4 text-gray-400" />
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Sale Timeline */}
-      <div>
-        <h3 className="text-lg font-semibold text-white mb-3">📅 Timeline</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-gray-800 rounded-lg">
-            <div className="text-sm text-gray-400 mb-1">Start Time</div>
-            <div className="text-white">{new Date(fairlaunch.start_at).toLocaleString()}</div>
+        ) : (
+          <div className="text-center py-6 text-gray-500">
+            No team vesting configured
           </div>
-          <div className="p-4 bg-gray-800 rounded-lg">
-            <div className="text-sm text-gray-400 mb-1">End Time</div>
-            <div className="text-white">{new Date(fairlaunch.end_at).toLocaleString()}</div>
-          </div>
-        </div>
+        )}
       </div>
+
+      {/* Remove old Timeline section - now in header */}
     </div>
   );
 }
@@ -298,4 +837,44 @@ function TransactionsTab({ userAddress }: { userAddress?: string }) {
       </p>
     </div>
   );
+}
+
+// Helper functions for timeline features
+function getTimeStatus(start: string, end: string): 'upcoming' | 'live' | 'ended' {
+  const now = Date.now();
+  const startTime = new Date(start).getTime();
+  const endTime = new Date(end).getTime();
+
+  if (now < startTime) return 'upcoming';
+  if (now > endTime) return 'ended';
+  return 'live';
+}
+
+function calculateTimeProgress(start: string, end: string): number {
+  const now = Date.now();
+  const startTime = new Date(start).getTime();
+  const endTime = new Date(end).getTime();
+  
+  if (now < startTime) return 0;
+  if (now > endTime) return 100;
+  
+  return ((now - startTime) / (endTime - startTime)) * 100;
+}
+
+function getDexLogo(platform: string): string {
+  const logos: Record<string, string> = {
+    pancakeswap: '/dex/pancakeswap.png',
+    uniswap: '/dex/uniswap.png',
+    sushiswap: '/dex/sushiswap.png',
+  };
+  return logos[platform.toLowerCase()] || '/dex/default.png';
+}
+
+function getDexName(platform: string): string {
+  const names: Record<string, string> = {
+    pancakeswap: 'PancakeSwap',
+    uniswap: 'Uniswap',
+    sushiswap: 'SushiSwap',
+  };
+  return names[platform.toLowerCase()] || platform;
 }

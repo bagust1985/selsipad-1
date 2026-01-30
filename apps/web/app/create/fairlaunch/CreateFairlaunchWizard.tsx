@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePublicClient, useWalletClient } from 'wagmi';
-import { decodeEventLog, parseEther, type Address } from 'viem';
+import { decodeEventLog, parseEther, parseUnits, type Address } from 'viem';
 import { ArrowLeft, ArrowRight, Rocket } from 'lucide-react';
 import { NetworkTokenStep } from './steps/NetworkTokenStep';
 import { ProjectInfoStep } from './steps/ProjectInfoStep';
@@ -298,13 +298,17 @@ export function CreateFairlaunchWizard({ walletAddress }: CreateFairlaunchWizard
         throw new Error(`Deployment fee not configured for chain ${chainId}`);
       }
 
-      // Step 3: Prepare contract arguments
+      // Step 3: Get token decimals FIRST (needed for contract args)
+      const tokenDecimals = prepareResult.params.tokenDecimals || 18;
+      const tokensForSaleWithDecimals = parseUnits(prepareResult.params.tokensForSale, tokenDecimals);
+      
+      // Step 3.5: Prepare contract arguments
       // Convert decimal values (like "0.1") to wei using parseEther
       const createFairlaunchParams = {
         projectToken: prepareResult.params.tokenAddress as Address,
         paymentToken: '0x0000000000000000000000000000000000000000' as Address, // Native BNB
         softcap: parseEther(prepareResult.params.softcap),
-        tokensForSale: BigInt(prepareResult.params.tokensForSale),
+        tokensForSale: tokensForSaleWithDecimals, // ✅ Now uses proper decimals!
         minContribution: parseEther(prepareResult.params.minContribution),
         maxContribution: parseEther(prepareResult.params.maxContribution),
         startTime: BigInt(prepareResult.params.startTime),
@@ -328,6 +332,71 @@ export function CreateFairlaunchWizard({ walletAddress }: CreateFairlaunchWizard
 
       console.log('📝 Contract args prepared');
       console.log('Deployment fee:', deploymentFee.toString(), 'wei');
+      console.log('Token decimals:', tokenDecimals);
+      console.log('Tokens for sale (human):', prepareResult.params.tokensForSale);
+      console.log('Tokens for sale (base units):', tokensForSaleWithDecimals.toString());
+
+      // Step 3.6: Calculate total tokens needed and approve Factory
+      console.log('💰 Calculating token requirements...');
+      
+      // Calculate liquidity tokens (same formula as contract)
+      const liquidityPercent = BigInt(prepareResult.params.liquidityPercent);
+      const liquidityTokens = (tokensForSaleWithDecimals * liquidityPercent) / 10000n;
+      const totalFairlaunchTokens = tokensForSaleWithDecimals + liquidityTokens;
+      
+      // Calculate vesting tokens (also need to convert)
+      const vestingAmounts = vestingParams.amounts;
+      const totalVestingTokens = vestingAmounts.reduce((sum: bigint, amount: bigint) => sum + amount, 0n);
+      
+      // Total tokens to approve
+      const totalTokensNeeded = totalFairlaunchTokens + totalVestingTokens;
+      
+      console.log('💰 Token calculation:');
+      console.log('  - For sale:', tokensForSaleWithDecimals.toString());
+      console.log('  - For liquidity:', liquidityTokens.toString());
+      console.log('  - For vesting:', totalVestingTokens.toString());
+      console.log('  - TOTAL:', totalTokensNeeded.toString());
+      
+      // Approve Factory to spend tokens
+      console.log('🔐 Requesting token approval... (confirm in wallet)');
+      
+      const ERC20_ABI = [
+        {
+          inputs: [
+            { name: 'spender', type: 'address' },
+            { name: 'amount', type: 'uint256' }
+          ],
+          name: 'approve',
+          outputs: [{ name: '', type: 'bool' }],
+          stateMutability: 'nonpayable',
+          type: 'function',
+        },
+      ] as const;
+      
+      const approveTxHash = await walletClient.writeContract({
+        address: prepareResult.params.tokenAddress as Address,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [factoryAddress, totalTokensNeeded],
+      });
+      
+      console.log('📤 Approval transaction sent:', approveTxHash);
+      console.log('⏳ Waiting for approval confirmation...');
+      
+      await publicClient.waitForTransactionReceipt({
+        hash: approveTxHash,
+        confirmations: 2,
+      });
+      
+      console.log('✅ Token approval confirmed!');
+      console.log(`Factory ${factoryAddress} can now spend ${totalTokensNeeded.toString()} tokens`);
+      
+      console.log('📋 LP Plan parameters:');
+      console.log('  - Liquidity Percent (BPS):', lpPlan.liquidityPercent);
+      console.log('  - LP Lock Months:', lpPlan.lockMonths);
+      console.log('  - DEX ID:', lpPlan.dexId);
+      
+      console.log('🚀 Deploying Fairlaunch... (confirm in wallet)');
 
       // Step 4: Deploy via wagmi writeContract
       const txHash = await walletClient.writeContract({
@@ -352,6 +421,9 @@ export function CreateFairlaunchWizard({ walletAddress }: CreateFairlaunchWizard
       let fairlaunchAddress: string | undefined;
       let vestingAddress: string | undefined;
 
+      console.log('📋 Parsing transaction logs...');
+      console.log('Total logs:', txReceipt.logs.length);
+
       for (const log of txReceipt.logs) {
         try {
           const decoded = decodeEventLog({
@@ -360,12 +432,14 @@ export function CreateFairlaunchWizard({ walletAddress }: CreateFairlaunchWizard
             topics: log.topics,
           });
 
+          console.log('Decoded event:', decoded.eventName);
+
           if (decoded.eventName === 'FairlaunchCreated') {
             const args = decoded.args as {
               fairlaunchId: bigint;
               fairlaunch: Address;
               vesting: Address;
-              projectToken: Address;
+              projectToken: Address; // ✅ Added missing parameter
             };
             
             fairlaunchAddress = args.fairlaunch;
@@ -376,14 +450,17 @@ export function CreateFairlaunchWizard({ walletAddress }: CreateFairlaunchWizard
             console.log('Vesting address:', vestingAddress);
             break;
           }
-        } catch (e) {
+        } catch (e: any) {
           // Skip logs that don't match our ABI
+          console.log('Skipping log (not from our contract):', e.message);
           continue;
         }
       }
 
       if (!fairlaunchAddress) {
-        throw new Error('Failed to parse FairlaunchCreated event from transaction logs');
+        console.error('❌ Failed to find FairlaunchCreated event in logs');
+        console.error('Transaction receipt:', txReceipt);
+        throw new Error('Failed to parse FairlaunchCreated event from transaction logs. The deployment may have succeeded - check BSCScan: ' + txReceipt.transactionHash);
       }
 
       // Step 7: Save to database with REAL addresses

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, Search } from 'lucide-react';
+import type { PoolStatus } from '@selsipad/shared';
 import { NetworkBadge } from '@/components/presale/NetworkBadge';
 import { StatusPill } from '@/components/presale/StatusPill';
 
@@ -221,7 +222,7 @@ function FairlaunchCard({ fairlaunch }: { fairlaunch: Fairlaunch }) {
           </h3>
           <div className="flex items-center gap-2">
             <NetworkBadge network={fairlaunch.params?.network_name || 'EVM'} chainId={fairlaunch.chain} />
-            <StatusPill status={fairlaunch.status} />
+            <StatusPill status={fairlaunch.status as PoolStatus} />
             {fairlaunch.params?.token_symbol && (
               <span className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs text-gray-300">
                 Token: {fairlaunch.params.token_symbol}

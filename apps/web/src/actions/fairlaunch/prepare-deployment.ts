@@ -17,6 +17,7 @@ import { getDexId } from '@/lib/web3/dex-config';
 interface DeploymentParams {
   tokenAddress: string;
   tokensForSale: string; // Wei amount
+  tokenDecimals?: number; // Token decimals (default 18)
   softcap: string; // Wei amount
   startTime: number; // Unix timestamp
   endTime: number; // Unix timestamp
@@ -44,7 +45,7 @@ const FAIRLAUNCH_FACTORY_ADDRESSES: Record<string, string> = {
   ethereum: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
   sepolia: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Deployed
   bnb: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
-  bsc_testnet: '0x723fbc908ebd1d13D755a7aC1fA96eFB79964698', // Deployed
+  bsc_testnet: '0xa7CA8Ada6a76E43D2BB9F43C8E95b99D253419d2', // NEW: Deployed with token transfer!
   base: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
   base_sepolia: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Deployed
 };
@@ -67,6 +68,7 @@ export async function prepareFairlaunchDeployment(wizardData: {
   network: string;
   tokenAddress: string;
   tokensForSale: string;
+  tokenDecimals?: number; // Token decimals
   softcap: string;
   startTime: string;
   endTime: string;
@@ -100,13 +102,18 @@ export async function prepareFairlaunchDeployment(wizardData: {
       wizardData.vestingSchedule,
       wizardData.teamAllocation,
       endTime, // Sale end time as vesting start
-      wizardData.vestingBeneficiary
+      wizardData.vestingBeneficiary,
+      wizardData.tokenDecimals || 18 // ✅ Pass token decimals for proper conversion
     );
+
 
     // 4. Get DEX ID as bytes32
     let dexId: string;
     try {
       dexId = getDexId(wizardData.dexPlatform);
+      console.log('🔍 DEX ID Debug:');
+      console.log('  - Platform selected:', wizardData.dexPlatform);
+      console.log('  - Resolved DEX ID:', dexId);
     } catch (error: any) {
       return {
         success: false,
@@ -117,12 +124,14 @@ export async function prepareFairlaunchDeployment(wizardData: {
     // 5. Convert times to Unix timestamps
     const startTime = Math.floor(new Date(wizardData.startTime).getTime() / 1000);
 
-    // 6. Validate times
+    // 6. Validate times with buffer (add 5 min buffer for transaction confirmation time)
     const now = Math.floor(Date.now() / 1000);
-    if (startTime < now) {
+    const MIN_FUTURE_BUFFER = 5 * 60; // 5 minutes in seconds
+    
+    if (startTime < now + MIN_FUTURE_BUFFER) {
       return {
         success: false,
-        error: 'Start time must be in the future',
+        error: `Start time must be at least 5 minutes in the future to allow for transaction confirmation. Please set a start time after ${new Date((now + MIN_FUTURE_BUFFER) * 1000).toLocaleString()}`,
       };
     }
 
@@ -140,6 +149,7 @@ export async function prepareFairlaunchDeployment(wizardData: {
     const params: DeploymentParams = {
       tokenAddress: wizardData.tokenAddress,
       tokensForSale: wizardData.tokensForSale, // Already in wei from client
+      tokenDecimals: wizardData.tokenDecimals || 18, // Default to 18 decimals
       softcap: wizardData.softcap, // Already in wei from client
       startTime,
       endTime,

@@ -2,6 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./Fairlaunch.sol";
 import "./TeamVesting.sol";
 
@@ -11,6 +13,8 @@ import "./TeamVesting.sol";
  * @dev Enforces deployment fee, LP lock requirements, and security standards
  */
 contract FairlaunchFactory is AccessControl {
+    using SafeERC20 for IERC20;
+    
     bytes32 public constant FACTORY_ADMIN_ROLE = keccak256("FACTORY_ADMIN_ROLE");
     
     // External contract references
@@ -76,6 +80,8 @@ contract FairlaunchFactory is AccessControl {
     error InsufficientLiquidityPercent();
     error ZeroAddress();
     error FeeTransferFailed();
+    error InsufficientTokenBalance();
+    error TokenTransferFailed();
     
     constructor(
         uint256 _deploymentFee,
@@ -152,6 +158,24 @@ contract FairlaunchFactory is AccessControl {
             lpPlan.dexId
         ));
         
+        // Calculate and transfer tokens AFTER deployment
+        IERC20 projectToken = IERC20(params.projectToken);
+        
+        // Calculate liquidity tokens (multiply before divide for accuracy)
+        uint256 liquidityTokens = (params.tokensForSale * lpPlan.liquidityPercent) / 10000;
+        uint256 totalFairlaunchTokens = params.tokensForSale + liquidityTokens;
+        
+        // Transfer tokens to Fairlaunch contract
+        projectToken.safeTransferFrom(msg.sender, fairlaunch, totalFairlaunchTokens);
+        
+        // Transfer tokens to Vesting contract if it exists
+        if (vesting != address(0)) {
+            uint256 totalVestingTokens = _calculateVestingTokens(vestingParams.amounts);
+            if (totalVestingTokens > 0) {
+                projectToken.safeTransferFrom(msg.sender, vesting, totalVestingTokens);
+            }
+        }
+        
         // Record mappings
         fairlaunches[fairlaunchCount] = fairlaunch;
         if (vesting != address(0)) {
@@ -195,6 +219,21 @@ contract FairlaunchFactory is AccessControl {
         // Validate addresses
         if (params.projectToken == address(0)) revert ZeroAddress();
         if (params.projectOwner == address(0)) revert ZeroAddress();
+    }
+    
+    /**
+     * @notice Calculate total vesting tokens from amounts array
+     * @dev Returns 0 if array is empty (safe for no-vesting case)
+     */
+    function _calculateVestingTokens(uint256[] calldata amounts) 
+        internal 
+        pure 
+        returns (uint256 total) 
+    {
+        for (uint256 i = 0; i < amounts.length; i++) {
+            total += amounts[i];
+        }
+        return total;
     }
     
     /**

@@ -3,6 +3,8 @@
  * Fee calculations, vesting conversion, and utilities
  */
 
+import { parseUnits } from 'viem';
+
 /**
  * Calculate total upfront cost for creating a fairlaunch
  */
@@ -125,9 +127,11 @@ export function convertVestingForSC(
   schedule: VestingScheduleUI[],
   totalAllocation: string,
   saleEndTime: number,
-  beneficiary: string
+  beneficiary: string,
+  tokenDecimals: number = 18 // ✅ NEW: Token decimals for proper conversion
 ): TeamVestingParams {
-  const totalAllocationBigInt = BigInt(totalAllocation);
+  // ✅ FIXED: Use parseUnits to properly convert human-readable amount to base units
+  const totalAllocationBigInt = parseUnits(totalAllocation, tokenDecimals);
   
   // Convert months to seconds (30 days per month)
   const SECONDS_PER_MONTH = 30 * 24 * 60 * 60;

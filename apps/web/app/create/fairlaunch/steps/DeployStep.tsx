@@ -38,6 +38,7 @@ export function DeployStep({ wizardData, onDeploy, explorerUrl }: DeployStepProp
   const [fairlaunchAddress, setFairlaunchAddress] = useState<string | undefined>();
   const [vestingAddress, setVestingAddress] = useState<string | undefined>();
   const [isDeploying, setIsDeploying] = useState(false);
+  const [hasDeployed, setHasDeployed] = useState(false); // ✅ Prevent multiple calls
   const [deploymentComplete, setDeploymentComplete] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
@@ -47,11 +48,13 @@ export function DeployStep({ wizardData, onDeploy, explorerUrl }: DeployStepProp
     );
   };
 
+  // ✅ FIXED: Only deploy once when component mounts
   useEffect(() => {
-    if (!isDeploying) {
+    if (!hasDeployed && !isDeploying) {
+      setHasDeployed(true); // Mark as deployed immediately
       handleDeploy();
     }
-  }, []);
+  }, []); // Empty array is correct - only run on mount
 
   const handleDeploy = async () => {
     setIsDeploying(true);
@@ -90,6 +93,13 @@ export function DeployStep({ wizardData, onDeploy, explorerUrl }: DeployStepProp
       // Step 5: Complete
       updateStep('complete', 'success', 'Your fairlaunch is now live!');
       setDeploymentComplete(true);
+      
+      // Auto-redirect to fairlaunch page after 3 seconds
+      setTimeout(() => {
+        if (result.fairlaunchAddress) {
+          router.push(`/fairlaunch/${result.fairlaunchAddress}`);
+        }
+      }, 3000);
     } catch (err: any) {
       console.error('Deployment error:', err);
       setError(err.message || 'Deployment failed');

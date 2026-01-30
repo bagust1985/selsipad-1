@@ -2,7 +2,7 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/bluecheck/BlueCheckRegistry.sol": {
-      "lastModificationDate": 1769552802307,
+      "lastModificationDate": 1769559549052,
       "contentHash": "de0f80316b74c90de82f31a5be163742",
       "sourceName": "contracts/bluecheck/BlueCheckRegistry.sol",
       "solcConfig": {
@@ -620,7 +620,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/std-presale/PresaleRound.sol": {
-      "lastModificationDate": 1769552802307,
+      "lastModificationDate": 1769559548132,
       "contentHash": "f29c1bb5ea0960404aa5f9597100034d",
       "sourceName": "contracts/std-presale/PresaleRound.sol",
       "solcConfig": {
@@ -705,7 +705,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/std-presale/MerkleVesting.sol": {
-      "lastModificationDate": 1769552802307,
+      "lastModificationDate": 1769559548132,
       "contentHash": "0e09ee3d2a70c740e60448cd5dd432bf",
       "sourceName": "contracts/std-presale/MerkleVesting.sol",
       "solcConfig": {
@@ -824,7 +824,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/std-presale/PresaleFactory.sol": {
-      "lastModificationDate": 1769552802307,
+      "lastModificationDate": 1769559548132,
       "contentHash": "29833615e2d73bd44e727d1f8c18e8b2",
       "sourceName": "contracts/std-presale/PresaleFactory.sol",
       "solcConfig": {
@@ -866,7 +866,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/std-presale/FeeSplitter.sol": {
-      "lastModificationDate": 1769552802307,
+      "lastModificationDate": 1769559548132,
       "contentHash": "5f419fbf758fac71c0f49dc2f5a1c003",
       "sourceName": "contracts/std-presale/FeeSplitter.sol",
       "solcConfig": {
@@ -909,7 +909,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/fairlaunch/TeamVesting.sol": {
-      "lastModificationDate": 1769552802307,
+      "lastModificationDate": 1769559548132,
       "contentHash": "8cdaf0bb2c013d6753cdad8ccb389d9a",
       "sourceName": "contracts/fairlaunch/TeamVesting.sol",
       "solcConfig": {
@@ -951,8 +951,8 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/fairlaunch/FairlaunchFactory.sol": {
-      "lastModificationDate": 1769556820778,
-      "contentHash": "fdd9638363edc8620b0f433b038670b9",
+      "lastModificationDate": 1769782549869,
+      "contentHash": "c5324b79484a55bcfdaa9ed7c7d813c2",
       "sourceName": "contracts/fairlaunch/FairlaunchFactory.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -981,6 +981,8 @@
       },
       "imports": [
         "@openzeppelin/contracts/access/AccessControl.sol",
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
         "./Fairlaunch.sol",
         "./TeamVesting.sol"
       ],
@@ -992,7 +994,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/fairlaunch/Fairlaunch.sol": {
-      "lastModificationDate": 1769557051827,
+      "lastModificationDate": 1769774772189,
       "contentHash": "62cad86f560d2789300bea59d23e053d",
       "sourceName": "contracts/fairlaunch/Fairlaunch.sol",
       "solcConfig": {
@@ -1038,7 +1040,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/std-presale/mocks/ERC20Mock.sol": {
-      "lastModificationDate": 1769552802307,
+      "lastModificationDate": 1769559548132,
       "contentHash": "aedaffca730f144563b3b65ff7c6ef4a",
       "sourceName": "contracts/std-presale/mocks/ERC20Mock.sol",
       "solcConfig": {
@@ -1077,7 +1079,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/fairlaunch/interfaces/IFairlaunch.sol": {
-      "lastModificationDate": 1769556819514,
+      "lastModificationDate": 1769774772189,
       "contentHash": "fa1bfd2235c02e64f81a45d9f476870e",
       "sourceName": "contracts/fairlaunch/interfaces/IFairlaunch.sol",
       "solcConfig": {
@@ -1114,7 +1116,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/fairlaunch/interfaces/ILPLocker.sol": {
-      "lastModificationDate": 1769556790410,
+      "lastModificationDate": 1769774772189,
       "contentHash": "6fc3c351311afdc3d8c207b7619028ca",
       "sourceName": "contracts/fairlaunch/interfaces/ILPLocker.sol",
       "solcConfig": {
@@ -1151,7 +1153,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/fairlaunch/mocks/MockFeeSplitter.sol": {
-      "lastModificationDate": 1769552802307,
+      "lastModificationDate": 1769559548132,
       "contentHash": "228877159bb827ba74243c8ee669b3d5",
       "sourceName": "contracts/fairlaunch/mocks/MockFeeSplitter.sol",
       "solcConfig": {
@@ -1188,7 +1190,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/mocks/MockERC20.sol": {
-      "lastModificationDate": 1769574522822,
+      "lastModificationDate": 1769774772193,
       "contentHash": "e7febf4522b2e4a8a52d8ebffc08b9f1",
       "sourceName": "contracts/mocks/MockERC20.sol",
       "solcConfig": {
@@ -1227,7 +1229,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/mocks/MockFeeSplitter.sol": {
-      "lastModificationDate": 1769574524666,
+      "lastModificationDate": 1769774772189,
       "contentHash": "4717ce4c0773aa9fa9c3b13c7cc4900a",
       "sourceName": "contracts/mocks/MockFeeSplitter.sol",
       "solcConfig": {
@@ -1264,7 +1266,7 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/fairlaunch/SimpleTokenFactory.sol": {
-      "lastModificationDate": 1769647115138,
+      "lastModificationDate": 1769774772189,
       "contentHash": "2a73ebb3917e9eb1f7302a7e7be50a68",
       "sourceName": "contracts/fairlaunch/SimpleTokenFactory.sol",
       "solcConfig": {

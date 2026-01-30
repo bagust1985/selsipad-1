@@ -39,14 +39,14 @@ interface PrepareFairlaunchResult {
   error?: string;
 }
 
-// Factory addresses per network
+// Factory addresses per network (from deployment artifacts)
 const FAIRLAUNCH_FACTORY_ADDRESSES: Record<string, string> = {
   ethereum: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
-  sepolia: '0x0000000000000000000000000000000000000000',
-  bnb: '0x0000000000000000000000000000000000000000',
-  bsc_testnet: '0x0000000000000000000000000000000000000000',
-  base: '0x0000000000000000000000000000000000000000',
-  base_sepolia: '0x0000000000000000000000000000000000000000',
+  sepolia: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Deployed
+  bnb: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
+  bsc_testnet: '0x723fbc908ebd1d13D755a7aC1fA96eFB79964698', // Deployed
+  base: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
+  base_sepolia: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Deployed
 };
 
 // Chain IDs

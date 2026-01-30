@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePublicClient, useWalletClient } from 'wagmi';
+import { decodeEventLog, parseEther, type Address } from 'viem';
 import { ArrowLeft, ArrowRight, Rocket } from 'lucide-react';
 import { NetworkTokenStep } from './steps/NetworkTokenStep';
 import { ProjectInfoStep } from './steps/ProjectInfoStep';
@@ -12,6 +14,12 @@ import { ReviewStep } from './steps/ReviewStep';
 import { DeployStep } from './steps/DeployStep';
 import { VestingScheduleUI } from '@/lib/fairlaunch/helpers';
 import { prepareFairlaunchDeployment, saveFairlaunch } from '@/actions/fairlaunch';
+import { 
+  FAIRLAUNCH_FACTORY_ABI, 
+  FAIRLAUNCH_FACTORY_ADDRESS,
+  FEE_SPLITTER_ADDRESS,
+  DEPLOYMENT_FEE 
+} from '@/contracts/FairlaunchFactory';
 
 interface CreateFairlaunchWizardProps {
   walletAddress: string;
@@ -83,6 +91,10 @@ export function CreateFairlaunchWizard({ walletAddress }: CreateFairlaunchWizard
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Wagmi hooks for blockchain interaction
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
 
   // Initialize wizard data with defaults
   const [wizardData, setWizardData] = useState<WizardData>({
@@ -261,28 +273,120 @@ export function CreateFairlaunchWizard({ walletAddress }: CreateFairlaunchWizard
         throw new Error(prepareResult.error || 'Failed to prepare deployment');
       }
 
-      // Step 2: Client-side deployment using wagmi
-      // TODO: Add wagmi hooks for actual blockchain interaction
-      // For now, return mock data until wagmi is integrated
-      
-      // IMPORTANT: This is a placeholder for wagmi integration
-      // Real implementation should:
-      // 1. Call writeContract() to deploy fairlaunch
-      // 2. Wait for transaction confirmation
-      // 3. Parse event logs to get deployed addresses
-      // 4. Then call saveFairlaunch below
-      
-      console.log('Deployment params ready:', prepareResult.params);
-      console.log('Factory address:', prepareResult.factoryAddress);
+      console.log('✅ Deployment params prepared:', prepareResult.params);
+      console.log('Factory:', prepareResult.factoryAddress);
       console.log('Chain ID:', prepareResult.chainId);
 
-      // Mock deployment result (replace with real wagmi calls)
-      const mockTxHash = '0x' + Math.random().toString(16).substring(2);
-      const mockFairlaunchAddr = '0x' + Math.random().toString(16).substring(2, 42);
-      const mockVestingAddr = '0x' + Math.random().toString(16).substring(2, 42);
-      const mockFeeSplitterAddr = '0x' + Math.random().toString(16).substring(2, 42);
+      // Step 2: Verify wallet client is available
+      if (!walletClient) {
+        throw new Error('Wallet not connected. Please connect your wallet to deploy.');
+      }
 
-      // Step 3: Save to database after successful deployment
+      if (!publicClient) {
+        throw new Error('Public client not available');
+      }
+
+      const chainId = prepareResult.chainId || 97;
+      const factoryAddress = FAIRLAUNCH_FACTORY_ADDRESS[chainId];
+      const deploymentFee = DEPLOYMENT_FEE[chainId];
+
+      if (!factoryAddress) {
+        throw new Error(`FairlaunchFactory not deployed on chain ${chainId}`);
+      }
+
+      if (!deploymentFee) {
+        throw new Error(`Deployment fee not configured for chain ${chainId}`);
+      }
+
+      // Step 3: Prepare contract arguments
+      // Convert decimal values (like "0.1") to wei using parseEther
+      const createFairlaunchParams = {
+        projectToken: prepareResult.params.tokenAddress as Address,
+        paymentToken: '0x0000000000000000000000000000000000000000' as Address, // Native BNB
+        softcap: parseEther(prepareResult.params.softcap),
+        tokensForSale: BigInt(prepareResult.params.tokensForSale),
+        minContribution: parseEther(prepareResult.params.minContribution),
+        maxContribution: parseEther(prepareResult.params.maxContribution),
+        startTime: BigInt(prepareResult.params.startTime),
+        endTime: BigInt(prepareResult.params.endTime),
+        projectOwner: walletAddress as Address,
+        listingPremiumBps: prepareResult.params.listingPremiumBps,
+      };
+
+      const vestingParams = {
+        beneficiary: (prepareResult.params.vestingParams.beneficiary || walletAddress) as Address,
+        startTime: BigInt(prepareResult.params.vestingParams.startTime || prepareResult.params.endTime),
+        durations: prepareResult.params.vestingParams.durations?.map((d: any) => BigInt(d)) || [],
+        amounts: prepareResult.params.vestingParams.amounts?.map((a: any) => BigInt(a)) || [],
+      };
+
+      const lpPlan = {
+        lockMonths: BigInt(prepareResult.params.lpLockMonths),
+        liquidityPercent: BigInt(prepareResult.params.liquidityPercent),
+        dexId: prepareResult.params.dexId as `0x${string}`,
+      };
+
+      console.log('📝 Contract args prepared');
+      console.log('Deployment fee:', deploymentFee.toString(), 'wei');
+
+      // Step 4: Deploy via wagmi writeContract
+      const txHash = await walletClient.writeContract({
+        address: factoryAddress as Address,
+        abi: FAIRLAUNCH_FACTORY_ABI,
+        functionName: 'createFairlaunch',
+        args: [createFairlaunchParams, vestingParams, lpPlan],
+        value: deploymentFee,
+      });
+
+      console.log('📤 Transaction sent:', txHash);
+
+      // Step 5: Wait for transaction confirmation
+      const txReceipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+        confirmations: 2, // Wait for 2 confirmations for security
+      });
+
+      console.log('✅ Transaction confirmed:', txReceipt.transactionHash);
+
+      // Step 6: Parse event logs to get deployed addresses
+      let fairlaunchAddress: string | undefined;
+      let vestingAddress: string | undefined;
+
+      for (const log of txReceipt.logs) {
+        try {
+          const decoded = decodeEventLog({
+            abi: FAIRLAUNCH_FACTORY_ABI,
+            data: log.data,
+            topics: log.topics,
+          });
+
+          if (decoded.eventName === 'FairlaunchCreated') {
+            const args = decoded.args as {
+              fairlaunchId: bigint;
+              fairlaunch: Address;
+              vesting: Address;
+              projectToken: Address;
+            };
+            
+            fairlaunchAddress = args.fairlaunch;
+            vestingAddress = args.vesting;
+            
+            console.log('🎉 Fairlaunch deployed!');
+            console.log('Fairlaunch address:', fairlaunchAddress);
+            console.log('Vesting address:', vestingAddress);
+            break;
+          }
+        } catch (e) {
+          // Skip logs that don't match our ABI
+          continue;
+        }
+      }
+
+      if (!fairlaunchAddress) {
+        throw new Error('Failed to parse FairlaunchCreated event from transaction logs');
+      }
+
+      // Step 7: Save to database with REAL addresses
       const saveResult = await saveFairlaunch({
         network: wizardData.network,
         tokenAddress: wizardData.tokenAddress,
@@ -312,10 +416,12 @@ export function CreateFairlaunchWizard({ walletAddress }: CreateFairlaunchWizard
         teamAllocation: wizardData.teamAllocation,
         vestingBeneficiary: wizardData.vestingBeneficiary,
         vestingSchedule: wizardData.vestingSchedule,
-        fairlaunchAddress: mockFairlaunchAddr,
-        vestingAddress: mockVestingAddr,
-        feeSplitterAddress: mockFeeSplitterAddr,
-        transactionHash: mockTxHash,
+        
+        // REAL deployed addresses from blockchain
+        fairlaunchAddress,
+        vestingAddress,
+        feeSplitterAddress: FEE_SPLITTER_ADDRESS[chainId],
+        transactionHash: txReceipt.transactionHash,
       });
 
       if (!saveResult.success) {
@@ -327,9 +433,9 @@ export function CreateFairlaunchWizard({ walletAddress }: CreateFairlaunchWizard
 
       return {
         success: true,
-        fairlaunchAddress: mockFairlaunchAddr,
-        vestingAddress: mockVestingAddr,
-        transactionHash: mockTxHash,
+        fairlaunchAddress,
+        vestingAddress,
+        transactionHash: txReceipt.transactionHash,
         fairlaunchId: saveResult.fairlaunchId,
       };
     } catch (error: any) {

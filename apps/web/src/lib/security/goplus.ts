@@ -48,7 +48,45 @@ export async function scanTokenSecurity(
     // Map network to chain ID
     const chainId = getChainId(network);
     
-    // Call GoPlus API
+    // Check if network is a testnet (GoPlus doesn't support testnets)
+    const isTestnet = network.includes('testnet') || network.includes('sepolia');
+    
+    if (isTestnet) {
+      console.warn(`⚠️ GoPlus doesn't support ${network} (testnet). Auto-passing security scan.`);
+      
+      // Auto-pass for testnets with all checks marked as passed
+      return {
+        token_address: tokenAddress,
+        status: 'PASS',
+        checks: {
+          antiMint: {
+            pass: true,
+            message: 'Testnet - scan bypassed',
+            details: 'GoPlus API does not support testnet chains. Manual verification recommended.',
+          },
+          honeypot: {
+            pass: true,
+            message: 'Testnet - scan bypassed',
+            details: 'GoPlus API does not support testnet chains. Manual verification recommended.',
+          },
+          tax: {
+            pass: true,
+            message: 'Testnet - scan bypassed',
+            buyTax: 0,
+            sellTax: 0,
+          },
+          pause: {
+            pass: true,
+            message: 'Testnet - scan bypassed',
+            details: 'GoPlus API does not support testnet chains. Manual verification recommended.',
+          },
+        },
+        allPassed: true,
+        scannedAt: new Date().toISOString(),
+      };
+    }
+    
+    // Call GoPlus API (mainnet only)
     const response = await fetch(
       `${GOPLUS_BASE_URL}/token_security/${chainId}?contract_addresses=${tokenAddress}`,
       {
@@ -64,10 +102,16 @@ export async function scanTokenSecurity(
     }
 
     const data = await response.json();
+    
+    // Check for API error response
+    if (data.code && data.code !== 1) {
+      throw new Error(data.message || 'GoPlus API returned an error');
+    }
+    
     const tokenData = data.result?.[tokenAddress.toLowerCase()];
 
     if (!tokenData) {
-      throw new Error('Token not found or invalid address');
+      throw new Error('Token not found or invalid address. Please verify the contract address is correct and deployed on the selected network.');
     }
 
     // Parse results
@@ -182,9 +226,17 @@ function getChainId(network: string): number {
 }
 
 /**
- * Check if network supports GoPlus API
+ * Check if network supports GoPlus API (mainnet chains only)
+ * Note: Testnets are auto-passed with bypass logic
  */
 export function isNetworkSupported(network: string): boolean {
-  const supported = ['ethereum', 'sepolia', 'bnb', 'bsc_testnet', 'base', 'base_sepolia'];
-  return supported.includes(network);
+  const supportedMainnets = ['ethereum', 'bnb', 'base', 'polygon', 'arbitrum', 'optimism'];
+  return supportedMainnets.includes(network);
+}
+
+/**
+ * Check if network is a testnet
+ */
+export function isTestnet(network: string): boolean {
+  return network.includes('testnet') || network.includes('sepolia');
 }

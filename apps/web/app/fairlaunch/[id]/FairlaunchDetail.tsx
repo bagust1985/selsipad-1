@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useWalletClient, usePublicClient } from 'wagmi';
 import { ArrowLeft, ExternalLink, Globe, Twitter, Send, MessageCircle, Shield, CheckCircle, Copy, Clock, TrendingUp, Lock, Users } from 'lucide-react';
 import { NetworkBadge } from '@/components/presale/NetworkBadge';
 import { StatusPill } from '@/components/presale/StatusPill';
@@ -315,7 +316,7 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
         {activeTab === 'overview' && (
           <OverviewTab fairlaunch={fairlaunch} finalPrice={finalPrice} />
         )}
-        {activeTab === 'contribute' && <ContributeTab userAddress={userAddress} />}
+        {activeTab === 'contribute' && <ContributeTab userAddress={userAddress} fairlaunch={fairlaunch} />}
         {activeTab === 'claim' && <ClaimTab />}
         {activeTab === 'refund' && <RefundTab />}
         {activeTab === 'transactions' && <TransactionsTab userAddress={userAddress} />}
@@ -553,21 +554,28 @@ function OverviewTab({ fairlaunch, finalPrice }: { fairlaunch: Fairlaunch; final
                 </span>
               </div>
 
+
               {/* Pool Contract Address */}
               <div className="pt-3 border-t border-gray-700">
                 <div className="text-xs text-gray-500 mb-1">Pool Contract</div>
-                <div className="flex items-center gap-2">
-                  <code className="text-sm text-blue-400 font-mono flex-1 truncate">
-                    {fairlaunch.id}
-                  </code>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(fairlaunch.id)}
-                    className="p-1.5 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
-                    title="Copy pool address"
-                  >
-                    <Copy className="w-4 h-4 text-gray-400" />
-                  </button>
-                </div>
+                {fairlaunch.params?.round_address ? (
+                  <div className="flex items-center gap-2">
+                    <code className="text-sm text-blue-400 font-mono flex-1 truncate">
+                      {fairlaunch.params.round_address}
+                    </code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(fairlaunch.params.round_address)}
+                      className="p-1.5 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+                      title="Copy pool address"
+                    >
+                      <Copy className="w-4 h-4 text-gray-400" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 italic">
+                    Contract address not available
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -791,16 +799,227 @@ function OverviewTab({ fairlaunch, finalPrice }: { fairlaunch: Fairlaunch; final
   );
 }
 
-function ContributeTab({ userAddress }: { userAddress?: string }) {
+function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fairlaunch: Fairlaunch }) {
+  const [amount, setAmount] = useState('');
+  const [isContributing, setIsContributing] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  
+  // Wagmi hooks
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
+  
+  // Get contract address and network info
+  const fairlaunchAddress = fairlaunch.params?.round_address as `0x${string}` | undefined;
+  const minContribution = Number(fairlaunch.params?.min_contribution || 0);
+  const maxContribution = Number(fairlaunch.params?.max_contribution || 0);
+  const nativeCurrency = getNativeCurrency(fairlaunch.network, fairlaunch.params?.chain_id);
+  
+  const handleContribute = async () => {
+    if (!userAddress) {
+      setError('Please connect your wallet first');
+      return;
+    }
+    
+    if (!walletClient) {
+      setError('Wallet not connected');
+      return;
+    }
+    
+    if (!publicClient) {
+      setError('Network not available');
+      return;
+    }
+    
+    if (!fairlaunchAddress) {
+      setError('Fairlaunch contract address not found');
+      return;
+    }
+    
+    try {
+      setIsContributing(true);
+      setError('');
+      setSuccess('');
+      
+      const amountNum = parseFloat(amount);
+      
+      // Validation
+      if (isNaN(amountNum) || amountNum <= 0) {
+        throw new Error('Please enter a valid amount');
+      }
+      
+      if (amountNum < minContribution) {
+        throw new Error(`Minimum contribution is ${minContribution} ${nativeCurrency}`);
+      }
+      
+      if (amountNum > maxContribution) {
+        throw new Error(`Maximum contribution is ${maxContribution} ${nativeCurrency}`);
+      }
+      
+      // Import helpers
+      const { parseEther } = await import('viem');
+      const { FAIRLAUNCH_ABI } = await import('@/contracts/Fairlaunch');
+      
+      // Convert to wei
+      const valueInWei = parseEther(amount);
+      
+      // Call contribute function using walletClient
+      const txHash = await walletClient.writeContract({
+        address: fairlaunchAddress,
+        abi: FAIRLAUNCH_ABI,
+        functionName: 'contribute',
+        value: valueInWei,
+      });
+      
+      setSuccess(`Transaction sent! Hash: ${txHash.slice(0, 10)}...`);
+      
+      // Wait for confirmation using publicClient
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+        confirmations: 2,
+      });
+      
+      if (receipt.status === 'reverted') {
+        throw new Error('Transaction failed');
+      }
+      
+      setSuccess(`Contribution successful! You contributed ${amount} ${nativeCurrency}`);
+      setAmount('');
+      
+      // Refresh page after 2 seconds
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+    } catch (err: any) {
+      console.error('Contribution error:', err);
+      setError(err.message || 'Failed to contribute');
+    } finally {
+      setIsContributing(false);
+    }
+  };
+  
+  if (!userAddress) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">🔒</div>
+        <h3 className="text-xl font-semibold text-white mb-2">Connect Wallet</h3>
+        <p className="text-gray-400">
+          Connect your wallet to contribute to this Fairlaunch
+        </p>
+      </div>
+    );
+  }
+  
+  if (fairlaunch.status !== 'LIVE') {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">⏸️</div>
+        <h3 className="text-xl font-semibold text-white mb-2">Sale Not Active</h3>
+        <p className="text-gray-400">
+          This Fairlaunch is currently {fairlaunch.status.toLowerCase()}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="text-center py-12">
-      <div className="text-6xl mb-4">🚧</div>
-      <h3 className="text-xl font-semibold text-white mb-2">Contribute Coming Soon</h3>
-      <p className="text-gray-400">
-        {userAddress
-          ? 'Contribution flow will be available after on-chain integration'
-          : 'Connect your wallet to contribute'}
-      </p>
+    <div className="max-w-2xl mx-auto">
+      <div className="glass-panel p-8">
+        <h3 className="text-2xl font-bold text-white mb-6">Contribute to Fairlaunch</h3>
+        
+        {/* Contribution Limits */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-white/5 rounded-lg p-4">
+            <div className="text-sm text-gray-400 mb-1">Minimum</div>
+            <div className="text-lg font-semibold text-white">
+              {minContribution} {nativeCurrency}
+            </div>
+          </div>
+          <div className="bg-white/5 rounded-lg p-4">
+            <div className="text-sm text-gray-400 mb-1">Maximum</div>
+            <div className="text-lg font-semibold text-white">
+              {maxContribution} {nativeCurrency}
+            </div>
+          </div>
+        </div>
+        
+        {/* Amount Input */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Contribution Amount ({nativeCurrency})
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={`Min: ${minContribution} ${nativeCurrency}`}
+              step="0.01"
+              min={minContribution}
+              max={maxContribution}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              disabled={isContributing}
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">
+              {nativeCurrency}
+            </div>
+          </div>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => setAmount(minContribution.toString())}
+              className="px-3 py-1 text-sm bg-white/5 hover:bg-white/10 rounded border border-white/10 text-gray-300"
+              disabled={isContributing}
+            >
+              Min
+            </button>
+            <button
+              onClick={() => setAmount(maxContribution.toString())}
+              className="px-3 py-1 text-sm bg-white/5 hover:bg-white/10 rounded border border-white/10 text-gray-300"
+              disabled={isContributing}
+            >
+              Max
+            </button>
+          </div>
+        </div>
+        
+        {/* Error/Success Messages */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
+        
+        {success && (
+          <div className="mb-4 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+            <p className="text-green-400 text-sm">{success}</p>
+          </div>
+        )}
+        
+        {/* Contribute Button */}
+        <button
+          onClick={handleContribute}
+          disabled={isContributing || !amount || parseFloat(amount) <= 0}
+          className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] disabled:scale-100"
+        >
+          {isContributing ? (
+            <span className="flex items-center justify-center gap-2">
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              {success ? 'Confirming...' : 'Processing...'}
+            </span>
+          ) : (
+            `Contribute ${amount || '0'} ${nativeCurrency}`
+          )}
+        </button>
+        
+        {/* Info */}
+        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+          <p className="text-sm text-blue-300">
+            💡 Your contribution will be used to purchase tokens at the sale price. 
+            You can claim your tokens after the sale ends successfully.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

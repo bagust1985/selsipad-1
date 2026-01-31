@@ -883,6 +883,20 @@ function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fair
         throw new Error('Transaction failed');
       }
       
+      // ✅ Save to database and trigger referral tracking
+      const { saveFairlaunchContribution } = await import('@/actions/fairlaunch/save-contribution');
+      const saveResult = await saveFairlaunchContribution({
+        roundId: fairlaunch.id,
+        amount: valueInWei.toString(),
+        txHash,
+        chain: fairlaunch.params?.chain_id || fairlaunch.network,
+      });
+      
+      if (!saveResult.success) {
+        console.error('Failed to save contribution:', saveResult.error);
+        // Don't fail the whole transaction, just log
+      }
+      
       setSuccess(`Contribution successful! You contributed ${amount} ${nativeCurrency}`);
       setAmount('');
       

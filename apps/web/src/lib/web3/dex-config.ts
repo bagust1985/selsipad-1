@@ -3,14 +3,15 @@
  * Maps DEX platform names to bytes32 IDs used by smart contracts
  */
 
-import { ethers } from 'ethers';
+import { keccak256, toHex, zeroAddress } from 'viem';
 
 // DEX identifier mapping (keccak256 hash)
+// Using viem equivalents for ethers.id
 export const DEX_IDS = {
-  'Uniswap': ethers.id('UNISWAP'),           // Ethereum/Sepolia
-  'PancakeSwap': ethers.id('PANCAKESWAP'),   // BSC/BSC Testnet
-  'BaseSwap': ethers.id('BASESWAP'),         // Base/Base Sepolia
-  'Raydium': ethers.id('RAYDIUM'),           // Solana (not used for EVM)
+  'Uniswap': keccak256(toHex('UNISWAP')),           // Ethereum/Sepolia
+  'PancakeSwap': keccak256(toHex('PANCAKESWAP')),   // BSC/BSC Testnet
+  'BaseSwap': keccak256(toHex('BASESWAP')),         // Base/Base Sepolia
+  'Raydium': keccak256(toHex('RAYDIUM')),           // Solana (not used for EVM)
 } as const;
 
 export type DexPlatform = keyof typeof DEX_IDS;
@@ -23,9 +24,7 @@ export function getDexId(platform: string): string {
   
   if (!dexId) {
     // Fallback: hash the platform name
-    return ethers
-
-.id(platform.toUpperCase());
+    return keccak256(toHex(platform.toUpperCase()));
   }
   
   return dexId;
@@ -103,5 +102,5 @@ export function getDexRouterAddress(network: string, dexPlatform: string): strin
     },
   };
 
-  return routers[network]?.[dexPlatform] || ethers.ZeroAddress;
+  return routers[network]?.[dexPlatform] || zeroAddress;
 }

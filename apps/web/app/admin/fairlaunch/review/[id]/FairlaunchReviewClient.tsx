@@ -308,67 +308,87 @@ export function FairlaunchReviewClient({ round }: FairlaunchReviewClientProps) {
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h2 className="text-xl font-semibold text-white mb-4">Review Actions</h2>
 
-        {!showRejectInput ? (
-          <div className="flex gap-4">
-            <button
-              onClick={handleApprove}
-              disabled={isProcessing || !isLiquidityValid}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
-            >
-              <CheckCircle2 className="w-5 h-5" />
-              {isProcessing ? 'Approving...' : 'Approve Fairlaunch'}
-            </button>
+        {/* Only show approve/reject for SUBMITTED status */}
+        {(round.status === 'SUBMITTED' || round.status === 'SUBMITTED_FOR_REVIEW') && (
+          <>
+            {!showRejectInput ? (
+              <div className="flex gap-4">
+                <button
+                  onClick={handleApprove}
+                  disabled={isProcessing || !isLiquidityValid}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  {isProcessing ? 'Approving...' : 'Approve Fairlaunch'}
+                </button>
 
-            <button
-              onClick={() => setShowRejectInput(true)}
-              disabled={isProcessing}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
-            >
-              <XCircle className="w-5 h-5" />
-              Reject Fairlaunch
-            </button>
+                <button
+                  onClick={() => setShowRejectInput(true)}
+                  disabled={isProcessing}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                >
+                  <XCircle className="w-5 h-5" />
+                  Reject Fairlaunch
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Rejection Reason (min 10 characters)
+                  </label>
+                  <textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Explain why this fairlaunch is being rejected..."
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none"
+                    rows={4}
+                    disabled={isProcessing}
+                  />
+                  <p className="text-gray-500 text-sm mt-1">
+                    {rejectionReason.length}/10 characters minimum
+                  </p>
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleReject}
+                    disabled={isProcessing || rejectionReason.trim().length < 10}
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                  >
+                    <XCircle className="w-5 h-5" />
+                    {isProcessing ? 'Rejecting...' : 'Confirm Rejection'}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowRejectInput(false);
+                      setRejectionReason('');
+                      setError('');
+                    }}
+                    disabled={isProcessing}
+                    className="px-6 py-3 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Show status message for approved/deployed */}
+        {round.status ===  'APPROVED_TO_DEPLOY' && (
+          <div className="bg-green-950/30 border border-green-800 rounded-lg p-4">
+            <p className="text-green-400 font-medium">✅ This fairlaunch has been approved</p>
+            <p className="text-gray-400 text-sm mt-1">Proceed to deploy the contract below.</p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Rejection Reason (min 10 characters)
-              </label>
-              <textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Explain why this fairlaunch is being rejected..."
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none"
-                rows={4}
-                disabled={isProcessing}
-              />
-              <p className="text-gray-500 text-sm mt-1">
-                {rejectionReason.length}/10 characters minimum
-              </p>
-            </div>
+        )}
 
-            <div className="flex gap-4">
-              <button
-                onClick={handleReject}
-                disabled={isProcessing || rejectionReason.trim().length < 10}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
-              >
-                <XCircle className="w-5 h-5" />
-                {isProcessing ? 'Rejecting...' : 'Confirm Rejection'}
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowRejectInput(false);
-                  setRejectionReason('');
-                  setError('');
-                }}
-                disabled={isProcessing}
-                className="px-6 py-3 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
+        {round.status === 'DEPLOYED' && (
+          <div className="bg-blue-950/30 border border-blue-800 rounded-lg p-4">
+            <p className="text-blue-400 font-medium">🚀 This fairlaunch has been deployed</p>
+            <p className="text-gray-400 text-sm mt-1">See deployment details below.</p>
           </div>
         )}
       </div>

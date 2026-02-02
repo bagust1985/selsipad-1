@@ -6,7 +6,7 @@ import { useWalletClient, usePublicClient } from 'wagmi';
 import { ArrowLeft, ExternalLink, Globe, Twitter, Send, MessageCircle, Shield, CheckCircle, Copy, Clock, TrendingUp, Lock, Users } from 'lucide-react';
 import { NetworkBadge } from '@/components/presale/NetworkBadge';
 import { StatusPill } from '@/components/presale/StatusPill';
-import { TokenFundingModal } from '@/components/fairlaunch/TokenFundingModal';
+
 import { useRouter } from 'next/navigation';
 import { Countdown } from '@/components/ui/Countdown';
 
@@ -91,7 +91,7 @@ type TabType = 'overview' | 'contribute' | 'claim' | 'refund' | 'transactions';
 export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
-  const [showFundingModal, setShowFundingModal] = useState(false);
+
 
   // Consolidate data access with robust fallbacks
   // Network logic: prefer explicit chain_id, fall back to chain string
@@ -166,8 +166,7 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
   ];
 
   // Helper for funding check
-  const isPendingFunding = fairlaunch.params?.funding_state === 'PENDING_FUNDING' || 
-                          fairlaunch.deployment_status === 'PENDING_FUNDING';
+
 
   // Helper for explorer URL
   const getExplorerUrl = (id: string) => {
@@ -177,7 +176,7 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
     return '#';
   };
 
-  const handleOpenFunding = () => setShowFundingModal(true);
+
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -186,45 +185,8 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
         Back to Fairlaunch List
       </Link>
 
-       {/* Pending Funding Alert */}
-       {isPendingFunding && (
-        <div className="mb-6 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-500/20 rounded-lg">
-              <Shield className="w-5 h-5 text-yellow-400" />
-            </div>
-            <div>
-              <h3 className="text-white font-semibold">Action Required: Fund Contract</h3>
-              <p className="text-sm text-gray-400">
-                You need to send the required tokens to the contract to start the sale.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleOpenFunding}
-            className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-medium rounded-lg transition-colors"
-          >
-            Fund Contract
-          </button>
-        </div>
-      )}
 
-      {/* Funding Modal */}
-      {isPendingFunding && (
-        <TokenFundingModal
-          open={showFundingModal}
-          onOpenChange={setShowFundingModal}
-          contractAddress={fairlaunch.contract_address || fairlaunch.params?.contract_address || ''}
-          tokenAddress={fairlaunch.params?.token_address}
-          tokenSymbol={fairlaunch.params?.token_symbol}
-          tokenDecimals={fairlaunch.params?.token_decimals}
-          requiredTokens={fairlaunch.params?.token_total_supply || fairlaunch.params?.tokens_for_sale} // simplified
-          explorerUrl={getExplorerUrl(String(chainId || chainKey))}
-          onFundingComplete={async () => {
-             window.location.reload();
-          }}
-        />
-      )}
+
 
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
@@ -375,6 +337,9 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
               <div className="text-xl font-bold text-green-400">
                 <Countdown targetDate={fairlaunch.end_at} />
               </div>
+              <div className="text-gray-500 text-[10px] mt-1">
+                {Intl.DateTimeFormat().resolvedOptions().timeZone}
+              </div>
             </div>
           )}
           {getTimeStatus(fairlaunch.start_at, fairlaunch.end_at) === 'upcoming' && (
@@ -382,6 +347,9 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
               <div className="text-gray-400 text-xs mb-1">Starts In</div>
               <div className="text-xl font-bold text-blue-400">
                 <Countdown targetDate={fairlaunch.start_at} />
+              </div>
+              <div className="text-gray-500 text-[10px] mt-1">
+                {Intl.DateTimeFormat().resolvedOptions().timeZone}
               </div>
             </div>
           )}
@@ -594,14 +562,14 @@ function OverviewTab({
               {fairlaunch.vesting_vault_address && (
                 <>
                   <button
-                    onClick={() => navigator.clipboard.writeText(fairlaunch.vesting_vault_address)}
+                    onClick={() => navigator.clipboard.writeText(fairlaunch.vesting_vault_address || '')}
                     className="p-1 hover:bg-gray-700 rounded transition-colors"
                     title="Copy address"
                   >
                     <Copy className="w-4 h-4 text-gray-400" />
                   </button>
                   <a
-                    href={`${getExplorerUrl(String(fairlaunch.chain_id || fairlaunch.chain))}/address/${fairlaunch.vesting_vault_address}`}
+                    href={`${getExplorerUrl(String(fairlaunch.chain_id || fairlaunch.chain))}/address/${fairlaunch.vesting_vault_address || ''}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-1 hover:bg-gray-700 rounded transition-colors"

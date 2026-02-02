@@ -37,11 +37,35 @@ export function ProjectStatusCard({ project }: ProjectStatusCardProps) {
   const router = useRouter();
   const round = project.launch_rounds?.[0];
 
+  // Calculate dynamic status based on deployment and time
+  const getDynamicStatus = () => {
+    // If not deployed yet, use database status
+    if (project.status !== 'DEPLOYED' || !round?.start_time || !round?.end_time) {
+      return project.status;
+    }
+
+    // For deployed projects, check current time vs start/end
+    const now = new Date();
+    const startTime = new Date(round.start_time);
+    const endTime = new Date(round.end_time);
+
+    if (now < startTime) {
+      return 'UPCOMING'; // Deployed but not started yet
+    } else if (now >= startTime && now <= endTime) {
+      return 'LIVE'; // Sale is active
+    } else {
+      return 'ENDED'; // Sale has ended
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { label: string; color: string; icon: any }> = {
       SUBMITTED: { label: 'Pending Review', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500', icon: Clock },
       IN_REVIEW: { label: 'In Review', color: 'bg-blue-500/20 text-blue-400 border-blue-500', icon: Clock },
       APPROVED: { label: 'Approved', color: 'bg-green-500/20 text-green-400 border-green-500', icon: CheckCircle },
+      APPROVED_TO_DEPLOY: { label: 'Approved', color: 'bg-green-500/20 text-green-400 border-green-500', icon: CheckCircle },
+      DEPLOYED: { label: 'Deployed', color: 'bg-blue-500/20 text-blue-400 border-blue-500', icon: Rocket },
+      UPCOMING: { label: 'Upcoming', color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500', icon: Clock },
       REJECTED: { label: 'Rejected', color: 'bg-red-500/20 text-red-400 border-red-500', icon: XCircle },
       LIVE: { label: 'Live', color: 'bg-purple-500/20 text-purple-400 border-purple-500', icon: Rocket },
       ENDED: { label: 'Ended', color: 'bg-gray-500/20 text-gray-400 border-gray-500', icon: CheckCircle },
@@ -82,7 +106,7 @@ export function ProjectStatusCard({ project }: ProjectStatusCardProps) {
             <p className="text-sm text-gray-400">{project.type}</p>
           </div>
         </div>
-        {getStatusBadge(project.status)}
+        {getStatusBadge(getDynamicStatus())}
       </div>
 
       {/* Description */}

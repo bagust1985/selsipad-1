@@ -70,6 +70,23 @@ export default function ProjectsPage() {
     return p.type === filter;
   });
 
+  // Helper to calculate dynamic status (same logic as ProjectStatusCard)
+  const getDynamicStatus = (project: Project) => {
+    const round = project.launch_rounds?.[0];
+    
+    if (project.status !== 'DEPLOYED' || !round?.start_time || !round?.end_time) {
+      return project.status;
+    }
+
+    const now = new Date();
+    const startTime = new Date(round.start_time);
+    const endTime = new Date(round.end_time);
+
+    if (now < startTime) return 'UPCOMING';
+    if (now >= startTime && now <= endTime) return 'LIVE';
+    return 'ENDED';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-900 to-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -181,13 +198,13 @@ export default function ProjectsPage() {
                 <div className="bg-green-600/20 border border-green-600 rounded-lg p-4">
                   <p className="text-gray-400 text-sm mb-1">Live</p>
                   <p className="text-2xl font-bold text-green-400">
-                    {projects.filter(p => p.status === 'LIVE').length}
+                    {projects.filter(p => getDynamicStatus(p) === 'LIVE').length}
                   </p>
                 </div>
                 <div className="bg-blue-600/20 border border-blue-600 rounded-lg p-4">
                   <p className="text-gray-400 text-sm mb-1">Ended</p>
                   <p className="text-2xl font-bold text-blue-400">
-                    {projects.filter(p => p.status === 'ENDED').length}
+                    {projects.filter(p => getDynamicStatus(p) === 'ENDED').length}
                   </p>
                 </div>
               </div>

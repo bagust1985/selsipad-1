@@ -46,7 +46,38 @@ export function CreateTokenDialog({ network, open, onOpenChange, onTokenCreated 
             
             if (decoded.eventName === 'TokenCreated') {
               const tokenAddress = (decoded.args as any).token as string;
+              const creatorAddress = (decoded.args as any).creator as string;
               console.log('Token created:', tokenAddress);
+              
+              // Auto-verify token on BSCScan
+              const chainId = network.includes('bsc_testnet') ? 97 : network.includes('bnb') ? 56 : undefined;
+              if (chainId) {
+                const totalSupplyWei = (BigInt(formData.totalSupply) * (10n ** BigInt(formData.decimals))).toString();
+                
+                fetch('/api/internal/verify-factory-token', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    tokenAddress,
+                    name: formData.name,
+                    symbol: formData.symbol,
+                    totalSupply: totalSupplyWei,
+                    decimals: formData.decimals,
+                    ownerAddress: creatorAddress,
+                    chainId,
+                  }),
+                })
+                  .then(res => res.json())
+                  .then(data => {
+                    if (data.success) {
+                      console.log('✅ Token verification submitted:', data.guid);
+                    } else {
+                      console.error('❌ Verification failed:', data.error);
+                    }
+                  })
+                  .catch(err => console.error('❌ Verification request failed:', err));
+              }
+              
               onTokenCreated({
                 address: tokenAddress,
                 name: formData.name,

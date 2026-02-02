@@ -196,7 +196,8 @@ export async function POST(request: NextRequest) {
       project.token_address,
       [
         'function balanceOf(address) view returns (uint256)',
-        'function approve(address spender, uint256 amount) returns (bool)'
+        'function approve(address spender, uint256 amount) returns (bool)',
+        'function transfer(address to, uint256 amount) returns (bool)'
       ],
       signer
     );
@@ -306,6 +307,98 @@ export async function POST(request: NextRequest) {
 
     console.log('[Admin Deploy] ✅ Contract deployed:', contractAddress);
     console.log('[Admin Deploy] ✅ Vesting vault deployed:', vestingAddress);
+
+    // 12. AUTO-FUND CONTRACTS (tokens are in admin wallet after escrow release)
+    // CRITICAL: This must be atomic - both transfers must succeed or we fail deployment
+    console.log('[Admin Deploy] Auto-funding contracts...');
+    
+    // Calculate token amounts needed for each contract (before try block for error handler access)
+    const liquidityTokens = ethers.parseUnits((params.liquidity_tokens || '0').toString(), 18);
+    const tokensForFairlaunch = createParams.tokensForSale + liquidityTokens;
+    
+    // Calculate total vesting tokens from amounts array
+    const totalVestingTokens = vestingParams.amounts.reduce(
+      (sum: bigint, amount: bigint) => sum + amount, 
+      BigInt(0)
+    );
+    
+    let fairlaunchFunded = false;
+    let vestingFunded = false;
+    
+    try {
+      console.log('[Admin Deploy] Transferring tokens:', {
+        fairlaunch: ethers.formatUnits(tokensForFairlaunch, 18),
+        vesting: ethers.formatUnits(totalVestingTokens, 18),
+      });
+
+      // Transfer 1: Fairlaunch contract
+      console.log('[Admin Deploy] Step 1/2: Funding Fairlaunch contract...');
+      const transferToFairlaunchTx = await (tokenContract as any).transfer(contractAddress, tokensForFairlaunch);
+      const fairlaunchReceipt = await transferToFairlaunchTx.wait();
+      fairlaunchFunded = true;
+      console.log('[Admin Deploy] ✅ Fairlaunch contract funded (TX:', fairlaunchReceipt.hash, ')');
+
+      // Transfer 2: Vesting vault
+      console.log('[Admin Deploy] Step 2/2: Funding Vesting vault...');
+      const transferToVestingTx = await (tokenContract as any).transfer(vestingAddress, totalVestingTokens);
+      const vestingReceipt = await transferToVestingTx.wait();
+      vestingFunded = true;
+      console.log('[Admin Deploy] ✅ Vesting vault funded (TX:', vestingReceipt.hash, ')');
+
+      console.log('[Admin Deploy] ✅ All contracts funded automatically!');
+      
+    } catch (fundingError: any) {
+      console.error('[Admin Deploy] ❌ CRITICAL: Auto-funding failed!', fundingError);
+      
+      // Log failure state for manual recovery
+      const fundingState = {
+        fairlaunchFunded,
+        vestingFunded,
+        fairlaunchAddress: contractAddress,
+        vestingAddress,
+        error: fundingError.message,
+        timestamp: new Date().toISOString(),
+      };
+      
+      console.error('[Admin Deploy] Funding state:', JSON.stringify(fundingState, null, 2));
+      
+      // Update database with FAILED state
+      await supabase
+        .from('launch_rounds')
+        .update({
+          status: 'DEPLOYMENT_FAILED',
+          contract_address: contractAddress,
+          vesting_vault_address: vestingAddress,
+          deployed_at: new Date().toISOString(),
+          deployment_tx_hash: receipt.hash,
+          deployment_error: `Auto-funding failed: ${fundingError.message}. Fairlaunch funded: ${fairlaunchFunded}, Vesting funded: ${vestingFunded}`,
+        })
+        .eq('id', launchRoundId);
+      
+      // Return error response with recovery instructions
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Deployment completed but auto-funding failed',
+          details: {
+            message: fundingError.message,
+            contracts: {
+              fairlaunch: contractAddress,
+              vesting: vestingAddress,
+            },
+            funded: {
+              fairlaunch: fairlaunchFunded,
+              vesting: vestingFunded,
+            },
+            recovery: fairlaunchFunded && !vestingFunded
+              ? `MANUAL ACTION REQUIRED: Fairlaunch was funded but Vesting failed. Transfer ${ethers.formatUnits(totalVestingTokens, 18)} tokens to ${vestingAddress}`
+              : 'Contact support with this error log for manual recovery',
+          },
+        },
+        { status: 500 }
+      );
+    }
+
 
     // 12. Update projects table
     const { error: updateProjectError } = await supabase

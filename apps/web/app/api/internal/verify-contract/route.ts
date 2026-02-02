@@ -79,10 +79,10 @@ async function verifyFairlaunchContract(
 ) {
   console.log('[Verify API] Verifying Fairlaunch:', contractAddress);
 
-  // Update status to VERIFYING
+  // Update status to VERIFICATION_QUEUED
   await supabase
     .from('launch_rounds')
-    .update({ verification_status: 'VERIFYING' })
+    .update({ verification_status: 'VERIFICATION_QUEUED' })
     .eq('id', launchRoundId);
 
   // Execute verification
@@ -131,10 +131,10 @@ async function verifyVestingContract(
 ) {
   console.log('[Verify API] Verifying Vesting:', contractAddress);
 
-  // Update status to VERIFYING
+  // Update status to VERIFICATION_QUEUED
   await supabase
     .from('launch_rounds')
-    .update({ vesting_verification_status: 'VERIFYING' })
+    .update({ vesting_verification_status: 'VERIFICATION_QUEUED' })
     .eq('id', launchRoundId);
 
   // Execute verification

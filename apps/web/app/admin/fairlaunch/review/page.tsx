@@ -9,7 +9,7 @@ async function getFairlaunchSubmissions() {
     .from('launch_rounds')
     .select('*, projects(name, symbol, logo_url)')
     .eq('sale_type', 'fairlaunch')
-    .in('status', ['SUBMITTED', 'SUBMITTED_FOR_REVIEW', 'APPROVED_TO_DEPLOY', 'REJECTED'])
+    .in('status', ['SUBMITTED', 'SUBMITTED_FOR_REVIEW', 'APPROVED_TO_DEPLOY', 'REJECTED', 'DEPLOYED'])
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -36,6 +36,13 @@ function getStatusBadge(status: string) {
           Approved
         </span>
       );
+    case 'DEPLOYED':
+      return (
+        <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600/20 text-blue-400 rounded-full text-sm">
+          <TrendingUp className="w-3 h-3" />
+          Deployed
+        </span>
+      );
     case 'REJECTED':
       return (
         <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-600/20 text-red-400 rounded-full text-sm">
@@ -53,7 +60,7 @@ export default async function FairlaunchReviewPage() {
 
   // Separate into pending and reviewed
   const pending = rounds.filter((r) => ['SUBMITTED', 'SUBMITTED_FOR_REVIEW'].includes(r.status));
-  const reviewed = rounds.filter((r) => ['APPROVED_TO_DEPLOY', 'REJECTED'].includes(r.status));
+  const reviewed = rounds.filter((r) => ['APPROVED_TO_DEPLOY', 'REJECTED', 'DEPLOYED'].includes(r.status));
 
   return (
     <div>

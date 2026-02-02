@@ -153,6 +153,10 @@ export function SaleParamsStep({ data, network, paymentSymbol, onChange, errors 
           `}
         />
         {errors?.startTime && <p className="text-red-400 text-sm mt-2">{errors.startTime}</p>}
+        <p className="text-gray-400 text-xs mt-1 flex items-center gap-1">
+          <Calendar className="w-3 h-3" />
+          Your timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+        </p>
       </div>
 
       {/* End Time */}
@@ -175,9 +179,12 @@ export function SaleParamsStep({ data, network, paymentSymbol, onChange, errors 
           `}
         />
         {errors?.endTime && <p className="text-red-400 text-sm mt-2">{errors.endTime}</p>}
+        <p className="text-gray-400 text-xs mt-1 flex items-center gap-1">
+          <Calendar className="w-3 h-3" />
+          Your timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+        </p>
         {duration > 0 && (
-          <p className="text-gray-400 text-xs mt-1">
-            <Calendar className="w-3 h-3 inline mr-1" />
+          <p className="text-purple-400 text-xs mt-1 font-medium">
             Duration: {duration} day{duration !== 1 ? 's' : ''}
           </p>
         )}

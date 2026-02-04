@@ -62,7 +62,9 @@ export default function AdminFairlaunchPage() {
             name,
             symbol,
             logo_url,
-            description
+            description,
+            creator_wallet,
+            token_address
           )
         `)
         .eq('type', 'FAIRLAUNCH')
@@ -85,7 +87,7 @@ export default function AdminFairlaunchPage() {
           logo_url: project?.logo_url || round.params?.logo_url,
           type: 'FAIRLAUNCH' as const,
           chain_id: round.chain === 'bsc-testnet' ? 97 : 56,
-          token_address: round.params?.token_address || '0x0000000000000000000000000000000000000000',
+          token_address: project?.token_address || round.params?.token_address || '0x0000000000000000000000000000000000000000',
           creator_wallet: project?.creator_wallet || round.params?.creator_address || '0x0000000000000000000000000000000000000000',
           created_at: round.created_at,
           launch_rounds: [{

@@ -1,6 +1,6 @@
 /**
  * useAMAChat Hook
- * 
+ *
  * Real-time chat for AMA sessions using Supabase Realtime
  * Discord-style live messaging
  */
@@ -32,7 +32,7 @@ interface UseAMAChatReturn {
   isSending: boolean;
   error: string | null;
   viewerCount: number;
-  
+
   // Actions
   sendMessage: (content: string) => Promise<void>;
   pinMessageById: (messageId: string) => Promise<void>;
@@ -46,17 +46,19 @@ export function useAMAChat(amaId: string): UseAMAChatReturn {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewerCount, setViewerCount] = useState(0);
-  
+
   const channelRef = useRef<ReturnType<typeof createClient>['channel'] | null>(null);
-  
+
   // Load initial messages
   useEffect(() => {
     if (!amaId) return;
-    
+
     const loadMessages = async () => {
+      console.log('[AMAChat] Loading messages for:', amaId);
       setIsLoading(true);
       try {
         const data = await getAMAMessages(amaId);
+        console.log('[AMAChat] Loaded messages:', data.length, data);
         setMessages(data as AMAMessage[]);
       } catch (err) {
         console.error('[AMAChat] Failed to load messages:', err);
@@ -65,16 +67,17 @@ export function useAMAChat(amaId: string): UseAMAChatReturn {
         setIsLoading(false);
       }
     };
-    
+
     loadMessages();
   }, [amaId]);
-  
+
   // Subscribe to real-time updates
   useEffect(() => {
     if (!amaId) return;
-    
+
+    console.log('[AMAChat] Setting up realtime for:', amaId);
     const supabase = createClient();
-    
+
     // Subscribe to new messages
     const channel = supabase
       .channel(`ama-chat:${amaId}`)
@@ -104,9 +107,7 @@ export function useAMAChat(amaId: string): UseAMAChatReturn {
           console.log('[AMAChat] Message updated:', payload.new);
           const updatedMessage = payload.new as AMAMessage;
           setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === updatedMessage.id ? updatedMessage : msg
-            )
+            prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
           );
         }
       )
@@ -118,7 +119,7 @@ export function useAMAChat(amaId: string): UseAMAChatReturn {
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
-          
+
           // Track presence
           await channel.track({
             user: `user_${Date.now()}`,
@@ -128,46 +129,52 @@ export function useAMAChat(amaId: string): UseAMAChatReturn {
           setIsConnected(false);
         }
       });
-    
+
     channelRef.current = channel as any;
-    
+
     return () => {
       supabase.removeChannel(channel);
     };
   }, [amaId]);
-  
+
   // Send a message
-  const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim()) return;
-    
-    setIsSending(true);
-    setError(null);
-    
-    try {
-      const result = await sendAMAMessage(amaId, content.trim());
-      if (!result.success) {
-        setError(result.error || 'Failed to send message');
+  const sendMessage = useCallback(
+    async (content: string) => {
+      if (!content.trim()) return;
+
+      setIsSending(true);
+      setError(null);
+
+      try {
+        const result = await sendAMAMessage(amaId, content.trim());
+        if (!result.success) {
+          setError(result.error || 'Failed to send message');
+        }
+      } catch (err) {
+        console.error('[AMAChat] Send error:', err);
+        setError('Failed to send message');
+      } finally {
+        setIsSending(false);
       }
-    } catch (err) {
-      console.error('[AMAChat] Send error:', err);
-      setError('Failed to send message');
-    } finally {
-      setIsSending(false);
-    }
-  }, [amaId]);
-  
+    },
+    [amaId]
+  );
+
   // Pin a message
-  const pinMessageById = useCallback(async (messageId: string) => {
-    try {
-      const result = await pinMessage(messageId, amaId);
-      if (!result.success) {
-        setError(result.error || 'Failed to pin message');
+  const pinMessageById = useCallback(
+    async (messageId: string) => {
+      try {
+        const result = await pinMessage(messageId, amaId);
+        if (!result.success) {
+          setError(result.error || 'Failed to pin message');
+        }
+      } catch (err) {
+        setError('Failed to pin message');
       }
-    } catch (err) {
-      setError('Failed to pin message');
-    }
-  }, [amaId]);
-  
+    },
+    [amaId]
+  );
+
   // Delete a message
   const deleteMessageById = useCallback(async (messageId: string) => {
     try {
@@ -179,15 +186,13 @@ export function useAMAChat(amaId: string): UseAMAChatReturn {
       setError('Failed to delete message');
     }
   }, []);
-  
+
   // Filter pinned messages
-  const pinnedMessages = messages.filter(
-    (msg) => msg.is_pinned_message && !msg.is_deleted
-  );
-  
+  const pinnedMessages = messages.filter((msg) => msg.is_pinned_message && !msg.is_deleted);
+
   // Filter visible messages (not deleted)
   const visibleMessages = messages.filter((msg) => !msg.is_deleted);
-  
+
   return {
     messages: visibleMessages,
     pinnedMessages,

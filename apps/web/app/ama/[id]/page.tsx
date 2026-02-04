@@ -2,7 +2,17 @@ import { createClient } from '@supabase/supabase-js';
 import { PageHeader, PageContainer } from '@/components/layout';
 import { notFound } from 'next/navigation';
 import { getAMAMessages } from '@/lib/data/ama';
-import { AMALiveRoom } from '@/components/ama/AMALiveRoom';
+import dynamicImport from 'next/dynamic';
+
+// Dynamic import to prevent SSR issues with Supabase client
+const AMALiveRoom = dynamicImport(
+  () => import('@/components/ama/AMALiveRoom').then((mod) => ({ default: mod.AMALiveRoom })),
+  { ssr: false }
+);
+
+// Force dynamic rendering for real-time status
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 async function getAMAById(id: string) {
   // Use service role to bypass RLS
@@ -10,7 +20,7 @@ async function getAMAById(id: string) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
-  
+
   // Fetch without embedded relations (FK not set up)
   const { data: ama, error } = await supabase
     .from('ama_requests')
@@ -39,6 +49,12 @@ export default async function AMADetailPage({ params }: { params: { id: string }
   const isEnded = ama.status === 'ENDED';
   const isPinned = ama.status === 'PINNED';
   const isPending = ama.status === 'PENDING';
+
+  // Debug logging
+  console.log('[AMA Detail] ID:', ama.id);
+  console.log('[AMA Detail] Status:', ama.status);
+  console.log('[AMA Detail] isLive:', isLive);
+  console.log('[AMA Detail] Messages count:', messages.length);
 
   const statusColors: Record<string, string> = {
     PENDING: 'bg-yellow-500/20 text-yellow-400',
@@ -134,8 +150,8 @@ export default async function AMADetailPage({ params }: { params: { id: string }
 
           {/* Live Chat Room (only for LIVE status) */}
           {isLive && (
-            <AMALiveRoom 
-              amaId={ama.id} 
+            <AMALiveRoom
+              amaId={ama.id}
               projectName={ama.project_name}
               developerId={ama.developer_id}
               initialMessages={messages}
@@ -164,9 +180,7 @@ export default async function AMADetailPage({ params }: { params: { id: string }
               {isPending && (
                 <div>
                   <h3 className="text-xl font-bold text-yellow-400 mb-4">⏳ Pending Approval</h3>
-                  <p className="text-gray-400">
-                    This AMA request is waiting for admin review.
-                  </p>
+                  <p className="text-gray-400">This AMA request is waiting for admin review.</p>
                 </div>
               )}
 
@@ -179,19 +193,27 @@ export default async function AMADetailPage({ params }: { params: { id: string }
                       dateStyle: 'long',
                     })}
                   </p>
-                  
+
                   {/* Show archived messages */}
                   {messages.length > 0 && (
                     <div className="mt-6 text-left">
-                      <h4 className="text-lg font-semibold text-white mb-4">Chat Archive ({messages.length} messages)</h4>
+                      <h4 className="text-lg font-semibold text-white mb-4">
+                        Chat Archive ({messages.length} messages)
+                      </h4>
                       <div className="max-h-96 overflow-y-auto space-y-3">
                         {messages.map((msg: any) => (
                           <div key={msg.id} className="p-3 bg-white/5 rounded-lg">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`font-medium ${msg.is_developer ? 'text-indigo-400' : 'text-white'}`}>
+                              <span
+                                className={`font-medium ${msg.is_developer ? 'text-indigo-400' : 'text-white'}`}
+                              >
                                 {msg.username}
                               </span>
-                              {msg.is_developer && <span className="text-xs bg-indigo-500/30 text-indigo-300 px-1 rounded">DEV</span>}
+                              {msg.is_developer && (
+                                <span className="text-xs bg-indigo-500/30 text-indigo-300 px-1 rounded">
+                                  DEV
+                                </span>
+                              )}
                               <span className="text-xs text-gray-500">
                                 {new Date(msg.created_at).toLocaleTimeString()}
                               </span>

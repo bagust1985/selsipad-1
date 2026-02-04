@@ -39,7 +39,10 @@ export async function submitAMARequest(data: SubmitAMAData) {
     return { success: false, error: 'Authentication required' };
   }
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   // Verify user is Dev Verified
   const { data: profile } = await supabase
@@ -116,12 +119,13 @@ export async function getLiveAMAs(): Promise<any[]> {
     .from('ama_requests')
     .select('*')
     .eq('status', 'LIVE')
-    .order('started_at', { ascending: false });
+    .order('scheduled_at', { ascending: false });
 
   if (error) {
     console.error('[AMA] Error fetching live AMAs:', error);
   }
 
+  console.log('[AMA] Live AMAs found:', requests?.length || 0);
   return requests || [];
 }
 
@@ -161,7 +165,10 @@ export async function getMyAMARequests(): Promise<any[]> {
     return [];
   }
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   const { data: requests } = await supabase
     .from('ama_requests')
@@ -181,7 +188,10 @@ export async function getMyAMARequests(): Promise<any[]> {
  * Get AMA by ID with full details
  */
 export async function getAMAById(amaId: string): Promise<any> {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   const { data: ama, error } = await supabase
     .from('ama_requests')
@@ -207,7 +217,10 @@ export async function getAMAById(amaId: string): Promise<any> {
  * Get AMA Messages
  */
 export async function getAMAMessages(amaId: string): Promise<any[]> {
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   const { data: messages, error } = await supabase
     .from('ama_messages')
@@ -238,7 +251,10 @@ export async function sendAMAMessage(amaId: string, content: string) {
     return { success: false, error: 'Message cannot be empty' };
   }
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   // Get profile info
   const { data: profile } = await supabase
@@ -285,7 +301,10 @@ export async function pinMessage(messageId: string, amaId: string) {
     return { success: false, error: 'Authentication required' };
   }
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   // Verify user is the developer
   const { data: ama } = await supabase
@@ -320,7 +339,10 @@ export async function deleteMessage(messageId: string) {
     return { success: false, error: 'Authentication required' };
   }
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   // Check if admin
   const { data: profile } = await supabase

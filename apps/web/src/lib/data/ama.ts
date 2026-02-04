@@ -1,7 +1,7 @@
 'use server';
 /**
  * AMA Data Layer
- * 
+ *
  * Server actions for AMA system
  * Used by both app/ and src/ files
  */
@@ -66,17 +66,26 @@ export async function getAMAMessages(amaId: string): Promise<AMAMessage[]> {
  * Send AMA Message
  */
 export async function sendAMAMessage(amaId: string, content: string) {
+  console.log('[sendAMAMessage] Starting...', { amaId, content });
+
   const session = await getServerSession();
 
   if (!session) {
+    console.log('[sendAMAMessage] No session');
     return { success: false, error: 'Authentication required' };
   }
+
+  console.log('[sendAMAMessage] Session:', session.userId);
 
   if (!content.trim()) {
     return { success: false, error: 'Message cannot be empty' };
   }
 
-  const supabase = createClient();
+  // Use service role to bypass RLS for message insertion
+  const supabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   // Get profile info
   const { data: profile } = await supabase
@@ -84,6 +93,8 @@ export async function sendAMAMessage(amaId: string, content: string) {
     .select('nickname, avatar_url, kyc_status')
     .eq('user_id', session.userId)
     .single();
+
+  console.log('[sendAMAMessage] Profile:', profile);
 
   // Check if user is the developer
   const { data: ama } = await supabase
@@ -93,8 +104,9 @@ export async function sendAMAMessage(amaId: string, content: string) {
     .single();
 
   const isDeveloper = ama?.developer_id === session.userId;
+  console.log('[sendAMAMessage] isDeveloper:', isDeveloper);
 
-  const { error } = await supabase.from('ama_messages').insert({
+  const messageData = {
     ama_id: amaId,
     user_id: session.userId,
     content: content.trim(),
@@ -103,14 +115,23 @@ export async function sendAMAMessage(amaId: string, content: string) {
     avatar_url: profile?.avatar_url,
     is_developer: isDeveloper,
     is_verified: profile?.kyc_status === 'APPROVED',
-  });
+  };
+
+  console.log('[sendAMAMessage] Inserting:', messageData);
+
+  const { data: inserted, error } = await supabase
+    .from('ama_messages')
+    .insert(messageData)
+    .select()
+    .single();
 
   if (error) {
-    console.error('Error sending message:', error);
+    console.error('[sendAMAMessage] Error:', error);
     return { success: false, error: error.message };
   }
 
-  return { success: true };
+  console.log('[sendAMAMessage] ✅ Success:', inserted);
+  return { success: true, data: inserted };
 }
 
 /**
@@ -203,7 +224,7 @@ export interface SubmitAMAData {
  */
 export async function submitAMARequest(data: SubmitAMAData) {
   console.log('[AMA Submit] Starting submission with data:', data);
-  
+
   const session = await getServerSession();
 
   if (!session) {

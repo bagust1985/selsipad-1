@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { MessageSquare, Clock, CheckCircle2, XCircle, Play, AlertCircle, Pin } from 'lucide-react';
 import Link from 'next/link';
+import { QuickStartButton } from '@/components/ama/QuickStartButton';
 
 async function getAMARequests() {
   // Use service role to bypass RLS and see all requests
@@ -21,6 +22,35 @@ async function getAMARequests() {
   }
 
   return requests || [];
+}
+
+// Helper to format datetime in both WIB and UTC
+function formatDualTimezone(isoString: string) {
+  const utcDate = new Date(isoString);
+
+  // WIB time (UTC+7)
+  const wibDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
+  const wibStr = wibDate.toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  // UTC time
+  const utcStr = utcDate.toLocaleString('en-US', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'UTC',
+  });
+
+  return { wib: wibStr, utc: utcStr };
 }
 
 function getStatusBadge(status: string) {
@@ -174,11 +204,25 @@ export default async function AMAManagementPage() {
                         {ama.profiles?.kyc_status === 'APPROVED' ? '✓ KYC Verified' : 'Pending KYC'}
                       </p>
                     </td>
-                    <td className="p-4 text-gray-300">
-                      {new Date(ama.scheduled_at).toLocaleString()}
+                    <td className="p-4">
+                      {(() => {
+                        const { wib, utc } = formatDualTimezone(ama.scheduled_at);
+                        return (
+                          <div>
+                            <p className="text-white text-sm font-medium">{wib}</p>
+                            <p className="text-gray-500 text-xs">WIB (UTC+7)</p>
+                            <p className="text-gray-400 text-xs mt-1">{utc} UTC</p>
+                            <div className="mt-2">
+                              <QuickStartButton amaId={ama.id} scheduledAt={ama.scheduled_at} />
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="p-4">
-                      <p className="text-indigo-400">{Number(ama.payment_amount_bnb).toFixed(4)} BNB</p>
+                      <p className="text-indigo-400">
+                        {Number(ama.payment_amount_bnb).toFixed(4)} BNB
+                      </p>
                       <a
                         href={`https://testnet.bscscan.com/tx/${ama.payment_tx_hash}`}
                         target="_blank"
@@ -220,6 +264,7 @@ export default async function AMAManagementPage() {
               <thead>
                 <tr className="border-b border-gray-800">
                   <th className="text-left p-4 text-gray-400 font-medium">Project</th>
+                  <th className="text-left p-4 text-gray-400 font-medium">Type</th>
                   <th className="text-left p-4 text-gray-400 font-medium">Developer</th>
                   <th className="text-left p-4 text-gray-400 font-medium">Schedule</th>
                   <th className="text-left p-4 text-gray-400 font-medium">Status</th>
@@ -238,11 +283,33 @@ export default async function AMAManagementPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 text-gray-300">
-                      @{ama.profiles?.nickname || 'Unknown'}
+                    <td className="p-4">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                          (ama.type === 'VIDEO' && 'bg-purple-500/20 text-purple-300') ||
+                          (ama.type === 'VOICE' && 'bg-indigo-500/20 text-indigo-300') ||
+                          'bg-gray-500/20 text-gray-300'
+                        }`}
+                      >
+                        {ama.type || 'TEXT'}
+                      </span>
                     </td>
-                    <td className="p-4 text-gray-400 text-sm">
-                      {new Date(ama.scheduled_at).toLocaleDateString()}
+                    <td className="p-4 text-gray-300">@{ama.profiles?.nickname || 'Unknown'}</td>
+                    <td className="p-4">
+                      {(() => {
+                        const { wib, utc } = formatDualTimezone(ama.scheduled_at);
+                        return (
+                          <div>
+                            <p className="text-white text-xs">{wib}</p>
+                            <p className="text-gray-500 text-xs">WIB</p>
+                            {ama.status === 'PINNED' && (
+                              <div className="mt-1">
+                                <QuickStartButton amaId={ama.id} scheduledAt={ama.scheduled_at} />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="p-4">{getStatusBadge(ama.status)}</td>
                     <td className="p-4 text-right">

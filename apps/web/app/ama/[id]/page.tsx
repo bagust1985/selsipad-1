@@ -1,72 +1,75 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { PageHeader, PageContainer } from '@/components/layout';
 import { notFound } from 'next/navigation';
+import { getAMAMessages } from '@/lib/data/ama';
+import { AMALiveRoom } from '@/components/ama/AMALiveRoom';
+
+async function getAMAById(id: string) {
+  // Use service role to bypass RLS
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  
+  // Fetch without embedded relations (FK not set up)
+  const { data: ama, error } = await supabase
+    .from('ama_requests')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching AMA:', error);
+    return null;
+  }
+
+  return ama;
+}
 
 export default async function AMADetailPage({ params }: { params: { id: string } }) {
-  const supabase = createClient();
-
-  // Fetch AMA details
-  const { data: ama } = await supabase
-    .from('ama_sessions')
-    .select(
-      `
-      *,
-      projects (
-        name,
-        logo_url,
-        description
-      )
-    `
-    )
-    .eq('id', params.id)
-    .single();
+  const ama = await getAMAById(params.id);
 
   if (!ama) {
     notFound();
   }
 
-  // Fetch host profile
-  const { data: host } = await supabase
-    .from('profiles')
-    .select('user_id, username, avatar_url, bluecheck_status')
-    .eq('user_id', ama.host_id)
-    .single();
+  const messages = await getAMAMessages(params.id);
 
   const isLive = ama.status === 'LIVE';
   const isEnded = ama.status === 'ENDED';
-  const isUpcoming = ama.status === 'APPROVED';
+  const isPinned = ama.status === 'PINNED';
+  const isPending = ama.status === 'PENDING';
 
-  const statusColors = {
-    SUBMITTED: 'bg-gray-100 text-gray-800',
-    PAID: 'bg-blue-100 text-blue-800',
-    APPROVED: 'bg-green-100 text-green-800',
-    LIVE: 'bg-red-100 text-red-800',
-    ENDED: 'bg-gray-100 text-gray-600',
-    CANCELLED: 'bg-red-100 text-red-600',
+  const statusColors: Record<string, string> = {
+    PENDING: 'bg-yellow-500/20 text-yellow-400',
+    PINNED: 'bg-indigo-500/20 text-indigo-400',
+    LIVE: 'bg-green-500/20 text-green-400',
+    ENDED: 'bg-gray-500/20 text-gray-400',
+    REJECTED: 'bg-red-500/20 text-red-400',
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <PageHeader title="AMA Session" backUrl="/ama" />
+    <div className="min-h-screen bg-[#0a0a0f] pb-20">
+      <PageHeader title="AMA Session" />
 
       <PageContainer className="py-6">
         <div className="max-w-4xl mx-auto">
           {/* Header Card */}
-          <div className="bg-white rounded-xl border border-gray-200 p-8 mb-6">
+          <div className="bg-gradient-to-br from-[#14142b] to-[#0a0a0f] rounded-xl border border-white/10 p-8 mb-6">
             {/* Status Badge */}
             {isLive && (
-              <div className="flex items-center justify-center gap-2 mb-6 px-4 py-2 bg-red-100 text-red-800 rounded-full inline-flex mx-auto">
-                <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              <div className="flex items-center justify-center gap-2 mb-6 px-4 py-2 bg-green-500/20 text-green-400 rounded-full w-fit mx-auto">
+                <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
                 <span className="font-bold">LIVE NOW</span>
               </div>
             )}
 
             {/* Title */}
-            <h1 className="text-3xl font-bold text-gray-900 mb-4 text-center">{ama.title}</h1>
+            <h1 className="text-3xl font-bold text-white mb-4 text-center">{ama.project_name}</h1>
 
             {/* Project Info */}
             <div className="flex items-center justify-center gap-3 mb-6">
-              {ama.projects.logo_url && (
+              {ama.projects?.logo_url && (
                 <img
                   src={ama.projects.logo_url}
                   alt={ama.projects.name}
@@ -74,36 +77,34 @@ export default async function AMADetailPage({ params }: { params: { id: string }
                 />
               )}
               <div className="text-center">
-                <p className="font-semibold text-gray-900">{ama.projects.name}</p>
-                <p className="text-sm text-gray-600">{ama.projects.description}</p>
+                <p className="font-semibold text-white">@{ama.profiles?.nickname || 'Unknown'}</p>
+                <p className="text-sm text-gray-400">
+                  {ama.profiles?.kyc_status === 'APPROVED' ? '✓ Dev Verified' : 'Developer'}
+                </p>
               </div>
             </div>
 
             {/* Metadata */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Type</p>
-                <p className="font-semibold text-gray-900">{ama.type}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Status</p>
+                <p className="text-sm text-gray-400 mb-1">Status</p>
                 <span
                   className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                    statusColors[ama.status as keyof typeof statusColors]
+                    statusColors[ama.status] || 'bg-gray-500/20 text-gray-400'
                   }`}
                 >
                   {ama.status}
                 </span>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Scheduled</p>
-                <p className="font-semibold text-gray-900">
+                <p className="text-sm text-gray-400 mb-1">Scheduled</p>
+                <p className="font-semibold text-white">
                   {new Date(ama.scheduled_at).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                   })}
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-400">
                   {new Date(ama.scheduled_at).toLocaleTimeString('en-US', {
                     hour: '2-digit',
                     minute: '2-digit',
@@ -111,78 +112,108 @@ export default async function AMADetailPage({ params }: { params: { id: string }
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Host</p>
-                <div className="flex items-center justify-center gap-1">
-                  <p className="font-semibold text-gray-900">{host?.username || 'Unknown'}</p>
-                  {(host?.bluecheck_status === 'VERIFIED' ||
-                    host?.bluecheck_status === 'ACTIVE') && (
-                    <span className="text-blue-500">✓</span>
-                  )}
-                </div>
+                <p className="text-sm text-gray-400 mb-1">Payment</p>
+                <p className="font-semibold text-indigo-400">
+                  {Number(ama.payment_amount_bnb).toFixed(4)} BNB
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-gray-400 mb-1">Messages</p>
+                <p className="font-semibold text-white">{messages.length}</p>
               </div>
             </div>
 
             {/* Description */}
             {ama.description && (
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="font-semibold text-gray-900 mb-2">About This AMA</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">{ama.description}</p>
+              <div className="border-t border-white/10 pt-6">
+                <h3 className="font-semibold text-white mb-2">About This AMA</h3>
+                <p className="text-gray-300 whitespace-pre-wrap">{ama.description}</p>
               </div>
             )}
           </div>
 
-          {/* Join/Status Section */}
-          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-            {isLive && ama.type === 'TEXT' && (
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Join the Discussion</h3>
-                <p className="text-gray-600 mb-6">
-                  Ask questions and interact with {host?.username}
-                </p>
-                <button className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg">
-                  Join Text Chat
-                </button>
-              </div>
-            )}
+          {/* Live Chat Room (only for LIVE status) */}
+          {isLive && (
+            <AMALiveRoom 
+              amaId={ama.id} 
+              projectName={ama.project_name}
+              developerId={ama.developer_id}
+              initialMessages={messages}
+            />
+          )}
 
-            {isLive && (ama.type === 'VOICE' || ama.type === 'VIDEO') && (
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Get Access Link</h3>
-                <p className="text-gray-600 mb-6">Join the live {ama.type.toLowerCase()} session</p>
-                <button className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg">
-                  Get {ama.type} Link
-                </button>
-              </div>
-            )}
+          {/* Status Section (for non-live) */}
+          {!isLive && (
+            <div className="bg-gradient-to-br from-[#14142b] to-[#0a0a0f] rounded-xl border border-white/10 p-8 text-center">
+              {isPinned && (
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-4">📌 Scheduled Session</h3>
+                  <p className="text-gray-400 mb-4">
+                    Starts in{' '}
+                    {Math.ceil(
+                      (new Date(ama.scheduled_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                    )}{' '}
+                    days
+                  </p>
+                  <button className="px-8 py-4 bg-white/10 text-gray-400 rounded-lg cursor-not-allowed font-medium text-lg">
+                    Chat Opens When Live
+                  </button>
+                </div>
+              )}
 
-            {isUpcoming && (
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Upcoming Session</h3>
-                <p className="text-gray-600 mb-4">
-                  Starts in{' '}
-                  {Math.ceil(
-                    (new Date(ama.scheduled_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-                  )}{' '}
-                  days
-                </p>
-                <button className="px-8 py-4 bg-gray-200 text-gray-600 rounded-lg cursor-not-allowed font-medium text-lg">
-                  Not Started Yet
-                </button>
-              </div>
-            )}
+              {isPending && (
+                <div>
+                  <h3 className="text-xl font-bold text-yellow-400 mb-4">⏳ Pending Approval</h3>
+                  <p className="text-gray-400">
+                    This AMA request is waiting for admin review.
+                  </p>
+                </div>
+              )}
 
-            {isEnded && (
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Session Ended</h3>
-                <p className="text-gray-600">
-                  This AMA ended on{' '}
-                  {new Date(ama.ended_at!).toLocaleDateString('en-US', {
-                    dateStyle: 'long',
-                  })}
-                </p>
-              </div>
-            )}
-          </div>
+              {isEnded && (
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-4">Session Ended</h3>
+                  <p className="text-gray-400">
+                    This AMA ended on{' '}
+                    {new Date(ama.ended_at!).toLocaleDateString('en-US', {
+                      dateStyle: 'long',
+                    })}
+                  </p>
+                  
+                  {/* Show archived messages */}
+                  {messages.length > 0 && (
+                    <div className="mt-6 text-left">
+                      <h4 className="text-lg font-semibold text-white mb-4">Chat Archive ({messages.length} messages)</h4>
+                      <div className="max-h-96 overflow-y-auto space-y-3">
+                        {messages.map((msg: any) => (
+                          <div key={msg.id} className="p-3 bg-white/5 rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`font-medium ${msg.is_developer ? 'text-indigo-400' : 'text-white'}`}>
+                                {msg.username}
+                              </span>
+                              {msg.is_developer && <span className="text-xs bg-indigo-500/30 text-indigo-300 px-1 rounded">DEV</span>}
+                              <span className="text-xs text-gray-500">
+                                {new Date(msg.created_at).toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <p className="text-gray-300">{msg.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {ama.status === 'REJECTED' && (
+                <div>
+                  <h3 className="text-xl font-bold text-red-400 mb-4">Request Rejected</h3>
+                  <p className="text-gray-400 mb-4">{ama.rejection_reason}</p>
+                  <p className="text-sm text-gray-500">Refund has been processed.</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </PageContainer>
     </div>

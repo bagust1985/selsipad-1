@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import { AmountInput, Button, ConfirmModal, useToast } from '@/components/ui';
 import { Card, CardContent } from '@/components/ui';

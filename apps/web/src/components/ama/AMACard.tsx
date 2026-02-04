@@ -1,117 +1,180 @@
 'use client';
 
-import { type AMAType, type AMAStatus } from '@/app/ama/actions';
+/**
+ * AMACard Component
+ * 
+ * Display card for upcoming/pinned AMAs
+ * Premium glassmorphism design
+ */
+
+import { formatDistanceToNow, format } from 'date-fns';
+import Link from 'next/link';
 
 interface AMACardProps {
-  ama: {
-    id: string;
-    title: string;
-    description?: string;
-    type: AMAType;
-    status: AMAStatus;
-    scheduled_at: string;
-    started_at?: string;
-    host: {
-      username: string;
-      avatar_url?: string;
-      bluecheck_status?: string;
-    };
-    projects: {
-      name: string;
-      logo_url?: string;
-    };
-  };
+  id: string;
+  projectName: string;
+  description: string;
+  scheduledAt: string;
+  developerName: string;
+  developerAvatar?: string;
+  status: 'PINNED' | 'LIVE' | 'ENDED';
+  isLive?: boolean;
 }
 
-export function AMACard({ ama }: AMACardProps) {
-  const isLive = ama.status === 'LIVE';
-  const isUpcoming = ama.status === 'APPROVED';
-
-  const typeColors = {
-    TEXT: 'bg-blue-100 text-blue-800',
-    VOICE: 'bg-purple-100 text-purple-800',
-    VIDEO: 'bg-pink-100 text-pink-800',
-  };
-
-  const statusColors = {
-    SUBMITTED: 'bg-gray-100 text-gray-800',
-    PAID: 'bg-blue-100 text-blue-800',
-    APPROVED: 'bg-green-100 text-green-800',
-    LIVE: 'bg-red-100 text-red-800',
-    ENDED: 'bg-gray-100 text-gray-600',
-    CANCELLED: 'bg-red-100 text-red-600',
-  };
-
+export function AMACard({
+  id,
+  projectName,
+  description,
+  scheduledAt,
+  developerName,
+  developerAvatar,
+  status,
+  isLive = false,
+}: AMACardProps) {
+  const scheduledDate = new Date(scheduledAt);
+  const isUpcoming = scheduledDate > new Date();
+  const timeUntil = isUpcoming
+    ? formatDistanceToNow(scheduledDate, { addSuffix: false })
+    : null;
+  
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          {ama.projects.logo_url && (
-            <img
-              src={ama.projects.logo_url}
-              alt={ama.projects.name}
-              className="w-12 h-12 rounded-full"
-            />
-          )}
-          <div>
-            <h3 className="font-semibold text-gray-900">{ama.title}</h3>
-            <p className="text-sm text-gray-600">{ama.projects.name}</p>
+    <div className="group relative bg-gradient-to-br from-[#14142b] to-[#0a0a0f] rounded-2xl border border-white/10 overflow-hidden hover:border-indigo-500/30 transition-all duration-300">
+      {/* Status Badge */}
+      <div className="absolute top-4 right-4 z-10">
+        {status === 'LIVE' ? (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 border border-red-500/30 rounded-full">
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-red-400 text-xs font-bold tracking-wide">LIVE NOW</span>
           </div>
-        </div>
-
-        {isLive && (
-          <span className="flex items-center gap-2 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
-            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            LIVE
-          </span>
+        ) : status === 'ENDED' ? (
+          <div className="px-3 py-1.5 bg-gray-500/20 border border-gray-500/30 rounded-full">
+            <span className="text-gray-400 text-xs font-medium">ENDED</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/20 border border-indigo-500/30 rounded-full">
+            <span className="text-indigo-400 text-xs font-bold tracking-wide">UPCOMING</span>
+          </div>
         )}
       </div>
-
-      {/* Description */}
-      {ama.description && (
-        <p className="text-gray-700 text-sm mb-4 line-clamp-2">{ama.description}</p>
+      
+      {/* Glow Effect */}
+      {status === 'LIVE' && (
+        <div className="absolute inset-0 bg-gradient-to-t from-red-500/5 to-transparent pointer-events-none" />
       )}
-
-      {/* Metadata */}
-      <div className="flex items-center gap-3 mb-4">
-        <span className={`px-2 py-1 rounded-md text-xs font-medium ${typeColors[ama.type]}`}>
-          {ama.type}
-        </span>
-        <span className={`px-2 py-1 rounded-md text-xs font-medium ${statusColors[ama.status]}`}>
-          {ama.status}
-        </span>
-      </div>
-
-      {/* Host & Time */}
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-gray-600">Host:</span>
-          <span className="font-medium text-gray-900">{ama.host.username}</span>
-          {(ama.host.bluecheck_status === 'VERIFIED' || ama.host.bluecheck_status === 'ACTIVE') && (
-            <span className="text-blue-500">✓</span>
+      
+      {/* Content */}
+      <div className="p-6">
+        {/* Header */}
+        <div className="flex items-start gap-4 mb-4">
+          {/* Developer Avatar */}
+          <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+            {developerAvatar ? (
+              <img
+                src={developerAvatar}
+                alt={developerName}
+                className="w-full h-full rounded-full object-cover"
+              />
+            ) : (
+              <span className="text-white font-bold text-lg">
+                {developerName.charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xl font-bold text-white truncate group-hover:text-indigo-300 transition-colors">
+              {projectName} AMA
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-gray-400 text-sm">@{developerName}</span>
+              <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs font-medium rounded border border-green-500/30">
+                ✓ Dev Verified
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Description */}
+        <p className="text-gray-300 text-sm line-clamp-2 mb-4">
+          {description}
+        </p>
+        
+        {/* Schedule */}
+        <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl mb-4">
+          <span className="text-2xl">📅</span>
+          <div>
+            <p className="text-white font-medium" suppressHydrationWarning>
+              {format(scheduledDate, 'MMMM d, yyyy')} at {format(scheduledDate, 'HH:mm')} UTC
+            </p>
+            {isUpcoming && timeUntil && (
+              <p className="text-indigo-400 text-sm" suppressHydrationWarning>
+                ⏰ Starts in {timeUntil}
+              </p>
+            )}
+          </div>
+        </div>
+        
+        {/* Actions */}
+        <div className="flex gap-3">
+          {status === 'LIVE' ? (
+            <Link
+              href={`/ama/${id}`}
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white font-medium rounded-xl text-center hover:from-red-500 hover:to-red-400 transition-all flex items-center justify-center gap-2"
+            >
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+              Join Live AMA
+            </Link>
+          ) : status === 'ENDED' ? (
+            <Link
+              href={`/ama/${id}`}
+              className="flex-1 px-4 py-3 bg-white/10 text-white font-medium rounded-xl text-center hover:bg-white/20 transition-all"
+            >
+              View Chat Archive
+            </Link>
+          ) : (
+            <>
+              <button className="flex-1 px-4 py-3 bg-white/10 text-white font-medium rounded-xl hover:bg-white/20 transition-all flex items-center justify-center gap-2">
+                <span>🔔</span>
+                Set Reminder
+              </button>
+              <Link
+                href={`/project/${id}`}
+                className="px-4 py-3 bg-indigo-500/20 text-indigo-400 font-medium rounded-xl hover:bg-indigo-500/30 transition-all flex items-center gap-2"
+              >
+                <span>👁️</span>
+                View Project
+              </Link>
+            </>
           )}
         </div>
-
-        <div className="text-gray-600">
-          {new Date(ama.scheduled_at).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </div>
       </div>
-
-      {/* Action Button */}
-      <div className="mt-4">
-        <a
-          href={`/ama/${ama.id}`}
-          className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-        >
-          {isLive ? 'Join Now' : isUpcoming ? 'View Details' : 'View'}
-        </a>
-      </div>
+      
+      {/* Bottom Gradient */}
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
     </div>
   );
 }
+
+/**
+ * AMACardSkeleton
+ * Loading placeholder for AMA cards
+ */
+export function AMACardSkeleton() {
+  return (
+    <div className="bg-gradient-to-br from-[#14142b] to-[#0a0a0f] rounded-2xl border border-white/10 p-6 animate-pulse">
+      <div className="flex items-start gap-4 mb-4">
+        <div className="w-12 h-12 bg-white/10 rounded-full" />
+        <div className="flex-1">
+          <div className="h-6 bg-white/10 rounded w-3/4 mb-2" />
+          <div className="h-4 bg-white/10 rounded w-1/2" />
+        </div>
+      </div>
+      <div className="h-4 bg-white/10 rounded w-full mb-2" />
+      <div className="h-4 bg-white/10 rounded w-2/3 mb-4" />
+      <div className="h-12 bg-white/10 rounded-xl mb-4" />
+      <div className="h-12 bg-white/10 rounded-xl" />
+    </div>
+  );
+}
+
+export default AMACard;

@@ -16,6 +16,7 @@ export function MultiChainConnectWallet() {
   const [mounted, setMounted] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // EVM
   const { open } = useWeb3Modal();
@@ -27,7 +28,39 @@ export function MultiChainConnectWallet() {
   useEffect(() => {
     setMounted(true);
   }, []);
-  // DISABLED: Auto sign-in was causing signature popups on every page navigation
+
+  // Check session status on mount and when address changes
+  useEffect(() => {
+    const checkSession = async () => {
+      if (!isConnected || !address) {
+        setIsAuthenticated(false);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/session');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated) {
+            const sessionWallet = data.user?.address?.toLowerCase();
+            const connectedWallet = address.toLowerCase();
+            setIsAuthenticated(sessionWallet === connectedWallet);
+          } else {
+            setIsAuthenticated(false);
+          }
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch {
+        setIsAuthenticated(false);
+      }
+    };
+
+    if (mounted) {
+      checkSession();
+    }
+  }, [mounted, isConnected, address]);
+
   // Users must now manually click "Sign In" after connecting wallet
   /*
   useEffect(() => {
@@ -88,9 +121,9 @@ export function MultiChainConnectWallet() {
       const result = await verifyAndCreateSession('evm', signResult);
 
       if (result.success) {
-        // Success! Don't auto-redirect, let user stay on current page
+        // Success! Update auth state and refresh
         console.log('[Wallet] Authentication successful');
-        // Optionally refresh to update UI
+        setIsAuthenticated(true);
         router.refresh();
       } else {
         setAuthError(result.error || 'Authentication failed');
@@ -147,13 +180,15 @@ export function MultiChainConnectWallet() {
           : 'Connect Wallet'}
       </button>
 
-      {/* Manual Sign In Button - appears after wallet is connected */}
+      {/* Sign In Button - shows lock state based on auth status */}
       {isConnected && address && (
         <button
           onClick={handleEVMAuth}
-          disabled={isAuthenticating}
+          disabled={isAuthenticating || isAuthenticated}
           style={{
-            backgroundColor: 'hsl(var(--success-main))',
+            backgroundColor: isAuthenticated 
+              ? 'hsl(var(--success-main))' 
+              : 'hsl(var(--warning-main))',
             color: 'white',
             borderRadius: '0.375rem',
             padding: '0.5rem 1rem',
@@ -161,9 +196,16 @@ export function MultiChainConnectWallet() {
             fontWeight: 500,
             height: '2.5rem',
             transition: 'background-color 0.2s',
+            cursor: isAuthenticated ? 'default' : 'pointer',
+            opacity: isAuthenticated ? 0.9 : 1,
           }}
         >
-          {isAuthenticating ? '🔐 Signing...' : '🔓 Sign In'}
+          {isAuthenticating 
+            ? '🔐 Signing...' 
+            : isAuthenticated 
+              ? '🔒 Signed In' 
+              : '🔓 Sign In'
+          }
         </button>
       )}
 

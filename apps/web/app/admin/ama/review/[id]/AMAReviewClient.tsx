@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { approveAMA, rejectAMA } from '../../actions';
-import { ArrowLeft, CheckCircle2, XCircle, Calendar, User, Clock } from 'lucide-react';
+import { pinAMA, rejectAMA, startAMA, endAMA } from '../../actions';
+import { ArrowLeft, CheckCircle2, XCircle, Calendar, User, Clock, Pin, Play, Square, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 
 interface AMAReviewClientProps {
@@ -17,17 +17,17 @@ export function AMAReviewClient({ ama }: AMAReviewClientProps) {
   const [rejectionReason, setRejectionReason] = useState('');
   const [error, setError] = useState('');
 
-  const handleApprove = async () => {
+  const handlePin = async () => {
     setIsProcessing(true);
     setError('');
 
-    const result = await approveAMA(ama.id);
+    const result = await pinAMA(ama.id);
 
     if (result.success) {
-      alert('AMA approved successfully!');
+      alert('AMA pinned successfully!');
       router.push('/admin/ama');
     } else {
-      setError(result.error || 'Failed to approve');
+      setError(result.error || 'Failed to pin');
       setIsProcessing(false);
     }
   };
@@ -44,10 +44,40 @@ export function AMAReviewClient({ ama }: AMAReviewClientProps) {
     const result = await rejectAMA(ama.id, rejectionReason);
 
     if (result.success) {
-      alert('AMA rejected');
+      alert('AMA rejected - refund will be processed');
       router.push('/admin/ama');
     } else {
       setError(result.error || 'Failed to reject');
+      setIsProcessing(false);
+    }
+  };
+
+  const handleStart = async () => {
+    setIsProcessing(true);
+    setError('');
+
+    const result = await startAMA(ama.id);
+
+    if (result.success) {
+      alert('AMA is now LIVE!');
+      router.push('/admin/ama');
+    } else {
+      setError(result.error || 'Failed to start');
+      setIsProcessing(false);
+    }
+  };
+
+  const handleEnd = async () => {
+    setIsProcessing(true);
+    setError('');
+
+    const result = await endAMA(ama.id);
+
+    if (result.success) {
+      alert('AMA has ended');
+      router.push('/admin/ama');
+    } else {
+      setError(result.error || 'Failed to end');
       setIsProcessing(false);
     }
   };
@@ -65,20 +95,31 @@ export function AMAReviewClient({ ama }: AMAReviewClientProps) {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Review AMA Session</h1>
-        <p className="text-gray-400">Review and approve or reject AMA submission</p>
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-3xl font-bold text-white">
+            {ama.status === 'PENDING' ? 'Review' : 'Manage'} AMA Request
+          </h1>
+          <StatusBadge status={ama.status} />
+        </div>
+        <p className="text-gray-400">
+          {ama.status === 'PENDING' && 'Review and approve or reject this AMA request'}
+          {ama.status === 'PINNED' && 'This AMA is approved and visible. You can start it when ready.'}
+          {ama.status === 'LIVE' && 'This AMA is currently live!'}
+          {ama.status === 'ENDED' && 'This AMA has ended.'}
+          {ama.status === 'REJECTED' && 'This AMA was rejected.'}
+        </p>
       </div>
 
       {/* AMA Details */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Basic Info */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Session Details</h2>
+          <h2 className="text-xl font-semibold text-white mb-4">Request Details</h2>
 
           <div className="space-y-4">
             <div>
-              <p className="text-gray-400 text-sm mb-1">Title</p>
-              <p className="text-white font-medium text-lg">{ama.title}</p>
+              <p className="text-gray-400 text-sm mb-1">Project</p>
+              <p className="text-white font-medium text-lg">{ama.project_name}</p>
             </div>
 
             <div>
@@ -87,53 +128,60 @@ export function AMAReviewClient({ ama }: AMAReviewClientProps) {
             </div>
 
             <div className="flex items-start gap-3">
-              <User className="w-5 h-5 text-cyan-400 mt-1" />
+              <User className="w-5 h-5 text-indigo-400 mt-1" />
               <div>
-                <p className="text-gray-400 text-sm">Host Wallet</p>
-                <p className="text-white font-mono">{ama.host_wallet}</p>
+                <p className="text-gray-400 text-sm">Developer</p>
+                <p className="text-white">@{ama.profiles?.nickname || 'Unknown'}</p>
+                <p className="text-gray-500 text-sm">
+                  {ama.profiles?.kyc_status === 'APPROVED' ? '✓ KYC Verified' : '⏳ Pending KYC'}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Schedule Info */}
+        {/* Schedule & Payment Info */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Schedule</h2>
+          <h2 className="text-xl font-semibold text-white mb-4">Schedule & Payment</h2>
 
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <Calendar className="w-5 h-5 text-green-400 mt-1" />
               <div>
-                <p className="text-gray-400 text-sm">Start Time</p>
-                <p className="text-white">
-                  {ama.start_at ? new Date(ama.start_at).toLocaleString() : 'Not set'}
-                </p>
+                <p className="text-gray-400 text-sm">Scheduled Time</p>
+                <p className="text-white" suppressHydrationWarning>{new Date(ama.scheduled_at).toLocaleString()}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-yellow-400 mt-1" />
+              <DollarSign className="w-5 h-5 text-yellow-400 mt-1" />
               <div>
-                <p className="text-gray-400 text-sm">End Time</p>
-                <p className="text-white">
-                  {ama.end_at ? new Date(ama.end_at).toLocaleString() : 'Not set'}
-                </p>
+                <p className="text-gray-400 text-sm">Payment</p>
+                <p className="text-indigo-400 font-medium">{Number(ama.payment_amount_bnb).toFixed(4)} BNB</p>
+                <a
+                  href={`https://testnet.bscscan.com/tx/${ama.payment_tx_hash}`}
+                  target="_blank"
+                  className="text-xs text-gray-500 hover:text-indigo-400"
+                >
+                  View Transaction →
+                </a>
               </div>
             </div>
 
-            <div>
-              <p className="text-gray-400 text-sm">Duration</p>
-              <p className="text-white">
-                {ama.start_at && ama.end_at
-                  ? `${Math.round((new Date(ama.end_at).getTime() - new Date(ama.start_at).getTime()) / (1000 * 60 * 60))} hours`
-                  : 'Not calculated'}
-              </p>
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-gray-400 mt-1" />
+              <div>
+                <p className="text-gray-400 text-sm">Submitted</p>
+                <p className="text-white" suppressHydrationWarning>{new Date(ama.created_at).toLocaleString()}</p>
+              </div>
             </div>
 
-            <div>
-              <p className="text-gray-400 text-sm">Submitted</p>
-              <p className="text-white">{new Date(ama.created_at).toLocaleString()}</p>
-            </div>
+            {ama.rejection_reason && (
+              <div className="p-3 bg-red-950/30 border border-red-800 rounded-lg">
+                <p className="text-red-400 text-sm font-medium">Rejection Reason:</p>
+                <p className="text-red-300">{ama.rejection_reason}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -147,17 +195,18 @@ export function AMAReviewClient({ ama }: AMAReviewClientProps) {
 
       {/* Actions */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h2 className="text-xl font-semibold text-white mb-4">Review Actions</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">Actions</h2>
 
-        {!showRejectInput ? (
+        {/* PENDING - Show Pin/Reject */}
+        {ama.status === 'PENDING' && !showRejectInput && (
           <div className="flex gap-4">
             <button
-              onClick={handleApprove}
+              onClick={handlePin}
               disabled={isProcessing}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
             >
-              <CheckCircle2 className="w-5 h-5" />
-              {isProcessing ? 'Approving...' : 'Approve AMA'}
+              <Pin className="w-5 h-5" />
+              {isProcessing ? 'Processing...' : 'Pin AMA (Approve)'}
             </button>
 
             <button
@@ -166,10 +215,13 @@ export function AMAReviewClient({ ama }: AMAReviewClientProps) {
               className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
             >
               <XCircle className="w-5 h-5" />
-              Reject AMA
+              Reject & Refund
             </button>
           </div>
-        ) : (
+        )}
+
+        {/* Rejection Input */}
+        {ama.status === 'PENDING' && showRejectInput && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -178,7 +230,7 @@ export function AMAReviewClient({ ama }: AMAReviewClientProps) {
               <textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Explain why this AMA is being rejected..."
+                placeholder="Explain why this AMA request is being rejected..."
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none"
                 rows={4}
                 disabled={isProcessing}
@@ -195,7 +247,7 @@ export function AMAReviewClient({ ama }: AMAReviewClientProps) {
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
               >
                 <XCircle className="w-5 h-5" />
-                {isProcessing ? 'Rejecting...' : 'Confirm Rejection'}
+                {isProcessing ? 'Rejecting...' : 'Confirm Rejection & Refund'}
               </button>
 
               <button
@@ -212,7 +264,60 @@ export function AMAReviewClient({ ama }: AMAReviewClientProps) {
             </div>
           </div>
         )}
+
+        {/* PINNED - Show Start */}
+        {ama.status === 'PINNED' && (
+          <button
+            onClick={handleStart}
+            disabled={isProcessing}
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+          >
+            <Play className="w-5 h-5" />
+            {isProcessing ? 'Starting...' : 'Start AMA (Go Live)'}
+          </button>
+        )}
+
+        {/* LIVE - Show End */}
+        {ama.status === 'LIVE' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-green-950/30 border border-green-800 rounded-lg">
+              <p className="text-green-400 font-medium">🔴 This AMA is currently LIVE!</p>
+              <p className="text-green-300 text-sm">Users can now send messages in the chat.</p>
+            </div>
+            <button
+              onClick={handleEnd}
+              disabled={isProcessing}
+              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+            >
+              <Square className="w-5 h-5" />
+              {isProcessing ? 'Ending...' : 'End AMA'}
+            </button>
+          </div>
+        )}
+
+        {/* ENDED/REJECTED - View only */}
+        {(ama.status === 'ENDED' || ama.status === 'REJECTED') && (
+          <p className="text-gray-400 text-center py-4">
+            No actions available for {ama.status.toLowerCase()} AMAs.
+          </p>
+        )}
       </div>
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    PENDING: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    PINNED: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+    LIVE: 'bg-green-500/20 text-green-400 border-green-500/30',
+    ENDED: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+    REJECTED: 'bg-red-500/20 text-red-400 border-red-500/30',
+  };
+
+  return (
+    <span className={`px-2 py-1 text-xs font-medium rounded border ${styles[status] || ''}`}>
+      {status}
+    </span>
   );
 }

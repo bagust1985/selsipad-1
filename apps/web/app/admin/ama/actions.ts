@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from '@/lib/auth/session';
 import { revalidatePath } from 'next/cache';
 
@@ -11,72 +11,79 @@ interface ActionResult {
 }
 
 /**
- * Approve AMA session
+ * Pin AMA request (approve for display)
  */
-export async function approveAMA(sessionId: string): Promise<ActionResult> {
+export async function pinAMA(requestId: string): Promise<ActionResult> {
   try {
     const session = await getServerSession();
     if (!session) {
       return { success: false, error: 'Not authenticated' };
     }
 
-    const supabase = createClient();
+    // Use service role to bypass RLS
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    // Verify admin
+    // Verify admin using user_id (more reliable than wallet_address)
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')
-      .eq('wallet_address', session.address)
+      .eq('user_id', session.userId)
       .single();
+
+    console.log('[AMA Pin] Admin check:', { userId: session.userId, isAdmin: profile?.is_admin });
 
     if (!profile?.is_admin) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Get AMA session
+    // Get request
     const { data: ama, error: fetchError } = await supabase
-      .from('ama_sessions')
+      .from('ama_requests')
       .select('*')
-      .eq('id', sessionId)
+      .eq('id', requestId)
       .single();
 
     if (fetchError || !ama) {
-      return { success: false, error: 'AMA session not found' };
+      console.error('[AMA Pin] Fetch error:', fetchError);
+      return { success: false, error: 'AMA request not found' };
     }
 
-    if (ama.status !== 'SUBMITTED') {
-      return { success: false, error: 'AMA not in submitted status' };
+    if (ama.status !== 'PENDING') {
+      return { success: false, error: 'AMA not in pending status' };
     }
 
-    // Update status to SCHEDULED
+    // Update status to PINNED
     const { error: updateError } = await supabase
-      .from('ama_sessions')
+      .from('ama_requests')
       .update({
-        status: 'SCHEDULED',
-        reviewed_by: session.address,
-        reviewed_at: new Date().toISOString(),
+        status: 'PINNED',
+        is_pinned: true,
+        pinned_at: new Date().toISOString(),
+        pinned_by: session.userId,
       })
-      .eq('id', sessionId);
+      .eq('id', requestId);
 
     if (updateError) {
+      console.error('[AMA Pin] Update error:', updateError);
       return { success: false, error: updateError.message };
     }
 
-    // TODO: Log admin action
-    // await logAdminAction('AMA_APPROVE', session.address, { sessionId });
-
+    console.log('[AMA Pin] ✅ Success:', requestId);
     revalidatePath('/admin/ama');
     return { success: true };
   } catch (error: any) {
-    console.error('AMA approval error:', error);
-    return { success: false, error: error.message || 'Failed to approve AMA' };
+    console.error('[AMA Pin] Error:', error);
+    return { success: false, error: error.message || 'Failed to pin AMA' };
   }
 }
 
 /**
- * Reject AMA session
+ * Reject AMA request (triggers refund)
  */
-export async function rejectAMA(sessionId: string, reason: string): Promise<ActionResult> {
+export async function rejectAMA(requestId: string, reason: string): Promise<ActionResult> {
   try {
     const session = await getServerSession();
     if (!session) {
@@ -87,136 +94,213 @@ export async function rejectAMA(sessionId: string, reason: string): Promise<Acti
       return { success: false, error: 'Rejection reason required (min 10 chars)' };
     }
 
-    const supabase = createClient();
+    // Use service role to bypass RLS
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    // Verify admin
+    // Verify admin using user_id
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')
-      .eq('wallet_address', session.address)
+      .eq('user_id', session.userId)
       .single();
 
     if (!profile?.is_admin) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Update AMA
+    // Update request
     const { error: updateError } = await supabase
-      .from('ama_sessions')
+      .from('ama_requests')
       .update({
         status: 'REJECTED',
         rejection_reason: reason.trim(),
-        reviewed_by: session.address,
-        reviewed_at: new Date().toISOString(),
       })
-      .eq('id', sessionId)
-      .eq('status', 'SUBMITTED');
+      .eq('id', requestId)
+      .eq('status', 'PENDING');
 
     if (updateError) {
+      console.error('[AMA Reject] Update error:', updateError);
       return { success: false, error: updateError.message };
     }
 
-    // TODO: Log admin action
-    // await logAdminAction('AMA_REJECT', session.address, { sessionId, reason });
+    // TODO: Trigger on-chain refund via backend wallet
+    // The contract has refundRequest(bytes32 requestId) function
+    // This would require a server-side wallet to call the contract
 
+    console.log('[AMA Reject] ✅ Success:', requestId);
     revalidatePath('/admin/ama');
     return { success: true };
   } catch (error: any) {
-    console.error('AMA rejection error:', error);
+    console.error('[AMA Reject] Error:', error);
     return { success: false, error: error.message || 'Failed to reject AMA' };
   }
 }
 
 /**
- * Pin/Unpin AMA session
+ * Start AMA session (go live)
  */
-export async function toggleAMAPin(sessionId: string): Promise<ActionResult> {
+export async function startAMA(requestId: string): Promise<ActionResult> {
   try {
     const session = await getServerSession();
     if (!session) {
       return { success: false, error: 'Not authenticated' };
     }
 
-    const supabase = createClient();
+    // Use service role to bypass RLS
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    // Verify admin
+    // Verify admin using user_id
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')
-      .eq('wallet_address', session.address)
+      .eq('user_id', session.userId)
       .single();
 
     if (!profile?.is_admin) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Get current status
+    // Verify request is PINNED
     const { data: ama } = await supabase
-      .from('ama_sessions')
-      .select('is_pinned')
-      .eq('id', sessionId)
+      .from('ama_requests')
+      .select('status')
+      .eq('id', requestId)
       .single();
 
-    if (!ama) {
-      return { success: false, error: 'AMA not found' };
+    if (!ama || ama.status !== 'PINNED') {
+      return { success: false, error: 'AMA must be pinned to start' };
     }
 
-    // Toggle pin
+    // Update status to LIVE
     const { error: updateError } = await supabase
-      .from('ama_sessions')
-      .update({ is_pinned: !ama.is_pinned })
-      .eq('id', sessionId);
+      .from('ama_requests')
+      .update({
+        status: 'LIVE',
+        started_at: new Date().toISOString(),
+      })
+      .eq('id', requestId);
 
     if (updateError) {
+      console.error('[AMA Start] Update error:', updateError);
       return { success: false, error: updateError.message };
     }
 
+    // Post system message
+    await supabase.from('ama_messages').insert({
+      ama_id: requestId,
+      user_id: session.userId,
+      content: '🎤 AMA has started! Welcome everyone!',
+      message_type: 'SYSTEM',
+      username: 'System',
+    });
+
+    console.log('[AMA Start] ✅ Success:', requestId);
     revalidatePath('/admin/ama');
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to toggle pin' };
+    console.error('[AMA Start] Error:', error);
+    return { success: false, error: error.message || 'Failed to start AMA' };
   }
 }
 
 /**
- * Force end AMA session
+ * End AMA session
  */
-export async function forceEndAMA(sessionId: string): Promise<ActionResult> {
+export async function endAMA(requestId: string): Promise<ActionResult> {
   try {
     const session = await getServerSession();
     if (!session) {
       return { success: false, error: 'Not authenticated' };
     }
 
-    const supabase = createClient();
+    // Use service role to bypass RLS
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    // Verify admin
+    // Verify admin using user_id
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')
-      .eq('wallet_address', session.address)
+      .eq('user_id', session.userId)
       .single();
 
     if (!profile?.is_admin) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Verify request is LIVE
+    const { data: ama } = await supabase
+      .from('ama_requests')
+      .select('status')
+      .eq('id', requestId)
+      .single();
+
+    if (!ama || ama.status !== 'LIVE') {
+      return { success: false, error: 'AMA must be live to end' };
+    }
+
     // Update status to ENDED
     const { error: updateError } = await supabase
-      .from('ama_sessions')
-      .update({ status: 'ENDED' })
-      .eq('id', sessionId);
+      .from('ama_requests')
+      .update({
+        status: 'ENDED',
+        ended_at: new Date().toISOString(),
+      })
+      .eq('id', requestId);
 
     if (updateError) {
+      console.error('[AMA End] Update error:', updateError);
       return { success: false, error: updateError.message };
     }
 
-    // TODO: Log admin action
-    // await logAdminAction('AMA_FORCE_END', session.address, { sessionId });
+    // Post system message
+    await supabase.from('ama_messages').insert({
+      ama_id: requestId,
+      user_id: session.userId,
+      content: '👋 AMA has ended. Thank you for participating!',
+      message_type: 'SYSTEM',
+      username: 'System',
+    });
 
+    console.log('[AMA End] ✅ Success:', requestId);
     revalidatePath('/admin/ama');
     return { success: true };
   } catch (error: any) {
+    console.error('[AMA End] Error:', error);
     return { success: false, error: error.message || 'Failed to end AMA' };
   }
+}
+
+/**
+ * Get single AMA request with details
+ */
+export async function getAMARequest(requestId: string) {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('ama_requests')
+    .select(
+      `
+      *,
+      profiles:developer_id (wallet_address, nickname, avatar_url, kyc_status),
+      projects:project_id (name, token_symbol, logo_url)
+    `
+    )
+    .eq('id', requestId)
+    .single();
+
+  if (error) {
+    console.error('Failed to fetch AMA request:', error);
+    return null;
+  }
+
+  return data;
 }

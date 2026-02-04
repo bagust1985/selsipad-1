@@ -1,0 +1,14 @@
+{
+  "network": "BSC Testnet",
+  "chainId": 97,
+  "contractAddress": "0x16224B0F87413416c4084603F0B1A6015739B7Bd",
+  "treasury": "0x95D94D86CfC550897d2b80672a3c94c12429a90D",
+  "priceFeed": "0x2514895c72f50D8bd4B4F9b1110F0D6bD2c97526",
+  "manualPrice": "600.0",
+  "useOracle": true,
+  "amaFeeUSD": "100.0",
+  "requiredBNB": "0.131640593272560137",
+  "deployer": "0x95D94D86CfC550897d2b80672a3c94c12429a90D",
+  "timestamp": "2026-02-04T04:27:59.820Z",
+  "transactionHash": "0xc433876d9be0706a76d80460d2e9609fcfbede092e2fde3734108122cd41555b"
+}

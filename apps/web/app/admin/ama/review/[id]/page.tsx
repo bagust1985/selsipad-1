@@ -1,22 +1,23 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { notFound, redirect } from 'next/navigation';
 import { AMAReviewClient } from './AMAReviewClient';
 
-async function getAMASession(id: string) {
-  const supabase = createClient();
+async function getAMARequest(id: string) {
+  // Use service role to bypass RLS
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
+  // Fetch without embedded relations (FK not set up)
   const { data: ama, error } = await supabase
-    .from('ama_sessions')
-    .select(
-      `
-      *,
-      profiles(wallet_address, username)
-    `
-    )
+    .from('ama_requests')
+    .select('*')
     .eq('id', id)
     .single();
 
   if (error || !ama) {
+    console.error('Failed to fetch AMA request:', error);
     return null;
   }
 
@@ -24,15 +25,10 @@ async function getAMASession(id: string) {
 }
 
 export default async function AMAReviewPage({ params }: { params: { id: string } }) {
-  const ama = await getAMASession(params.id);
+  const ama = await getAMARequest(params.id);
 
   if (!ama) {
     notFound();
-  }
-
-  // If already reviewed, redirect to management page
-  if (ama.status !== 'SUBMITTED') {
-    redirect('/admin/ama');
   }
 
   return <AMAReviewClient ama={ama} />;

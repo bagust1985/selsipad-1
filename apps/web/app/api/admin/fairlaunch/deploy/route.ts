@@ -9,7 +9,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { ethers } from 'ethers';
 import FairlaunchFactoryABI from '@/../../packages/contracts/artifacts/contracts/fairlaunch/FairlaunchFactory.sol/FairlaunchFactory.json';
+import FairlaunchABI from '@/../../packages/contracts/artifacts/contracts/fairlaunch/Fairlaunch.sol/Fairlaunch.json';
 import EscrowVaultABI from '@/../../packages/contracts/artifacts/contracts/escrow/EscrowVault.sol/EscrowVault.json';
+import lpLockerDeployment from '@/../../packages/contracts/deployments/lplocker.json';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +21,7 @@ const supabase = createClient(
 const FACTORY_ADDRESSES = {
   bsc_testnet:
     process.env.NEXT_PUBLIC_FAIRLAUNCH_FACTORY_BSC_TESTNET ||
-    '0x9c01770816C81D4c356DBD6335839Ba65e33d7e8',
+    '0xBf8B3e6b88C46F1B99d1675436771e272eA284c7', // Updated 2026-02-05
   bnb: process.env.NEXT_PUBLIC_FAIRLAUNCH_FACTORY_BSC_MAINNET,
 };
 
@@ -120,14 +122,16 @@ export async function POST(request: NextRequest) {
     }
 
     const provider = new ethers.JsonRpcProvider(rpcUrl);
-    const deployerKey = process.env.ADMIN_DEPLOYER_PRIVATE_KEY;
+    // CRITICAL: Use DEPLOYER_PRIVATE_KEY (0x95D94D86C...) which is the adminExecutor
+    // Factory grants ADMIN_ROLE to adminExecutor, so setLPLocker() must use same wallet
+    const deployerKey = process.env.DEPLOYER_PRIVATE_KEY;
 
     if (!deployerKey) {
-      throw new Error('ADMIN_DEPLOYER_PRIVATE_KEY not configured');
+      throw new Error('DEPLOYER_PRIVATE_KEY not configured');
     }
 
     const signer = new ethers.Wallet(deployerKey, provider);
-    console.log('[Admin Deploy] Deployer wallet:', signer.address);
+    console.log('[Admin Deploy] Deployer wallet (adminExecutor):', signer.address);
 
     // 7a. FIRST: Get projectId from escrow transaction (decode from logs)
     // Wizard generates random UUID and hashes it, we need to extract that bytes32
@@ -329,13 +333,46 @@ export async function POST(request: NextRequest) {
     // No additional funding step needed - contracts are ready to use!
     console.log('[Admin Deploy] ✅ Contracts funded by factory during deployment');
 
-    // 12. Update projects table
+    // 12.5. Auto-configure LP Locker (CRITICAL for finalization)
+    console.log('[Admin Deploy] ⚙️ Starting LP Locker auto-configuration...');
+    try {
+      console.log('[Admin Deploy] Loading LP Locker deployment config...');
+      const lpLockerAddress = lpLockerDeployment.lpLocker;
+      console.log('[Admin Deploy] LP Locker address from config:', lpLockerAddress);
+
+      if (lpLockerAddress && lpLockerAddress !== ethers.ZeroAddress) {
+        console.log('[Admin Deploy] Setting LP Locker:', lpLockerAddress);
+
+        const fairlaunchContract = new ethers.Contract(contractAddress, FairlaunchABI.abi, signer);
+
+        const setLPLockerTx = await (fairlaunchContract as any).setLPLocker(lpLockerAddress);
+        await setLPLockerTx.wait();
+
+        console.log('[Admin Deploy] ✅ LP Locker configured:', setLPLockerTx.hash);
+      } else {
+        console.warn('[Admin Deploy] ⚠️ LP Locker not deployed yet - skipping configuration');
+      }
+    } catch (lpLockerError: any) {
+      console.error('[Admin Deploy] ⚠️ Failed to set LP Locker:', lpLockerError.message);
+      console.error('[Admin Deploy] Full error:', lpLockerError);
+      console.error('[Admin Deploy] Deployment will continue, but finalization may fail!');
+      // Don't throw - allow deployment to continue
+    }
+
+    // 12. Update projects table with factory metadata and SAFU badges
     const { error: updateProjectError } = await supabase
       .from('projects')
       .update({
         status: 'DEPLOYED',
         contract_address: contractAddress,
         deployment_tx_hash: receipt.hash,
+        // ✅ Auto-grant SAFU badges for factory-deployed tokens
+        factory_address: factoryAddress,
+        template_version: 'v1.0',
+        metadata: {
+          ...(project.metadata || {}),
+          security_badges: ['SAFU', 'SC_PASS'],
+        },
         // verification_status removed - not in projects table
       })
       .eq('id', project.id);

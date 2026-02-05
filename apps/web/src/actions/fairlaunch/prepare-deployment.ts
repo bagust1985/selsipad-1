@@ -45,7 +45,7 @@ const FAIRLAUNCH_FACTORY_ADDRESSES: Record<string, string> = {
   ethereum: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
   sepolia: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Deployed
   bnb: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
-  bsc_testnet: '0xeB4f1508102dbA065D0cEd8F003518F65ecc8EA4', // UPDATED: Deployed with setLPLocker!
+  bsc_testnet: '0xBf8B3e6b88C46F1B99d1675436771e272eA284c7', // UPDATED 2026-02-05: Deployed with setLPLocker!
   base: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
   base_sepolia: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Deployed
 };

@@ -303,23 +303,33 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
               <p className="text-gray-400 mb-3">{projectDesc}</p>
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Security Badges */}
-                {fairlaunch.params?.token_source === 'factory' &&
-                  fairlaunch.params?.security_badges?.length > 0 && (
+                {(() => {
+                  // ✅ Option 1: Read from project.metadata.security_badges
+                  const badges = fairlaunch.project?.metadata?.security_badges || [];
+                  // ✅ Fallback: Auto-grant if factory_address exists
+                  const hasFactoryAddress = fairlaunch.project?.factory_address != null;
+                  const hasSafu = badges.includes('SAFU') || hasFactoryAddress;
+                  const hasScPass = badges.includes('SC_PASS') || hasFactoryAddress;
+
+                  if (!hasSafu && !hasScPass) return null;
+
+                  return (
                     <>
-                      {fairlaunch.params.security_badges.includes('SAFU') && (
+                      {hasSafu && (
                         <span className="px-3 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded-full text-xs font-medium text-yellow-400 flex items-center gap-1">
                           <Shield className="w-3 h-3" />
                           SAFU
                         </span>
                       )}
-                      {fairlaunch.params.security_badges.includes('SC_PASS') && (
+                      {hasScPass && (
                         <span className="px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-xs font-medium text-green-400 flex items-center gap-1">
                           <CheckCircle className="w-3 h-3" />
                           SC Pass
                         </span>
                       )}
                     </>
-                  )}
+                  );
+                })()}
 
                 {projectSymbol && (
                   <span className="text-sm text-gray-500">

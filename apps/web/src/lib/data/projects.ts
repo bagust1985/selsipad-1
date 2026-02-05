@@ -275,6 +275,9 @@ export async function getAllProjects(filters?: {
             contract_address: round.contract_address, // Add contract address
             startDate: round.start_at, // ISO timestamp for countdown
             endDate: round.end_at, // ISO timestamp for countdown
+            // ✅ Add metadata and factory_address for SAFU badges
+            metadata: project.metadata || {},
+            factory_address: project.factory_address || null,
           };
         });
     });

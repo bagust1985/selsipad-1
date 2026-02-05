@@ -67,8 +67,8 @@ export async function finalizeFairlaunch(roundId: string) {
 
       // Setup provider based on chain
       const rpcUrls: Record<string, string> = {
-        '97': process.env.BSC_TESTNET_RPC || 'https://data-seed-prebsc-1-s1.binance.org:8545',
-        '56': process.env.BSC_MAINNET_RPC || 'https://bsc-dataseed.binance.org',
+        '97': process.env.BSC_TESTNET_RPC_URL || 'https://data-seed-prebsc-1-s1.bnbchain.org:8545',
+        '56': process.env.BSC_MAINNET_RPC_URL || 'https://bsc-dataseed.binance.org',
       };
 
       const rpcUrl = rpcUrls[round.chain];

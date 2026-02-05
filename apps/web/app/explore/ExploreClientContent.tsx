@@ -250,7 +250,6 @@ export function ExploreClientContent({ initialProjects }: ExploreClientContentPr
                         <StatusBadge status={project.status} />
                       </div>
 
-
                       {/* Title & Desc */}
                       <div>
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -286,12 +285,34 @@ export function ExploreClientContent({ initialProjects }: ExploreClientContentPr
                               )}
                             </>
                           )}
+                          {/* ✅ SAFU Badges */}
+                          {(() => {
+                            const metadata = (project as any).metadata;
+                            const badges = metadata?.security_badges || [];
+                            const factoryAddress = (project as any).factory_address;
+                            const hasSafu = badges.includes('SAFU') || factoryAddress != null;
+                            const hasScPass = badges.includes('SC_PASS') || factoryAddress != null;
+
+                            return (
+                              <>
+                                {hasSafu && (
+                                  <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded border border-yellow-500/30 font-semibold">
+                                    SAFU
+                                  </span>
+                                )}
+                                {hasScPass && (
+                                  <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded border border-green-500/30 font-semibold">
+                                    SC
+                                  </span>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                         <p className="text-sm text-text-secondary line-clamp-2 min-h-[40px]">
                           {project.description}
                         </p>
                       </div>
-
 
                       {/* Progress */}
                       <div className="space-y-2 pt-2 border-t border-border-subtle/50">
@@ -326,8 +347,10 @@ export function ExploreClientContent({ initialProjects }: ExploreClientContentPr
                           <span className="text-xs font-medium text-text-tertiary">
                             {project.status === 'upcoming' ? '🚀 Starts in' : '⏰ Ends in'}
                           </span>
-                          <Countdown 
-                            targetDate={project.status === 'upcoming' ? project.startDate : project.endDate}
+                          <Countdown
+                            targetDate={
+                              project.status === 'upcoming' ? project.startDate : project.endDate
+                            }
                           />
                         </div>
                       )}

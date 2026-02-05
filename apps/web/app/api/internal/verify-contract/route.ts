@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { verifyContractWithRetry, getNetworkFromChainId } from '@/lib/verification/contract-verifier';
-import { buildFairlaunchArgsFromDB, buildVestingArgsFromDB } from '@/lib/verification/args-builders';
+import {
+  verifyContractWithRetry,
+  getNetworkFromChainId,
+} from '@/lib/verification/contract-verifier';
+import {
+  buildFairlaunchArgsFromDB,
+  buildVestingArgsFromDB,
+} from '@/lib/verification/args-builders';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120; // 2 minutes for verification
@@ -13,9 +19,16 @@ export const maxDuration = 120; // 2 minutes for verification
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { contractAddress, contractType, launchRoundId, projectId, constructorArgs, chainId } = body;
+    const { contractAddress, contractType, launchRoundId, projectId, constructorArgs, chainId } =
+      body;
 
-    console.log('[Verify API] Request:', { contractAddress, contractType, launchRoundId, projectId, chainId });
+    console.log('[Verify API] Request:', {
+      contractAddress,
+      contractType,
+      launchRoundId,
+      projectId,
+      chainId,
+    });
 
     // Validate required fields
     if (!contractAddress || !contractType) {
@@ -94,9 +107,16 @@ async function verifyFairlaunchContract(
   });
 
   // Update database with result
+  // First, get current attempts
+  const { data: currentData } = await supabase
+    .from('launch_rounds')
+    .select('verification_attempts')
+    .eq('id', launchRoundId)
+    .single();
+
   const updates: any = {
     verification_status: result.status,
-    verification_attempts: supabase.raw('verification_attempts + 1'),
+    verification_attempts: (currentData?.verification_attempts || 0) + 1,
   };
 
   if (result.success) {
@@ -106,10 +126,7 @@ async function verifyFairlaunchContract(
     updates.last_verification_error = result.error || 'Verification failed';
   }
 
-  await supabase
-    .from('launch_rounds')
-    .update(updates)
-    .eq('id', launchRoundId);
+  await supabase.from('launch_rounds').update(updates).eq('id', launchRoundId);
 
   console.log('[Verify API] Fairlaunch verification result:', result.status);
 
@@ -142,7 +159,7 @@ async function verifyVestingContract(
     contractAddress,
     constructorArgs,
     network: network as any,
-    contractPath: 'contracts/vesting/TeamVesting.sol:TeamVesting',
+    contractPath: 'contracts/std-presale/MerkleVesting.sol:MerkleVesting',
   });
 
   // Update database with result
@@ -154,10 +171,7 @@ async function verifyVestingContract(
     updates.vesting_verified_at = new Date().toISOString();
   }
 
-  await supabase
-    .from('launch_rounds')
-    .update(updates)
-    .eq('id', launchRoundId);
+  await supabase.from('launch_rounds').update(updates).eq('id', launchRoundId);
 
   console.log('[Verify API] Vesting verification result:', result.status);
 
@@ -194,9 +208,16 @@ async function verifyTokenContract(
   });
 
   // Update database with result
+  // First, get current attempts
+  const { data: currentData } = await supabase
+    .from('projects')
+    .select('token_verification_attempts')
+    .eq('id', projectId)
+    .single();
+
   const updates: any = {
     token_verification_status: result.status,
-    token_verification_attempts: supabase.raw('token_verification_attempts + 1'),
+    token_verification_attempts: (currentData?.token_verification_attempts || 0) + 1,
   };
 
   if (result.success) {
@@ -206,10 +227,7 @@ async function verifyTokenContract(
     updates.last_token_verification_error = result.error || 'Verification failed';
   }
 
-  await supabase
-    .from('projects')
-    .update(updates)
-    .eq('id', projectId);
+  await supabase.from('projects').update(updates).eq('id', projectId);
 
   console.log('[Verify API] Token verification result:', result.status);
 

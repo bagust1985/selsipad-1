@@ -7,7 +7,7 @@ import { Address } from 'viem';
  * FairlaunchFactory addresses per network
  */
 export const FAIRLAUNCH_FACTORY_ADDRESS: Record<number, Address> = {
-  97: '0xeB4f1508102dbA065D0cEd8F003518F65ecc8EA4', // BSC Testnet - UPDATED with setLPLocker!
+  97: '0xBf8B3e6b88C46F1B99d1675436771e272eA284c7', // BSC Testnet - UPDATED 2026-02-05 with setLPLocker!
   11155111: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Sepolia
   84532: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Base Sepolia
 } as const;

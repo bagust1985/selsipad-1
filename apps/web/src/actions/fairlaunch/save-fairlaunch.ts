@@ -9,13 +9,13 @@ interface SaveFairlaunchData {
   tokenAddress: string;
   tokenSource: 'factory' | 'existing';
   securityBadges: string[];
-  
+
   // Token metadata
   tokenName?: string;
   tokenSymbol?: string;
   tokenDecimals?: number;
   tokenTotalSupply?: string;
-  
+
   projectName: string;
   description: string;
   logoUrl?: string;
@@ -56,13 +56,11 @@ interface SaveFairlaunchResult {
 /**
  * Save fairlaunch to database after successful deployment
  * Creates both project and launch_round records
- * 
+ *
  * @param data - Complete wizard data + deployed contract addresses
  * @returns Database IDs or error
  */
-export async function saveFairlaunch(
-  data: SaveFairlaunchData
-): Promise<SaveFairlaunchResult> {
+export async function saveFairlaunch(data: SaveFairlaunchData): Promise<SaveFairlaunchResult> {
   try {
     // 1. Check authentication
     const session = await getServerSession();
@@ -85,7 +83,7 @@ export async function saveFairlaunch(
       .eq('token_address', data.tokenAddress)
       .gte('created_at', fiveMinutesAgo)
       .single();
-    
+
     if (recentDuplicate) {
       console.warn('Duplicate fairlaunch detected (same token + user within 5 min)');
       return {
@@ -109,6 +107,18 @@ export async function saveFairlaunch(
         twitter: data.socialLinks.twitter || null,
         telegram: data.socialLinks.telegram || null,
         // Note: Discord will be stored in launch_rounds.params instead
+
+        // ✅ Factory metadata for SAFU badges
+        token_address: data.tokenAddress,
+        factory_address:
+          data.tokenSource === 'factory'
+            ? process.env.NEXT_PUBLIC_SIMPLE_TOKEN_FACTORY_BSC_TESTNET || null
+            : null,
+        template_version: data.tokenSource === 'factory' ? 'v1.0' : null,
+
+        // ✅ Auto-grant security badges for factory tokens in metadata
+        metadata: data.tokenSource === 'factory' ? { security_badges: ['SAFU', 'SC_PASS'] } : {},
+
         // Auto-approved for fairlaunch (no KYC/admin review)
         status: 'LIVE', // Valid values: DRAFT, SUBMITTED, IN_REVIEW, APPROVED, REJECTED, LIVE, ENDED
         kyc_status: 'NONE', // Valid values: NONE, PENDING, VERIFIED, REJECTED
@@ -160,49 +170,49 @@ export async function saveFairlaunch(
           // Token source metadata
           token_source: data.tokenSource, // 'factory' or 'existing'
           security_badges: data.securityBadges,
-          
+
           // Token metadata
           token_name: data.tokenName,
           token_symbol: data.tokenSymbol,
           token_address: data.tokenAddress,
           token_decimals: data.tokenDecimals || 18,
           token_total_supply: data.tokenTotalSupply,
-          
+
           // Contract addresses
           round_address: data.fairlaunchAddress,
           vesting_vault_address: data.vestingAddress || null,
           fee_splitter_address: data.feeSplitterAddress || null,
-          
+
           // Listing configuration
           listing_premium_bps: data.listingPremiumBps,
-          
+
           // Sale parameters
           tokens_for_sale: data.tokensForSale,
           softcap: data.softcap,
           min_contribution: data.minContribution,
           max_contribution: data.maxContribution,
           dex_platform: data.dexPlatform,
-          
+
           // Liquidity configuration
           liquidity_percent: data.liquidityPercent,
           lp_lock_months: data.lpLockMonths,
-          
+
           // Team vesting
           team_allocation: data.teamAllocation,
           vesting_beneficiary: data.vestingBeneficiary,
           vesting_schedule: data.vestingSchedule,
-          
+
           // Full social links (4 platforms)
           social_links: data.socialLinks,
-          
+
           // Project info (stored in both places for easy access)
           project_name: data.projectName,
           project_description: data.description,
           logo_url: data.logoUrl,
-          
+
           // Network name (for easy display)
           network_name: data.network, // e.g., 'bsc_testnet', 'sepolia'
-          
+
           // Deployment metadata
           deployed_at: new Date().toISOString(),
           deployment_tx: data.transactionHash,
@@ -213,10 +223,10 @@ export async function saveFairlaunch(
 
     if (roundError || !round) {
       console.error('Failed to create launch round:', roundError);
-      
+
       // Cleanup: delete the project if round creation failed
       await supabase.from('projects').delete().eq('id', project.id);
-      
+
       return {
         success: false,
         error: 'Failed to save fairlaunch: ' + (roundError?.message || 'Unknown error'),

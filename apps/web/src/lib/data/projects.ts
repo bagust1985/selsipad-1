@@ -397,6 +397,10 @@ function mapLaunchRoundStatus(dbStatus: string): 'live' | 'upcoming' | 'ended' {
  * 2. If current time >= start_at && current time < end_at → LIVE
  * 3. If current time < start_at → UPCOMING
  *
+ * Special cases:
+ * - DEPLOYED status (Fairlaunch admin-deployed) → Depends on time
+ * - ACTIVE status (Fairlaunch after start_at) → Treat as LIVE
+ *
  * This OVERRIDES the database status field when necessary to ensure
  * the UI always reflects the real-time state.
  */
@@ -414,8 +418,12 @@ function calculateRealTimeStatus(round: any): 'live' | 'upcoming' | 'ended' {
   if (now >= endAt) {
     return 'ended';
   } else if (now >= startAt && now < endAt) {
-    return 'live';
+    return 'live'; // DEPLOYED/ACTIVE rounds in this time range are LIVE
   } else {
+    // Check if DEPLOYED before start_at
+    if (round.status === 'DEPLOYED' || round.status === 'APPROVED') {
+      return 'upcoming'; // Deployed but not started yet
+    }
     return 'upcoming';
   }
 }

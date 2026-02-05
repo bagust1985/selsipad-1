@@ -1,13 +1,16 @@
 /**
  * POST /api/fairlaunch/submit
- * 
+ *
  * Submit a new Fairlaunch project with escrowed tokens
  * This replaces the old /deploy endpoint in the Hybrid Admin architecture
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { validateDeploymentParams, formatValidationErrors } from '@/lib/fairlaunch/deployment-validation';
+import {
+  validateDeploymentParams,
+  formatValidationErrors,
+} from '@/lib/fairlaunch/deployment-validation';
 import { ethers } from 'ethers';
 import type { FairlaunchDeployParams } from '@/lib/fairlaunch/params-builder';
 
@@ -23,12 +26,12 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   let userId: string | undefined;
   let walletAddress: string | undefined;
-  
+
   try {
     // 1. Authenticate user
     const { getServerSession } = await import('@/lib/auth/session');
     const session = await getServerSession();
-    
+
     if (session) {
       userId = session.userId;
       walletAddress = session.address;
@@ -93,10 +96,7 @@ export async function POST(request: NextRequest) {
     // Get transaction receipt to ensure it was successful
     const escrowReceipt = await provider.getTransactionReceipt(escrowTxHash);
     if (!escrowReceipt || escrowReceipt.status !== 1) {
-      return NextResponse.json(
-        { error: 'Escrow transaction failed or pending' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Escrow transaction failed or pending' }, { status: 400 });
     }
 
     // 4. Verify creation fee payment
@@ -110,6 +110,26 @@ export async function POST(request: NextRequest) {
     if (!feeReceipt || feeReceipt.status !== 1) {
       return NextResponse.json(
         { error: 'Creation fee payment failed or pending' },
+        { status: 400 }
+      );
+    }
+
+    // Validate fee recipient and amount
+    const TREASURY_ADDRESS =
+      process.env.TREASURY_WALLET_ADDRESS || process.env.NEXT_PUBLIC_TREASURY_WALLET;
+    if (!TREASURY_ADDRESS) {
+      return NextResponse.json({ error: 'Treasury address not configured' }, { status: 500 });
+    }
+
+    if (feeTx.to?.toLowerCase() !== TREASURY_ADDRESS.toLowerCase()) {
+      return NextResponse.json({ error: 'Invalid fee payment: wrong recipient' }, { status: 400 });
+    }
+
+    // Validate fee amount (allow some tolerance for gas price fluctuation)
+    const EXPECTED_FEE = ethers.parseEther('0.2'); // BSC Testnet fairlaunch fee
+    if (feeTx.value < EXPECTED_FEE) {
+      return NextResponse.json(
+        { error: `Insufficient creation fee: expected ${ethers.formatEther(EXPECTED_FEE)} BNB` },
         { status: 400 }
       );
     }
@@ -219,7 +239,6 @@ export async function POST(request: NextRequest) {
       status: 'PENDING_DEPLOY',
       message: 'Project submitted successfully. Awaiting admin deployment.',
     });
-
   } catch (error: any) {
     console.error('[Submit API] Error:', error);
     return NextResponse.json(

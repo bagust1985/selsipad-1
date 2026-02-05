@@ -51,21 +51,41 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: 'Round not found' }, { status: 404 });
     }
 
-    // Verify round is in refundable state
-    const refundableResults = ['FAILED', 'CANCELED'];
+    // Verify round is in refundable state (updated spelling: CANCELLED)
+    const refundableResults = ['FAILED', 'CANCELLED'];
     if (!refundableResults.includes(round.result)) {
       return NextResponse.json(
-        { error: `Round must be FAILED or CANCELED to claim refund (current: ${round.result})` },
+        { error: `Round must be FAILED or CANCELLED to claim refund (current: ${round.result})` },
         { status: 400 }
       );
     }
 
-    // Get user's total contributions
+    // Get user's wallet address (support wallet-only auth)
+    let walletAddress: string;
+
+    // Try to get wallet from authenticated user
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('primary_wallet')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.primary_wallet) {
+      walletAddress = profile.primary_wallet;
+    } else {
+      // Fallback: get from request header for wallet-only flow
+      walletAddress = request.headers.get('x-wallet-address') || '';
+      if (!walletAddress) {
+        return NextResponse.json({ error: 'Wallet address required for refund' }, { status: 400 });
+      }
+    }
+
+    // Get user's total contributions by wallet_address (not user_id)
     const { data: contributions } = await supabase
       .from('contributions')
       .select('*')
       .eq('round_id', params.id)
-      .eq('user_id', user.id)
+      .eq('wallet_address', walletAddress.toLowerCase())
       .eq('status', 'CONFIRMED');
 
     if (!contributions || contributions.length === 0) {

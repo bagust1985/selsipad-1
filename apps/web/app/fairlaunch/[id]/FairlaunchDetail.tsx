@@ -3,7 +3,24 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useWalletClient, usePublicClient } from 'wagmi';
-import { ArrowLeft, ExternalLink, Globe, Twitter, Send, MessageCircle, Shield, CheckCircle, Copy, Clock, TrendingUp, Lock, Users, AlertCircle, Loader2, DollarSign } from 'lucide-react';
+import {
+  ArrowLeft,
+  ExternalLink,
+  Globe,
+  Twitter,
+  Send,
+  MessageCircle,
+  Shield,
+  CheckCircle,
+  Copy,
+  Clock,
+  TrendingUp,
+  Lock,
+  Users,
+  AlertCircle,
+  Loader2,
+  DollarSign,
+} from 'lucide-react';
 import { NetworkBadge } from '@/components/presale/NetworkBadge';
 import { StatusPill } from '@/components/presale/StatusPill';
 
@@ -14,6 +31,7 @@ import { ethers } from 'ethers';
 interface Fairlaunch {
   id: string;
   status: string;
+  result?: string; // SUCCESS, FAILED, CANCELLED, NONE
   chain: string; // Used to be network
   chain_id: number;
   params: any;
@@ -53,12 +71,12 @@ interface FairlaunchDetailProps {
 function getNetworkDisplay(chain?: string, chainId?: string | number): string {
   // Map standard chain keys to display names
   const keyMap: Record<string, string> = {
-    'bsc_testnet': 'BSC Testnet',
-    'sepolia': 'Sepolia',
-    'base_sepolia': 'Base Sepolia',
-    'ethereum': 'Ethereum',
-    'bnb': 'BNB Chain',
-    'base': 'Base',
+    bsc_testnet: 'BSC Testnet',
+    sepolia: 'Sepolia',
+    base_sepolia: 'Base Sepolia',
+    ethereum: 'Ethereum',
+    bnb: 'BNB Chain',
+    base: 'Base',
     '97': 'BSC Testnet',
     '56': 'BNB Chain',
     '11155111': 'Sepolia',
@@ -72,7 +90,7 @@ function getNetworkDisplay(chain?: string, chainId?: string | number): string {
     const mapped = keyMap[chainId.toString()];
     if (mapped) return mapped;
   }
-  
+
   return chain || 'Unknown Network';
 }
 
@@ -80,42 +98,54 @@ function getNetworkDisplay(chain?: string, chainId?: string | number): string {
 function getNativeCurrency(chain?: string, chainId?: string | number): string {
   const c = chain?.toLowerCase() || '';
   const cid = chainId?.toString() || '';
-  
+
   // Debug logging
   console.log('getNativeCurrency debug:', { chain, chainId, c, cid });
-  
+
   // IMPORTANT: Sometimes chain_id is stored in 'chain' field instead of 'chainId'
   // Check if 'chain' is a number (like '97', '56', etc.)
   const isChainNumeric = /^\d+$/.test(c);
   const effectiveChainId = isChainNumeric ? c : cid;
-  
+
   console.log('Effective chain ID:', effectiveChainId);
-  
+
   // Check chain_id first (most reliable)
   if (effectiveChainId === '97' || effectiveChainId === '56') {
     console.log('Detected BNB chain by ID:', effectiveChainId);
     return 'BNB';
   }
-  
+
   // Then check chain string (only if not numeric)
   if (!isChainNumeric && (c.includes('bsc') || c.includes('bnb'))) {
     console.log('Detected BNB chain by name:', c);
     return 'BNB';
   }
-  
+
   // Base network
   if (effectiveChainId === '8453' || effectiveChainId === '84532' || c.includes('base')) {
     console.log('Detected Base chain');
     return 'ETH';
   }
-  
+
   // Ethereum networks
-  if (effectiveChainId === '1' || effectiveChainId === '11155111' || c.includes('eth') || c.includes('sepolia')) {
+  if (
+    effectiveChainId === '1' ||
+    effectiveChainId === '11155111' ||
+    c.includes('eth') ||
+    c.includes('sepolia')
+  ) {
     console.log('Detected Ethereum chain');
     return 'ETH';
   }
-  
-  console.warn('Unknown network, defaulting to ETH. chain:', c, 'chainId:', cid, 'effectiveChainId:', effectiveChainId);
+
+  console.warn(
+    'Unknown network, defaulting to ETH. chain:',
+    c,
+    'chainId:',
+    cid,
+    'effectiveChainId:',
+    effectiveChainId
+  );
   return 'ETH'; // Default
 }
 
@@ -125,12 +155,12 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
 
-
   // Consolidate data access with robust fallbacks
   // Network logic: prefer explicit chain_id, fall back to chain string
-  const chainId = fairlaunch.chain_id || fairlaunch.project?.chain_id || fairlaunch.params?.chain_id;
+  const chainId =
+    fairlaunch.chain_id || fairlaunch.project?.chain_id || fairlaunch.params?.chain_id;
   const chainKey = fairlaunch.chain || '';
-  
+
   // Debug logging for network detection
   console.log('Fairlaunch network debug:', {
     fairlaunch_chain_id: fairlaunch.chain_id,
@@ -138,54 +168,54 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
     project_chain_id: fairlaunch.project?.chain_id,
     params_chain_id: fairlaunch.params?.chain_id,
     resolved_chainId: chainId,
-    resolved_chainKey: chainKey
+    resolved_chainKey: chainKey,
   });
-  
+
   const networkName = getNetworkDisplay(chainKey, chainId);
   const nativeCurrency = getNativeCurrency(chainKey, chainId);
-  
+
   // Token Data
   const tokenDecimals = parseInt(
-    fairlaunch.project?.metadata?.token_decimals || 
-    fairlaunch.project?.token_decimals || 
-    fairlaunch.params?.token_decimals || 
-    '18'
+    fairlaunch.project?.metadata?.token_decimals ||
+      fairlaunch.project?.token_decimals ||
+      fairlaunch.params?.token_decimals ||
+      '18'
   );
 
   const tokensForSale = parseFloat(fairlaunch.params?.tokens_for_sale || '0');
   const liquidityTokens = parseFloat(fairlaunch.params?.liquidity_tokens || '0');
   const teamTokens = parseFloat(
-    fairlaunch.params?.team_vesting_tokens || 
-    fairlaunch.params?.team_allocation || 
-    '0'
+    fairlaunch.params?.team_vesting_tokens || fairlaunch.params?.team_allocation || '0'
   );
 
   // Calculate Total Supply if not provided
   let tokenSupply = parseFloat(
-    fairlaunch.project?.metadata?.token_total_supply || 
-    fairlaunch.project?.token_total_supply || 
-    fairlaunch.params?.token_total_supply || 
-    '0'
+    fairlaunch.project?.metadata?.token_total_supply ||
+      fairlaunch.project?.token_total_supply ||
+      fairlaunch.params?.token_total_supply ||
+      '0'
   );
 
   // Fallback calculation: if supply is 0 but we have component parts, sum them up
   // This is a heuristic: Sale + Liquidity + Team is usually the bulk of it.
   if (tokenSupply === 0 && tokensForSale > 0) {
-      // If we can't get exact, we assume these components make up the supply or at least display them
-      // But usually Total Supply >= Sale + Liquidity + Team
-      tokenSupply = tokensForSale + liquidityTokens + teamTokens;
+    // If we can't get exact, we assume these components make up the supply or at least display them
+    // But usually Total Supply >= Sale + Liquidity + Team
+    tokenSupply = tokensForSale + liquidityTokens + teamTokens;
   }
 
   // State calculations
   // Priority: Project Table > Launch Params > Defaults
-  const projectName = fairlaunch.project?.name || fairlaunch.params?.project_name || 'Unnamed Project';
+  const projectName =
+    fairlaunch.project?.name || fairlaunch.params?.project_name || 'Unnamed Project';
   const projectSymbol = fairlaunch.project?.symbol || fairlaunch.params?.token_symbol || 'TBD';
-  const projectDesc = fairlaunch.project?.description || fairlaunch.params?.project_description || 'No description';
+  const projectDesc =
+    fairlaunch.project?.description || fairlaunch.params?.project_description || 'No description';
   const projectLogo = fairlaunch.project?.logo_url || fairlaunch.params?.logo_url;
-  
+
   const softcap = parseFloat(fairlaunch.params?.softcap || '0');
   const raised = fairlaunch.total_raised || 0;
-  
+
   const finalPrice = tokensForSale > 0 ? raised / tokensForSale : 0;
   const progress = softcap > 0 ? (raised / softcap) * 100 : 0;
 
@@ -201,36 +231,44 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
   const timeStatus = getTimeStatus(fairlaunch.start_at, fairlaunch.end_at);
   const isLive = timeStatus === 'live';
   const isEnded = timeStatus === 'ended';
-  const isFinalized = fairlaunch.status === 'FINALIZED_SUCCESS' || fairlaunch.status === 'FINALIZED_FAIL';
+
+  // Get result from database (set by finalize action)
+  const result = fairlaunch.result || 'NONE';
+  const isSuccess = result === 'SUCCESS';
+  const isFailed = result === 'FAILED';
+  const isCancelled = result === 'CANCELLED';
 
   const tabs: { key: TabType; label: string; enabled: boolean; hasIndicator?: boolean }[] = [
     { key: 'overview', label: 'Overview', enabled: true },
-    { 
-      key: 'contribute', 
-      label: 'Contribute', 
-      // Enable if time-based status is 'live' OR database status is 'LIVE'
-      enabled: isLive || fairlaunch.status === 'LIVE',
-      hasIndicator: isLive || fairlaunch.status === 'LIVE'
+    {
+      key: 'contribute',
+      label: 'Contribute',
+      // Enable if ACTIVE/DEPLOYED/LIVE and not ended
+      enabled:
+        (fairlaunch.status === 'ACTIVE' ||
+          fairlaunch.status === 'DEPLOYED' ||
+          fairlaunch.status === 'LIVE') &&
+        !isEnded,
+      hasIndicator: isLive,
     },
-    { 
-      key: 'claim', 
-      label: 'Claim', 
-      // Enable if ended AND softcap reached, OR status is ENDED/SUCCESS
-      enabled: (isEnded && raised >= softcap) || fairlaunch.status === 'ENDED' || fairlaunch.status === 'SUCCESS',
-      hasIndicator: (isEnded && raised >= softcap) || fairlaunch.status === 'ENDED'
+    {
+      key: 'claim',
+      label: 'Claim',
+      // Enable ONLY if result is SUCCESS (set by finalize action)
+      enabled: isSuccess,
+      hasIndicator: isSuccess && fairlaunch.status === 'ENDED',
     },
     {
       key: 'refund',
       label: 'Refund',
-      // Enable if ended below softcap OR finalized as fail/refunding
-      enabled: (isEnded && raised < softcap) || fairlaunch.status === 'FINALIZED_FAIL' || fairlaunch.status === 'FAILED' || fairlaunch.status === 'REFUNDING',
-      hasIndicator: (isEnded && raised < softcap) || fairlaunch.status === 'FAILED'
+      // Enable if result is FAILED or CANCELLED
+      enabled: isFailed || isCancelled,
+      hasIndicator: isFailed || isCancelled,
     },
     { key: 'transactions', label: 'Transactions', enabled: !!userAddress },
   ];
 
   // Helper for funding check
-
 
   // Helper for explorer URL
   const getExplorerUrl = (id: string) => {
@@ -240,17 +278,15 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
     return '#';
   };
 
-
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <Link href="/fairlaunch/list" className="inline-flex items-center text-gray-400 hover:text-white mb-6">
+      <Link
+        href="/fairlaunch/list"
+        className="inline-flex items-center text-gray-400 hover:text-white mb-6"
+      >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Fairlaunch List
       </Link>
-
-
-
 
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
@@ -264,84 +300,89 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
             )}
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">{projectName}</h1>
-              <p className="text-gray-400 mb-3">
-                {projectDesc}
-              </p>
+              <p className="text-gray-400 mb-3">{projectDesc}</p>
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Security Badges */}
-                {fairlaunch.params?.token_source === 'factory' && fairlaunch.params?.security_badges?.length > 0 && (
-                  <>
-                    {fairlaunch.params.security_badges.includes('SAFU') && (
-                      <span className="px-3 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded-full text-xs font-medium text-yellow-400 flex items-center gap-1">
-                        <Shield className="w-3 h-3" />
-                        SAFU
-                      </span>
-                    )}
-                    {fairlaunch.params.security_badges.includes('SC_PASS') && (
-                      <span className="px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-xs font-medium text-green-400 flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" />
-                        SC Pass
-                      </span>
-                    )}
-                  </>
-                )}
+                {fairlaunch.params?.token_source === 'factory' &&
+                  fairlaunch.params?.security_badges?.length > 0 && (
+                    <>
+                      {fairlaunch.params.security_badges.includes('SAFU') && (
+                        <span className="px-3 py-1 bg-yellow-500/10 border border-yellow-500/30 rounded-full text-xs font-medium text-yellow-400 flex items-center gap-1">
+                          <Shield className="w-3 h-3" />
+                          SAFU
+                        </span>
+                      )}
+                      {fairlaunch.params.security_badges.includes('SC_PASS') && (
+                        <span className="px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-xs font-medium text-green-400 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" />
+                          SC Pass
+                        </span>
+                      )}
+                    </>
+                  )}
 
                 {projectSymbol && (
                   <span className="text-sm text-gray-500">
-                    Token:{' '}
-                    <span className="text-white font-semibold">
-                      {projectSymbol}
-                    </span>
+                    Token: <span className="text-white font-semibold">{projectSymbol}</span>
                   </span>
                 )}
               </div>
-              
+
               {/* Social Media Links from Project Table or Params */}
               <div className="flex items-center gap-2 mt-3">
-                  {(fairlaunch.project?.website_url || fairlaunch.params?.social_links?.website) && (
-                    <a
-                      href={fairlaunch.project?.website_url || fairlaunch.params?.social_links?.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Website"
-                    >
-                      <Globe className="w-4 h-4 text-gray-400" />
-                    </a>
-                  )}
-                  {(fairlaunch.project?.twitter_url || fairlaunch.params?.social_links?.twitter) && (
-                    <a
-                      href={fairlaunch.project?.twitter_url || fairlaunch.params?.social_links?.twitter}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Twitter"
-                    >
-                      <Twitter className="w-4 h-4 text-gray-400" />
-                    </a>
-                  )}
-                  {(fairlaunch.project?.telegram_url || fairlaunch.params?.social_links?.telegram) && (
-                    <a
-                      href={fairlaunch.project?.telegram_url || fairlaunch.params?.social_links?.telegram}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Telegram"
-                    >
-                      <Send className="w-4 h-4 text-gray-400" />
-                    </a>
-                  )}
-                  {(fairlaunch.project?.discord_url || fairlaunch.params?.social_links?.discord) && (
-                    <a
-                      href={fairlaunch.project?.discord_url || fairlaunch.params?.social_links?.discord}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Discord"
-                    >
-                      <MessageCircle className="w-4 h-4 text-gray-400" />
-                    </a>
-                  )}
+                {(fairlaunch.project?.website_url || fairlaunch.params?.social_links?.website) && (
+                  <a
+                    href={
+                      fairlaunch.project?.website_url || fairlaunch.params?.social_links?.website
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Website"
+                  >
+                    <Globe className="w-4 h-4 text-gray-400" />
+                  </a>
+                )}
+                {(fairlaunch.project?.twitter_url || fairlaunch.params?.social_links?.twitter) && (
+                  <a
+                    href={
+                      fairlaunch.project?.twitter_url || fairlaunch.params?.social_links?.twitter
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Twitter"
+                  >
+                    <Twitter className="w-4 h-4 text-gray-400" />
+                  </a>
+                )}
+                {(fairlaunch.project?.telegram_url ||
+                  fairlaunch.params?.social_links?.telegram) && (
+                  <a
+                    href={
+                      fairlaunch.project?.telegram_url || fairlaunch.params?.social_links?.telegram
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Telegram"
+                  >
+                    <Send className="w-4 h-4 text-gray-400" />
+                  </a>
+                )}
+                {(fairlaunch.project?.discord_url || fairlaunch.params?.social_links?.discord) && (
+                  <a
+                    href={
+                      fairlaunch.project?.discord_url || fairlaunch.params?.social_links?.discord
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Discord"
+                  >
+                    <MessageCircle className="w-4 h-4 text-gray-400" />
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -363,8 +404,14 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
                 ended: 'bg-gray-500/10 border-gray-500/30 text-gray-400',
               };
               return (
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold border uppercase ${colors[status]}`}>
-                  {status === 'live' ? '🟢 Live' : status === 'upcoming' ? '⏰ Upcoming' : '⏹️ Ended'}
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border uppercase ${colors[status]}`}
+                >
+                  {status === 'live'
+                    ? '🟢 Live'
+                    : status === 'upcoming'
+                      ? '⏰ Upcoming'
+                      : '⏹️ Ended'}
                 </span>
               );
             })()}
@@ -476,34 +523,38 @@ export function FairlaunchDetail({ fairlaunch, userAddress }: FairlaunchDetailPr
       {/* Tab Content */}
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
         {activeTab === 'overview' && (
-          <OverviewTab 
-             fairlaunch={fairlaunch} 
-             finalPrice={finalPrice}
-             projectSymbol={projectSymbol}
-             tokenSupply={tokenSupply}
-             tokenDecimals={tokenDecimals}
-             networkName={networkName}
-             nativeCurrency={nativeCurrency}
-             tokensForSale={tokensForSale}
-             softcap={softcap}
-             presalePercent={presalePercent}
-             teamPercent={teamPercent}
-             unlockedPercent={unlockedPercent}
-             teamTokens={teamTokens}
+          <OverviewTab
+            fairlaunch={fairlaunch}
+            finalPrice={finalPrice}
+            projectSymbol={projectSymbol}
+            tokenSupply={tokenSupply}
+            tokenDecimals={tokenDecimals}
+            networkName={networkName}
+            nativeCurrency={nativeCurrency}
+            tokensForSale={tokensForSale}
+            softcap={softcap}
+            presalePercent={presalePercent}
+            teamPercent={teamPercent}
+            unlockedPercent={unlockedPercent}
+            teamTokens={teamTokens}
           />
         )}
-        {activeTab === 'contribute' && <ContributeTab userAddress={userAddress} fairlaunch={fairlaunch} />}
+        {activeTab === 'contribute' && (
+          <ContributeTab userAddress={userAddress} fairlaunch={fairlaunch} />
+        )}
         {activeTab === 'claim' && <ClaimTab fairlaunch={fairlaunch} userAddress={userAddress} />}
         {activeTab === 'refund' && <RefundTab userAddress={userAddress} fairlaunch={fairlaunch} />}
-        {activeTab === 'transactions' && <TransactionsTab roundId={fairlaunch.id} chain={fairlaunch.chain} />}
+        {activeTab === 'transactions' && (
+          <TransactionsTab roundId={fairlaunch.id} chain={fairlaunch.chain} />
+        )}
       </div>
     </div>
   );
 }
 
 // Updated OverviewTab to accept prepared props
-function OverviewTab({ 
-  fairlaunch, 
+function OverviewTab({
+  fairlaunch,
   finalPrice,
   projectSymbol,
   tokenSupply,
@@ -515,9 +566,9 @@ function OverviewTab({
   presalePercent,
   teamPercent,
   unlockedPercent,
-  teamTokens
-}: { 
-  fairlaunch: Fairlaunch; 
+  teamTokens,
+}: {
+  fairlaunch: Fairlaunch;
   finalPrice: number;
   projectSymbol: string;
   tokenSupply: number;
@@ -531,7 +582,6 @@ function OverviewTab({
   unlockedPercent: number;
   teamTokens: number;
 }) {
-
   return (
     <div className="space-y-6">
       {/* Fairlaunch Rules */}
@@ -575,7 +625,9 @@ function OverviewTab({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 bg-gray-800 rounded-lg">
             <div className="text-sm text-gray-400 mb-1">Token Name</div>
-            <div className="text-white font-medium">{fairlaunch.project?.name || fairlaunch.params?.token_name || 'N/A'}</div>
+            <div className="text-white font-medium">
+              {fairlaunch.project?.name || fairlaunch.params?.token_name || 'N/A'}
+            </div>
           </div>
           <div className="p-4 bg-gray-800 rounded-lg">
             <div className="text-sm text-gray-400 mb-1">Symbol</div>
@@ -584,10 +636,16 @@ function OverviewTab({
           <div className="p-4 bg-gray-800 rounded-lg col-span-full">
             <div className="text-sm text-gray-400 mb-1">Contract Address</div>
             <div className="flex items-center gap-2">
-              <code className="text-white font-mono text-sm">{fairlaunch.project?.token_address || fairlaunch.params?.token_address || 'N/A'}</code>
+              <code className="text-white font-mono text-sm">
+                {fairlaunch.project?.token_address || fairlaunch.params?.token_address || 'N/A'}
+              </code>
               {(fairlaunch.project?.token_address || fairlaunch.params?.token_address) && (
                 <button
-                  onClick={() => navigator.clipboard.writeText(fairlaunch.project?.token_address || fairlaunch.params.token_address)}
+                  onClick={() =>
+                    navigator.clipboard.writeText(
+                      fairlaunch.project?.token_address || fairlaunch.params.token_address
+                    )
+                  }
                   className="p-1 hover:bg-gray-700 rounded transition-colors"
                   title="Copy address"
                 >
@@ -599,11 +657,19 @@ function OverviewTab({
           <div className="p-4 bg-gray-800 rounded-lg col-span-full">
             <div className="text-sm text-gray-400 mb-1">Pool Contract Address</div>
             <div className="flex items-center gap-2">
-              <code className="text-white font-mono text-sm">{fairlaunch.contract_address || fairlaunch.params?.contract_address || 'Not deployed yet'}</code>
+              <code className="text-white font-mono text-sm">
+                {fairlaunch.contract_address ||
+                  fairlaunch.params?.contract_address ||
+                  'Not deployed yet'}
+              </code>
               {(fairlaunch.contract_address || fairlaunch.params?.contract_address) && (
                 <>
                   <button
-                    onClick={() => navigator.clipboard.writeText(fairlaunch.contract_address || fairlaunch.params.contract_address)}
+                    onClick={() =>
+                      navigator.clipboard.writeText(
+                        fairlaunch.contract_address || fairlaunch.params.contract_address
+                      )
+                    }
                     className="p-1 hover:bg-gray-700 rounded transition-colors"
                     title="Copy address"
                   >
@@ -625,11 +691,15 @@ function OverviewTab({
           <div className="p-4 bg-gray-800 rounded-lg col-span-full">
             <div className="text-sm text-gray-400 mb-1">Vesting Vault Address</div>
             <div className="flex items-center gap-2">
-              <code className="text-white font-mono text-sm">{fairlaunch.vesting_vault_address || 'Not deployed yet'}</code>
+              <code className="text-white font-mono text-sm">
+                {fairlaunch.vesting_vault_address || 'Not deployed yet'}
+              </code>
               {fairlaunch.vesting_vault_address && (
                 <>
                   <button
-                    onClick={() => navigator.clipboard.writeText(fairlaunch.vesting_vault_address || '')}
+                    onClick={() =>
+                      navigator.clipboard.writeText(fairlaunch.vesting_vault_address || '')
+                    }
                     className="p-1 hover:bg-gray-700 rounded transition-colors"
                     title="Copy address"
                   >
@@ -659,8 +729,11 @@ function OverviewTab({
           <div className="p-4 bg-gray-800 rounded-lg">
             <div className="text-sm text-gray-400 mb-1">Network</div>
             <div className="flex items-center gap-2">
-                <NetworkBadge chainId={fairlaunch.chain_id?.toString() || ''} network={fairlaunch.chain || ''} />
-               <span className="text-white font-medium">{networkName}</span>
+              <NetworkBadge
+                chainId={fairlaunch.chain_id?.toString() || ''}
+                network={fairlaunch.chain || ''}
+              />
+              <span className="text-white font-medium">{networkName}</span>
             </div>
           </div>
           <div className="p-4 bg-gray-800 rounded-lg">
@@ -676,7 +749,9 @@ function OverviewTab({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 bg-gray-800 rounded-lg">
             <div className="text-sm text-gray-400 mb-1">Softcap</div>
-            <div className="text-white font-medium">{softcap} {nativeCurrency}</div>
+            <div className="text-white font-medium">
+              {softcap} {nativeCurrency}
+            </div>
           </div>
           <div className="p-4 bg-gray-800 rounded-lg">
             <div className="text-sm text-gray-400 mb-1">Hardcap</div>
@@ -684,15 +759,21 @@ function OverviewTab({
           </div>
           <div className="p-4 bg-gray-800 rounded-lg">
             <div className="text-sm text-gray-400 mb-1">Min Contribution</div>
-            <div className="text-white font-medium">{fairlaunch.params?.min_contribution || 0} {nativeCurrency}</div>
+            <div className="text-white font-medium">
+              {fairlaunch.params?.min_contribution || 0} {nativeCurrency}
+            </div>
           </div>
           <div className="p-4 bg-gray-800 rounded-lg">
             <div className="text-sm text-gray-400 mb-1">Max Contribution</div>
-            <div className="text-white font-medium">{fairlaunch.params?.max_contribution || 0} {nativeCurrency}</div>
+            <div className="text-white font-medium">
+              {fairlaunch.params?.max_contribution || 0} {nativeCurrency}
+            </div>
           </div>
           <div className="p-4 bg-gray-800 rounded-lg">
             <div className="text-sm text-gray-400 mb-1">Listing On</div>
-            <div className="text-white font-medium capitalize">{fairlaunch.params?.dex_platform || 'PancakeSwap'}</div>
+            <div className="text-white font-medium capitalize">
+              {fairlaunch.params?.dex_platform || 'PancakeSwap'}
+            </div>
           </div>
         </div>
       </div>
@@ -708,13 +789,13 @@ function OverviewTab({
                 {(() => {
                   const radius = 40;
                   const circumference = 2 * Math.PI * radius;
-                  
+
                   const presaleLength = (presalePercent / 100) * circumference;
                   const teamLength = (teamPercent / 100) * circumference;
                   const unlockedLength = (unlockedPercent / 100) * circumference;
-                  
+
                   let offset = 0;
-                  
+
                   return (
                     <>
                       {/* Presale - Green */}
@@ -759,7 +840,7 @@ function OverviewTab({
                   );
                 })()}
               </svg>
-              
+
               {/* Center text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <div className="text-2xl font-bold text-white">
@@ -779,7 +860,7 @@ function OverviewTab({
                   {tokensForSale.toLocaleString()} ({presalePercent.toFixed(1)}%)
                 </span>
               </div>
-              
+
               {teamPercent > 0 && (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -798,7 +879,8 @@ function OverviewTab({
                   <span className="text-gray-400">Unlocked</span>
                 </div>
                 <span className="text-white font-medium">
-                  {(tokenSupply - tokensForSale - teamTokens).toLocaleString()} ({unlockedPercent.toFixed(1)}%)
+                  {(tokenSupply - tokensForSale - teamTokens).toLocaleString()} (
+                  {unlockedPercent.toFixed(1)}%)
                 </span>
               </div>
             </div>
@@ -809,84 +891,91 @@ function OverviewTab({
   );
 }
 
-function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fairlaunch: Fairlaunch }) {
+function ContributeTab({
+  userAddress,
+  fairlaunch,
+}: {
+  userAddress?: string;
+  fairlaunch: Fairlaunch;
+}) {
   const [amount, setAmount] = useState('');
   const [isContributing, setIsContributing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+
   // Wagmi hooks
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
-  
+
   // Get contract address and network info
   // Try multiple sources for contract address
-  const fairlaunchAddress = (
-    fairlaunch.contract_address || 
-    fairlaunch.params?.round_address || 
-    fairlaunch.params?.contract_address
-  ) as `0x${string}` | undefined;
-  
+  const fairlaunchAddress = (fairlaunch.contract_address ||
+    fairlaunch.params?.round_address ||
+    fairlaunch.params?.contract_address) as `0x${string}` | undefined;
+
   console.log('ContributeTab - Contract address debug:', {
     contract_address: fairlaunch.contract_address,
     params_round_address: fairlaunch.params?.round_address,
     params_contract_address: fairlaunch.params?.contract_address,
     resolved_address: fairlaunchAddress,
-    deployment_status: fairlaunch.deployment_status
+    deployment_status: fairlaunch.deployment_status,
   });
-  
+
   const minContribution = Number(fairlaunch.params?.min_contribution || 0);
   const maxContribution = Number(fairlaunch.params?.max_contribution || 0);
-  const nativeCurrency = getNativeCurrency(fairlaunch.chain, String(fairlaunch.params?.chain_id || ''));
-  
+  const nativeCurrency = getNativeCurrency(
+    fairlaunch.chain,
+    String(fairlaunch.params?.chain_id || '')
+  );
+
   const handleContribute = async () => {
     if (!userAddress) {
       setError('Please connect your wallet first');
       return;
     }
-    
+
     if (!walletClient) {
       setError('Wallet not connected');
       return;
     }
-    
+
     if (!publicClient) {
       setError('Network not available');
       return;
     }
-    
+
     if (!fairlaunchAddress) {
       setError('Fairlaunch contract address not found');
       return;
     }
-    
+
     try {
       setIsContributing(true);
       setError('');
       setSuccess('');
-      
+
       const amountNum = parseFloat(amount);
-      
+
       // Validation
       if (isNaN(amountNum) || amountNum <= 0) {
         throw new Error('Please enter a valid amount');
       }
-      
+
       if (amountNum < minContribution) {
         throw new Error(`Minimum contribution is ${minContribution} ${nativeCurrency}`);
       }
-      
+
       if (amountNum > maxContribution) {
         throw new Error(`Maximum contribution is ${maxContribution} ${nativeCurrency}`);
       }
-      
+
       // Import helpers
       const { parseEther } = await import('viem');
       const { FAIRLAUNCH_ABI } = await import('@/contracts/Fairlaunch');
-      
+
       // Convert to wei
       const valueInWei = parseEther(amount);
-      
+
       // Call contribute function using walletClient
       const txHash = await walletClient.writeContract({
         address: fairlaunchAddress,
@@ -894,19 +983,19 @@ function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fair
         functionName: 'contribute',
         value: valueInWei,
       });
-      
+
       setSuccess(`Transaction sent! Hash: ${txHash.slice(0, 10)}...`);
-      
+
       // Wait for confirmation using publicClient
       const receipt = await publicClient.waitForTransactionReceipt({
         hash: txHash,
         confirmations: 2,
       });
-      
+
       if (receipt.status === 'reverted') {
         throw new Error('Transaction failed');
       }
-      
+
       // ✅ Save to database and trigger referral tracking
       console.log('[ContributeTab] Saving contribution:', {
         roundId: fairlaunch.id,
@@ -914,7 +1003,7 @@ function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fair
         txHash,
         chain: String(fairlaunch.params?.chain_id || fairlaunch.chain || '97'),
       });
-      
+
       const { saveFairlaunchContribution } = await import('@/actions/fairlaunch/save-contribution');
       const saveResult = await saveFairlaunchContribution({
         roundId: fairlaunch.id,
@@ -923,23 +1012,24 @@ function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fair
         chain: String(fairlaunch.params?.chain_id || fairlaunch.chain || '97'),
         walletAddress: userAddress, // Pass wallet address from client
       });
-      
+
       console.log('[ContributeTab] Save result:', saveResult);
-      
+
       if (!saveResult.success) {
         console.error('[ContributeTab] Failed to save contribution:', saveResult.error);
         // Alert user but don't fail the whole transaction
-        alert(`⚠️ Transaction successful but failed to update database: ${saveResult.error}\n\nPlease contact support with TX: ${txHash}`);
+        alert(
+          `⚠️ Transaction successful but failed to update database: ${saveResult.error}\n\nPlease contact support with TX: ${txHash}`
+        );
       }
-      
+
       setSuccess(`Contribution successful! You contributed ${amount} ${nativeCurrency}`);
       setAmount('');
-      
+
       // Refresh page after 2 seconds
       setTimeout(() => {
         window.location.reload();
       }, 2000);
-      
     } catch (err: any) {
       console.error('Contribution error:', err);
       setError(err.message || 'Failed to contribute');
@@ -947,26 +1037,23 @@ function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fair
       setIsContributing(false);
     }
   };
-  
+
   if (!userAddress) {
     return (
       <div className="text-center py-12">
         <div className="text-6xl mb-4">🔒</div>
         <h3 className="text-xl font-semibold text-white mb-2">Connect Wallet</h3>
-        <p className="text-gray-400">
-          Connect your wallet to contribute to this Fairlaunch
-        </p>
+        <p className="text-gray-400">Connect your wallet to contribute to this Fairlaunch</p>
       </div>
     );
   }
-  
-  
+
   // Check if sale is active based on time
   const timeStatus = getTimeStatus(fairlaunch.start_at, fairlaunch.end_at);
   const isTimeBasedLive = timeStatus === 'live';
   const isDatabaseLive = fairlaunch.status === 'LIVE';
   const isSaleActive = isTimeBasedLive || isDatabaseLive;
-  
+
   if (!isSaleActive) {
     return (
       <div className="text-center py-12">
@@ -975,9 +1062,7 @@ function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fair
         <p className="text-gray-400">
           This Fairlaunch is currently {fairlaunch.status.toLowerCase()}
         </p>
-        <p className="text-sm text-gray-500 mt-2">
-          Time status: {timeStatus}
-        </p>
+        <p className="text-sm text-gray-500 mt-2">Time status: {timeStatus}</p>
       </div>
     );
   }
@@ -986,7 +1071,7 @@ function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fair
     <div className="max-w-2xl mx-auto">
       <div className="glass-panel p-8">
         <h3 className="text-2xl font-bold text-white mb-6">Contribute to Fairlaunch</h3>
-        
+
         {/* Contribution Limits */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-white/5 rounded-lg p-4">
@@ -1002,7 +1087,7 @@ function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fair
             </div>
           </div>
         </div>
-        
+
         {/* Amount Input */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -1041,20 +1126,20 @@ function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fair
             </button>
           </div>
         </div>
-        
+
         {/* Error/Success Messages */}
         {error && (
           <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
             <p className="text-red-400 text-sm">{error}</p>
           </div>
         )}
-        
+
         {success && (
           <div className="mb-4 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
             <p className="text-green-400 text-sm">{success}</p>
           </div>
         )}
-        
+
         {/* Contribute Button */}
         <button
           onClick={handleContribute}
@@ -1070,12 +1155,12 @@ function ContributeTab({ userAddress, fairlaunch }: { userAddress?: string; fair
             `Contribute ${amount || '0'} ${nativeCurrency}`
           )}
         </button>
-        
+
         {/* Info */}
         <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
           <p className="text-sm text-blue-300">
-            💡 Your contribution will be used to purchase tokens at the sale price. 
-            You can claim your tokens after the sale ends successfully.
+            💡 Your contribution will be used to purchase tokens at the sale price. You can claim
+            your tokens after the sale ends successfully.
           </p>
         </div>
       </div>
@@ -1105,9 +1190,9 @@ function ClaimTab({ fairlaunch, userAddress }: { fairlaunch: Fairlaunch; userAdd
       console.log('[ClaimTab] Loading claim info for:', userAddress);
       const { claimFairlaunchTokens } = await import('@/actions/fairlaunch/claim-tokens');
       const result = await claimFairlaunchTokens(fairlaunch.id);
-      
+
       console.log('[ClaimTab] Claim result:', result);
-      
+
       if (result.success) {
         setClaimInfo(result);
       } else {
@@ -1131,7 +1216,7 @@ function ClaimTab({ fairlaunch, userAddress }: { fairlaunch: Fairlaunch; userAdd
     try {
       // Import contract ABI
       const FairlaunchABI = (await import('@/lib/web3/abis/Fairlaunch.json')).default;
-      
+
       // Call claimTokens() on contract
       const hash = await walletClient.writeContract({
         address: claimInfo.contractAddress as `0x${string}`,
@@ -1224,9 +1309,7 @@ Check your wallet!`);
 
           <div className="bg-black/20 rounded-xl p-4">
             <div className="text-sm text-gray-400 mb-1">Your Share</div>
-            <div className="text-2xl font-bold text-purple-400">
-              {claimInfo.userShare}%
-            </div>
+            <div className="text-2xl font-bold text-purple-400">{claimInfo.userShare}%</div>
           </div>
 
           <div className="bg-black/20 rounded-xl p-4">
@@ -1260,7 +1343,8 @@ Check your wallet!`);
           ) : (
             <>
               <CheckCircle className="w-5 h-5" />
-              Claim {parseFloat(claimInfo.claimable).toLocaleString()} {fairlaunch.project?.symbol || 'Tokens'}
+              Claim {parseFloat(claimInfo.claimable).toLocaleString()}{' '}
+              {fairlaunch.project?.symbol || 'Tokens'}
             </>
           )}
         </button>
@@ -1290,7 +1374,7 @@ function RefundTab({ userAddress, fairlaunch }: { userAddress?: string; fairlaun
           fairlaunch.contract_address,
           ['function contributions(address) view returns (uint256)'],
           provider
-        );
+        ) as any; // Type assertion for dynamic ABI
 
         const amount = await contract.contributions(userAddress);
         setContribution(parseFloat(ethers.formatEther(amount)));
@@ -1315,13 +1399,13 @@ function RefundTab({ userAddress, fairlaunch }: { userAddress?: string; fairlaun
         fairlaunch.contract_address,
         ['function refund()'],
         signer
-      );
+      ) as any; // Type assertion for dynamic ABI
 
       const tx = await contract.refund();
       console.log('Refund tx:', tx.hash);
 
       await tx.wait();
-      
+
       setRefunded(true);
       setContribution(0);
       alert('✅ Refund successful! BNB returned to your wallet.');
@@ -1361,8 +1445,8 @@ function RefundTab({ userAddress, fairlaunch }: { userAddress?: string; fairlaun
           {refunded ? 'Refund Claimed!' : 'No Contribution Found'}
         </h3>
         <p className="text-gray-400">
-          {refunded 
-            ? 'Your funds have been returned to your wallet' 
+          {refunded
+            ? 'Your funds have been returned to your wallet'
             : 'You did not contribute to this fairlaunch'}
         </p>
       </div>
@@ -1445,7 +1529,8 @@ function TransactionsTab({ roundId, chain }: { roundId: string; chain: string })
     async function loadContributions() {
       console.log('[TransactionsTab] Loading contributions for roundId:', roundId);
       try {
-        const { getFairlaunchContributions } = await import('@/actions/fairlaunch/get-contributions');
+        const { getFairlaunchContributions } =
+          await import('@/actions/fairlaunch/get-contributions');
         const result = await getFairlaunchContributions(roundId);
         console.log('[TransactionsTab] Result:', result);
         if (result.success) {
@@ -1539,9 +1624,7 @@ function TransactionsTab({ roundId, chain }: { roundId: string; chain: string })
                     View TX ↗
                   </a>
                 </div>
-                <p className="text-gray-400 text-xs">
-                  {formatDate(contribution.created_at)}
-                </p>
+                <p className="text-gray-400 text-xs">{formatDate(contribution.created_at)}</p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-white">
@@ -1572,10 +1655,10 @@ function calculateTimeProgress(start: string, end: string): number {
   const now = Date.now();
   const startTime = new Date(start).getTime();
   const endTime = new Date(end).getTime();
-  
+
   if (now < startTime) return 0;
   if (now > endTime) return 100;
-  
+
   return ((now - startTime) / (endTime - startTime)) * 100;
 }
 function getDexLogo(platform: string): string {
@@ -1607,4 +1690,3 @@ function getDexName(platform: string): string {
   };
   return names[platform.toLowerCase()] || platform;
 }
-

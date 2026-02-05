@@ -87,11 +87,7 @@ export async function finalizeFairlaunch(roundId: string) {
         'function isFinalized() view returns (bool)',
       ];
 
-      const contract = new ethers.Contract(
-        round.contract_address,
-        fairlaunchAbi,
-        adminWallet
-      );
+      const contract = new ethers.Contract(round.contract_address, fairlaunchAbi, adminWallet);
 
       // Check if already finalized
       const isFinalized = await contract.isFinalized();
@@ -108,21 +104,25 @@ export async function finalizeFairlaunch(roundId: string) {
       // Wait for confirmation
       const receipt = await tx.wait();
       console.log('[finalizeFairlaunch] Transaction confirmed in block:', receipt.blockNumber);
-
     } catch (contractError: any) {
       console.error('[finalizeFairlaunch] Contract call failed:', contractError);
-      return { 
-        success: false, 
-        error: `Contract finalization failed: ${contractError.message}` 
+      return {
+        success: false,
+        error: `Contract finalization failed: ${contractError.message}`,
       };
     }
 
     // ===== Update Database Status =====
-    const newStatus = softcapReached ? 'ENDED' : 'FAILED';
-    
+    const newStatus = 'ENDED'; // Always ENDED after finalize
+    const newResult = softcapReached ? 'SUCCESS' : 'FAILED';
+
     const { error: updateError } = await supabase
       .from('launch_rounds')
-      .update({ status: newStatus })
+      .update({
+        status: newStatus,
+        result: newResult,
+        finalized_at: new Date().toISOString(),
+      })
       .eq('id', roundId);
 
     if (updateError) {
@@ -132,7 +132,7 @@ export async function finalizeFairlaunch(roundId: string) {
 
     return {
       success: true,
-      message: softcapReached 
+      message: softcapReached
         ? 'Fairlaunch finalized successfully! LP created and claims enabled.'
         : 'Fairlaunch marked as FAILED. Refunds are now enabled for all contributors.',
       contractAddress: round.contract_address,

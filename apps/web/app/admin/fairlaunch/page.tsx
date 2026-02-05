@@ -48,14 +48,14 @@ export default function AdminFairlaunchPage() {
       // Fetch ended fairlaunches directly from database
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
-      
-      
+
       const now = new Date().toISOString();
-      
-      // Query live fairlaunches (DEPLOYED status + between start_at and end_at)
+
+      // Query live fairlaunches (DEPLOYED or ACTIVE status + between start_at and end_at)
       const { data: liveRounds, error: liveError } = await supabase
         .from('launch_rounds')
-        .select(`
+        .select(
+          `
           *,
           projects (
             id,
@@ -66,9 +66,10 @@ export default function AdminFairlaunchPage() {
             creator_wallet,
             token_address
           )
-        `)
+        `
+        )
         .eq('type', 'FAIRLAUNCH')
-        .eq('status', 'DEPLOYED')
+        .in('status', ['DEPLOYED', 'ACTIVE']) // Include ACTIVE status
         .lte('start_at', now)
         .gte('end_at', now)
         .order('start_at', { ascending: false });
@@ -87,29 +88,38 @@ export default function AdminFairlaunchPage() {
           logo_url: project?.logo_url || round.params?.logo_url,
           type: 'FAIRLAUNCH' as const,
           chain_id: round.chain === 'bsc-testnet' ? 97 : 56,
-          token_address: project?.token_address || round.params?.token_address || '0x0000000000000000000000000000000000000000',
-          creator_wallet: project?.creator_wallet || round.params?.creator_address || '0x0000000000000000000000000000000000000000',
+          token_address:
+            project?.token_address ||
+            round.params?.token_address ||
+            '0x0000000000000000000000000000000000000000',
+          creator_wallet:
+            project?.creator_wallet ||
+            round.params?.creator_address ||
+            '0x0000000000000000000000000000000000000000',
           created_at: round.created_at,
-          launch_rounds: [{
-            id: round.id,
-            softcap: round.params?.softcap || '0',
-            tokens_for_sale: round.params?.tokens_for_sale || '0',
-            start_time: round.start_at,
-            end_time: round.end_at,
-            escrow_tx_hash: round.params?.escrow_tx_hash,
-            escrow_amount: round.params?.escrow_amount,
-            creation_fee_paid: round.params?.creation_fee_paid,
-          }],
+          launch_rounds: [
+            {
+              id: round.id,
+              softcap: round.params?.softcap || '0',
+              tokens_for_sale: round.params?.tokens_for_sale || '0',
+              start_time: round.start_at,
+              end_time: round.end_at,
+              escrow_tx_hash: round.params?.escrow_tx_hash,
+              escrow_amount: round.params?.escrow_amount,
+              creation_fee_paid: round.params?.creation_fee_paid,
+            },
+          ],
         };
       });
-      
+
       setLiveProjects(liveFairlaunches);
       console.log('[Admin] Fetched live fairlaunches:', liveFairlaunches.length, liveFairlaunches);
-      
+
       // Query launch_rounds that have ended
       const { data: rounds, error } = await supabase
         .from('launch_rounds')
-        .select(`
+        .select(
+          `
           *,
           projects (
             id,
@@ -118,7 +128,8 @@ export default function AdminFairlaunchPage() {
             logo_url,
             description
           )
-        `)
+        `
+        )
         .eq('type', 'FAIRLAUNCH')
         .eq('status', 'DEPLOYED')
         .lt('end_at', now)
@@ -146,9 +157,13 @@ export default function AdminFairlaunchPage() {
           status: round.status,
         };
       });
-      
+
       setEndedProjects(endedFairlaunches);
-      console.log('[Admin] Fetched ended fairlaunches:', endedFairlaunches.length, endedFairlaunches);
+      console.log(
+        '[Admin] Fetched ended fairlaunches:',
+        endedFairlaunches.length,
+        endedFairlaunches
+      );
     } catch (err: any) {
       console.error('Error fetching projects:', err);
       setError(err.message);
@@ -173,7 +188,7 @@ export default function AdminFairlaunchPage() {
 
       // Refresh projects
       await fetchProjects();
-      
+
       alert(`✅ Deployed successfully!\nContract: ${data.contractAddress}`);
     } catch (err: any) {
       alert(`❌ Deployment failed: ${err.message}`);
@@ -196,7 +211,7 @@ export default function AdminFairlaunchPage() {
 
       // Refresh projects
       await fetchProjects();
-      
+
       alert(`✅ Project paused successfully`);
     } catch (err: any) {
       alert(`❌ Pause failed: ${err.message}`);
@@ -207,13 +222,15 @@ export default function AdminFairlaunchPage() {
     try {
       const { finalizeFairlaunch } = await import('@/actions/admin/finalize-fairlaunch');
       const result = await finalizeFairlaunch(roundId);
-      
+
       if (!result.success) {
         throw new Error(result.error);
       }
-      
-      alert(`✅ Fairlaunch marked as FINALIZING!\n\nNext step: Call finalize() on contract\nContract: ${result.contractAddress}\nChain: ${result.chain}`);
-      
+
+      alert(
+        `✅ Fairlaunch marked as FINALIZING!\n\nNext step: Call finalize() on contract\nContract: ${result.contractAddress}\nChain: ${result.chain}`
+      );
+
       // Refresh
       await fetchProjects();
     } catch (err: any) {
@@ -287,19 +304,13 @@ export default function AdminFairlaunchPage() {
             {pendingProjects.length === 0 ? (
               <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-12 text-center">
                 <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-400 mb-2">
-                  All Caught Up!
-                </h3>
+                <h3 className="text-xl font-semibold text-gray-400 mb-2">All Caught Up!</h3>
                 <p className="text-gray-500">No projects pending deployment</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {pendingProjects.map((project) => (
-                  <AdminDeployCard
-                    key={project.id}
-                    project={project}
-                    onDeploy={handleDeploy}
-                  />
+                  <AdminDeployCard key={project.id} project={project} onDeploy={handleDeploy} />
                 ))}
               </div>
             )}
@@ -312,9 +323,7 @@ export default function AdminFairlaunchPage() {
             {liveProjects.length === 0 ? (
               <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-12 text-center">
                 <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-400 mb-2">
-                  No Live Projects
-                </h3>
+                <h3 className="text-xl font-semibold text-gray-400 mb-2">No Live Projects</h3>
                 <p className="text-gray-500">Deploy some projects to see them here</p>
               </div>
             ) : (
@@ -338,10 +347,10 @@ export default function AdminFairlaunchPage() {
             {endedProjects.length === 0 ? (
               <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-12 text-center">
                 <AlertTriangle className="w-16 h-16 text-orange-500 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-400 mb-2">
-                  No Ended Fairlaunches
-                </h3>
-                <p className="text-gray-500">Fairlaunches that end will appear here for finalization</p>
+                <h3 className="text-xl font-semibold text-gray-400 mb-2">No Ended Fairlaunches</h3>
+                <p className="text-gray-500">
+                  Fairlaunches that end will appear here for finalization
+                </p>
               </div>
             ) : (
               <div className="space-y-4">

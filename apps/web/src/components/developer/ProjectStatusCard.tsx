@@ -58,7 +58,8 @@ export function ProjectStatusCard({ project }: ProjectStatusCardProps) {
     if (now < startTime) {
       return 'UPCOMING'; // Deployed but not started yet
     } else if (now >= startTime && now <= endTime) {
-      return 'LIVE'; // Sale is active
+      // If database status is ACTIVE, show ACTIVE instead of LIVE
+      return project.status === 'ACTIVE' ? 'ACTIVE' : 'LIVE';
     } else {
       return 'ENDED'; // Sale has ended
     }
@@ -117,6 +118,16 @@ export function ProjectStatusCard({ project }: ProjectStatusCardProps) {
         label: 'Live',
         color: 'bg-purple-500/20 text-purple-400 border-purple-500',
         icon: Rocket,
+      },
+      ACTIVE: {
+        label: 'Active',
+        color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500',
+        icon: Rocket,
+      },
+      PAUSED: {
+        label: 'Paused',
+        color: 'bg-orange-500/20 text-orange-400 border-orange-500',
+        icon: Clock,
       },
       ENDED: {
         label: 'Ended',

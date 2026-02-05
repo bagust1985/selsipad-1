@@ -3,8 +3,9 @@
  * Automatically transitions pool states based on time
  *
  * Transitions:
- * - APPROVED → LIVE when start_at reached
- * - LIVE → ENDED when end_at passed
+ * - APPROVED → LIVE when start_at reached (legacy presale)
+ * - DEPLOYED → ACTIVE when start_at reached (fairlaunch)
+ * - LIVE/ACTIVE → ENDED when end_at passed
  *
  * Run: Every minute via cron
  */
@@ -60,16 +61,59 @@ async function transitionApprovedToLive(): Promise<number> {
 }
 
 /**
- * Transition LIVE rounds to ENDED when end time passed
+ * Transition DEPLOYED rounds to ACTIVE when start time reached
+ * This handles Fairlaunch rounds deployed by admin
+ */
+async function transitionDeployedToActive(): Promise<number> {
+  const now = new Date().toISOString();
+
+  // Find DEPLOYED rounds that should be ACTIVE
+  const { data: rounds, error: fetchError } = await supabase
+    .from('launch_rounds')
+    .select('id, status, start_at')
+    .eq('status', 'DEPLOYED')
+    .lte('start_at', now);
+
+  if (fetchError) {
+    console.error('Error fetching DEPLOYED rounds:', fetchError);
+    return 0;
+  }
+
+  if (!rounds || rounds.length === 0) {
+    return 0;
+  }
+
+  console.log(`Found ${rounds.length} rounds to transition DEPLOYED → ACTIVE`);
+
+  // Update to ACTIVE
+  const { error: updateError } = await supabase
+    .from('launch_rounds')
+    .update({ status: 'ACTIVE' })
+    .in(
+      'id',
+      rounds.map((r: { id: string }) => r.id)
+    );
+
+  if (updateError) {
+    console.error('Error updating rounds to ACTIVE:', updateError);
+    return 0;
+  }
+
+  console.log(`✅ Transitioned ${rounds.length} rounds to ACTIVE`);
+  return rounds.length;
+}
+
+/**
+ * Transition LIVE/ACTIVE rounds to ENDED when end time passed
  */
 async function transitionLiveToEnded(): Promise<number> {
   const now = new Date().toISOString();
 
-  // Find LIVE rounds that should be ENDED
+  // Find LIVE or ACTIVE rounds that should be ENDED
   const { data: rounds, error: fetchError } = await supabase
     .from('launch_rounds')
     .select('id, status, end_at')
-    .eq('status', 'LIVE')
+    .in('status', ['LIVE', 'ACTIVE'])
     .lte('end_at', now);
 
   if (fetchError) {
@@ -80,8 +124,7 @@ async function transitionLiveToEnded(): Promise<number> {
   if (!rounds || rounds.length === 0) {
     return 0;
   }
-
-  console.log(`Found ${rounds.length} rounds to transition LIVE → ENDED`);
+  console.log(`Found ${rounds.length} rounds to transition LIVE/ACTIVE → ENDED`);
 
   // Update to ENDED
   const { error: updateError } = await supabase
@@ -110,11 +153,13 @@ export async function runRoundStateScheduler(): Promise<void> {
 
   try {
     const approvedCount = await transitionApprovedToLive();
+    const deployedCount = await transitionDeployedToActive();
     const liveCount = await transitionLiveToEnded();
 
     console.log('\n📊 Summary:');
     console.log(`  - APPROVED → LIVE: ${approvedCount}`);
-    console.log(`  - LIVE → ENDED: ${liveCount}`);
+    console.log(`  - DEPLOYED → ACTIVE: ${deployedCount}`);
+    console.log(`  - LIVE/ACTIVE → ENDED: ${liveCount}`);
     console.log('✅ Scheduler completed successfully\n');
   } catch (error) {
     console.error('❌ Scheduler error:', error);

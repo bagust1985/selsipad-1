@@ -7,20 +7,24 @@ interface Step1BasicInfoProps {
   data: Partial<PresaleBasics>;
   onChange: (data: Partial<PresaleBasics>) => void;
   errors?: Partial<Record<keyof PresaleBasics, string>>;
+  selectedNetwork?: string;
 }
 
-const NETWORKS = [
-  { value: 'ethereum', label: 'Ethereum', icon: '⟠' },
-  { value: 'bsc', label: 'BNB Smart Chain', icon: '🔶' },
-  { value: 'polygon', label: 'Polygon', icon: '🟣' },
-  { value: 'avalanche', label: 'Avalanche', icon: '🔺' },
-  { value: 'solana', label: 'Solana', icon: '◎' },
-];
+const NETWORK_DISPLAY: Record<string, { label: string; icon: string }> = {
+  bsc_testnet: { label: 'BSC Testnet', icon: '🔶' },
+  sepolia: { label: 'ETH Sepolia', icon: '⟠' },
+  base_sepolia: { label: 'Base Sepolia', icon: '🔵' },
+  bnb: { label: 'BNB Chain', icon: '🔶' },
+  ethereum: { label: 'Ethereum', icon: '⟠' },
+  base: { label: 'Base', icon: '🔵' },
+};
 
-export function Step1BasicInfo({ data, onChange, errors }: Step1BasicInfoProps) {
+export function Step1BasicInfo({ data, onChange, errors, selectedNetwork }: Step1BasicInfoProps) {
   const handleChange = (field: keyof PresaleBasics, value: string) => {
     onChange({ ...data, [field]: value });
   };
+
+  const networkInfo = selectedNetwork ? NETWORK_DISPLAY[selectedNetwork] : null;
 
   return (
     <div className="space-y-6">
@@ -28,7 +32,7 @@ export function Step1BasicInfo({ data, onChange, errors }: Step1BasicInfoProps) 
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Basic Information</h2>
         <p className="text-gray-400">
-          Tell us about your project and choose which network you'll be launching on.
+          Tell us about your project. The network was selected in the previous step.
         </p>
       </div>
 
@@ -98,39 +102,21 @@ export function Step1BasicInfo({ data, onChange, errors }: Step1BasicInfoProps) 
         {errors?.banner_url && <p className="mt-2 text-sm text-red-400">{errors.banner_url}</p>}
       </div>
 
-      {/* Network Selection */}
+      {/* Network Display (Read-Only — selected in Step 0) */}
       <div>
         <label className="block text-sm font-medium text-white mb-3">
-          Network <span className="text-red-400">*</span>
+          Network <span className="text-xs text-gray-400 ml-1">🔒 Selected in Step 0</span>
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {NETWORKS.map((network) => (
-            <button
-              key={network.value}
-              type="button"
-              onClick={() => handleChange('network', network.value as any)}
-              className={`p-4 rounded-lg border-2 transition-all ${
-                data.network === network.value
-                  ? 'border-purple-500 bg-purple-500/20 ring-2 ring-purple-500/30'
-                  : 'border-gray-700 bg-gray-800/30 hover:border-gray-600'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="text-3xl">{network.icon}</div>
-                <div className="text-left">
-                  <div
-                    className={`font-semibold ${
-                      data.network === network.value ? 'text-white' : 'text-gray-300'
-                    }`}
-                  >
-                    {network.label}
-                  </div>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-        {errors?.network && <p className="mt-2 text-sm text-red-400">{errors.network}</p>}
+        {networkInfo ? (
+          <div className="p-4 rounded-lg border-2 border-purple-500 bg-purple-500/10 inline-flex items-center gap-3">
+            <div className="text-3xl">{networkInfo.icon}</div>
+            <div className="font-semibold text-white">{networkInfo.label}</div>
+          </div>
+        ) : (
+          <div className="p-4 rounded-lg border-2 border-gray-700 bg-gray-800/30">
+            <span className="text-gray-400">No network selected — go back to Step 0</span>
+          </div>
+        )}
       </div>
 
       {/* Info Banner */}
@@ -138,9 +124,9 @@ export function Step1BasicInfo({ data, onChange, errors }: Step1BasicInfoProps) 
         <div className="flex gap-3">
           <div className="text-blue-400 text-xl flex-shrink-0">ℹ️</div>
           <div className="text-sm text-blue-300">
-            <strong className="text-blue-200">Important:</strong> The network you select cannot be
-            changed after creation. Make sure to choose the network where your token contract is
-            deployed.
+            <strong className="text-blue-200">Important:</strong> The network was locked in Step 0
+            and cannot be changed here. If you need to change it, go back to Step 0 and reset your
+            contract mode selection.
           </div>
         </div>
       </div>

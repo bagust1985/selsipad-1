@@ -7,6 +7,7 @@ import { decodeEventLog } from 'viem';
 import {
   getTokenCreationFee,
   getTokenFactoryAddress,
+  isTokenFactoryAvailable,
   SimpleTokenFactoryABI,
 } from '@/lib/web3/token-factory';
 
@@ -40,6 +41,8 @@ export function TemplateModeStep({
     address: string;
     name: string;
     symbol: string;
+    decimals: number;
+    totalSupply: string;
   } | null>(null);
 
   const { writeContract, data: hash, isPending, reset, error: writeError } = useWriteContract();
@@ -107,6 +110,8 @@ export function TemplateModeStep({
             address: tokenAddress,
             name: formData.name,
             symbol: formData.symbol,
+            decimals: formData.decimals,
+            totalSupply: formData.totalSupply,
           });
 
           onTokenCreated?.({
@@ -125,19 +130,30 @@ export function TemplateModeStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccess, receipt]);
 
+  const factoryAvailable = isTokenFactoryAvailable(network);
+
   const handleCreate = () => {
     if (!formData.name || !formData.symbol || !formData.totalSupply) return;
 
-    const factoryAddress = getTokenFactoryAddress(network);
-    const totalSupply = BigInt(formData.totalSupply) * 10n ** BigInt(formData.decimals);
+    if (!factoryAvailable) {
+      alert(`Token factory is not available on "${network}". Please select a supported network.`);
+      return;
+    }
 
-    writeContract({
-      address: factoryAddress,
-      abi: SimpleTokenFactoryABI,
-      functionName: 'createToken',
-      args: [formData.name, formData.symbol, totalSupply, formData.decimals],
-      value: creationFee,
-    });
+    try {
+      const factoryAddress = getTokenFactoryAddress(network);
+      const totalSupply = BigInt(formData.totalSupply) * 10n ** BigInt(formData.decimals);
+
+      writeContract({
+        address: factoryAddress,
+        abi: SimpleTokenFactoryABI,
+        functionName: 'createToken',
+        args: [formData.name, formData.symbol, totalSupply, formData.decimals],
+        value: creationFee,
+      });
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   return (
@@ -328,53 +344,83 @@ export function TemplateModeStep({
         </div>
       )}
 
-      {/* Token Created Success — shown AFTER token is created */}
+      {/* Token Created — Full Details Card */}
       {createdToken && (
-        <div className="bg-green-950/30 border border-green-800/40 rounded-lg p-6">
-          <div className="flex items-start gap-3">
-            <Shield className="w-6 h-6 text-green-400 flex-shrink-0" />
-            <div className="flex-1">
-              <h4 className="font-semibold text-green-200 mb-2">✅ Token Created Successfully</h4>
-              <p className="text-green-300/90 text-sm mb-3">
-                Your token has been deployed and automatically assigned security badges.
+        <div className="bg-green-950/30 border border-green-800/40 rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <Shield className="w-7 h-7 text-green-400 flex-shrink-0" />
+            <h4 className="text-lg font-semibold text-green-200">✅ Token Created Successfully</h4>
+          </div>
+
+          <p className="text-green-300/80 text-sm">
+            Your token has been deployed and automatically assigned security badges.
+          </p>
+
+          {/* Token Details Grid */}
+          <div className="grid grid-cols-2 gap-4 bg-gray-900/60 border border-gray-700/50 rounded-lg p-4">
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Token Name</p>
+              <p className="text-white font-medium">{createdToken.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Symbol</p>
+              <p className="text-white font-medium">{createdToken.symbol}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Decimals</p>
+              <p className="text-white font-medium">{createdToken.decimals}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Total Supply</p>
+              <p className="text-white font-medium">
+                {Number(createdToken.totalSupply).toLocaleString()}
               </p>
-              <div className="bg-green-900/40 border border-green-800/30 rounded-lg p-3 mb-3">
-                <p className="text-xs text-green-300 mb-1">Token Address:</p>
-                <p className="text-sm text-green-200 font-mono break-all">{createdToken.address}</p>
-              </div>
-              <div className="flex gap-2">
-                <div className="px-3 py-1 bg-green-900/40 border border-green-700/40 rounded-full text-sm text-green-300">
-                  🛡️ SAFU
-                </div>
-                <div className="px-3 py-1 bg-green-900/40 border border-green-700/40 rounded-full text-sm text-green-300">
-                  ✓ SC Pass
-                </div>
-              </div>
-              {hash && (
-                <a
-                  href={`${explorerBase}/tx/${hash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 text-green-400 text-sm hover:underline flex items-center gap-1"
-                >
-                  View transaction <ExternalLink size={12} />
-                </a>
-              )}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Deploy Smart Contract Button — shown AFTER token is created */}
-      {createdToken && (
-        <div className="flex flex-col gap-4">
-          <button
-            disabled
-            className="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 opacity-70 cursor-not-allowed"
-          >
-            <CheckCircle className="w-5 h-5" />
-            Token Deployed ✓ — Click Next to Continue
-          </button>
+          {/* Contract Address */}
+          <div className="bg-gray-900/60 border border-gray-700/50 rounded-lg p-4">
+            <p className="text-xs text-gray-400 mb-1">Contract Address</p>
+            <p className="text-green-300 font-mono text-sm break-all">{createdToken.address}</p>
+            <a
+              href={`${explorerBase}/address/${createdToken.address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 text-blue-400 text-xs hover:underline flex items-center gap-1"
+            >
+              View on Explorer <ExternalLink size={12} />
+            </a>
+          </div>
+
+          {/* Badges */}
+          <div className="flex gap-2">
+            <div className="px-3 py-1 bg-green-900/40 border border-green-700/40 rounded-full text-sm text-green-300">
+              🛡️ SAFU Verified
+            </div>
+            <div className="px-3 py-1 bg-green-900/40 border border-green-700/40 rounded-full text-sm text-green-300">
+              ✓ SC Pass
+            </div>
+          </div>
+
+          {/* TX Link */}
+          {hash && (
+            <a
+              href={`${explorerBase}/tx/${hash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green-400 text-sm hover:underline flex items-center gap-1"
+            >
+              View creation transaction <ExternalLink size={12} />
+            </a>
+          )}
+
+          {/* Next indicator */}
+          <div className="pt-3 border-t border-green-800/30">
+            <div className="flex items-center gap-2 text-green-300">
+              <CheckCircle className="w-5 h-5" />
+              <span className="font-medium">Token deployed — Click Next to continue</span>
+            </div>
+          </div>
         </div>
       )}
 

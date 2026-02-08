@@ -39,13 +39,13 @@ const WIZARD_STEPS: Step[] = [
   },
   {
     number: 5,
-    title: 'Team Vesting',
-    description: 'Team unlock schedule',
+    title: 'LP Lock',
+    description: 'Liquidity protection',
   },
   {
     number: 6,
-    title: 'LP Lock',
-    description: 'Liquidity protection',
+    title: 'Team Vesting',
+    description: 'Team unlock schedule',
   },
   {
     number: 7,

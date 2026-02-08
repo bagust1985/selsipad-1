@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Shield, AlertTriangle, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
-import {
-  scanContractAddress,
-  getScanStatus,
-} from '../actions/scan-contract';
+import { scanContractAddress, getScanStatus } from '../actions/scan-contract';
 
 export interface ExternalScanStepProps {
   projectId: string; // Can be 'temp' for new projects
@@ -13,6 +10,12 @@ export interface ExternalScanStepProps {
   contractAddress: string;
   onContractAddressChange: (address: string) => void;
   onScanComplete: (status: 'PASS' | 'FAIL' | 'NEEDS_REVIEW') => void;
+  onTokenInfoRead?: (info: {
+    totalSupply: string;
+    name: string;
+    symbol: string;
+    decimals: number;
+  }) => void;
 }
 
 export function ExternalScanStep({
@@ -21,6 +24,7 @@ export function ExternalScanStep({
   contractAddress,
   onContractAddressChange,
   onScanComplete,
+  onTokenInfoRead,
 }: ExternalScanStepProps) {
   const [scanId, setScanId] = useState<string | null>(null);
   const [scanStatus, setScanStatus] = useState<string | null>(null);
@@ -41,6 +45,20 @@ export function ExternalScanStep({
           if (['PASS', 'FAIL', 'NEEDS_REVIEW'].includes(result.data.status)) {
             clearInterval(interval);
             onScanComplete(result.data.status as any);
+            // Read token info from scan result if available
+            if (
+              result.data.status === 'PASS' &&
+              (result.data as any).token_info &&
+              onTokenInfoRead
+            ) {
+              const tokenInfo = (result.data as any).token_info;
+              onTokenInfoRead({
+                totalSupply: tokenInfo.total_supply || '0',
+                name: tokenInfo.name || '',
+                symbol: tokenInfo.symbol || '',
+                decimals: tokenInfo.decimals || 18,
+              });
+            }
           }
         }
       }, 2000); // Poll every 2 seconds

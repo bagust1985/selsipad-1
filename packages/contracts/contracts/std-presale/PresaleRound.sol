@@ -78,6 +78,7 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
     event Cancelled(string reason);
     event FeeConfigUpdated(FeeConfig newConfig);
     event StatusSynced(Status oldStatus, Status newStatus);
+    event UnsoldTokensBurned(uint256 amount);
     
     // Errors
     error InvalidStatus();
@@ -202,11 +203,15 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
     
     /**
      * @notice Finalize presale successfully (soft cap met)
-     * @dev V2.1: Deducts fee & distributes. Funds vesting vault. Sets TGE.
+     * @dev V2.2: Deducts fee & distributes. Funds vesting vault. Burns unsold tokens. Sets TGE.
+     * @param merkleRoot The merkle root for vesting claims
+     * @param totalVestingAllocation Total tokens allocated for investor vesting
+     * @param totalTokensForSale Total tokens that were offered for sale
      */
     function finalizeSuccess(
         bytes32 merkleRoot,
-        uint256 totalVestingAllocation
+        uint256 totalVestingAllocation,
+        uint256 totalTokensForSale
     ) external onlyRole(ADMIN_ROLE) nonReentrant {
         // V2.1 PATCH: Sync status
         _syncStatus();
@@ -244,6 +249,24 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
             if (!success) revert VestingFundingFailed();
         } else {
             IERC20(paymentToken).safeTransfer(projectOwner, netAmount);
+        }
+        
+        // V2.2: Auto-burn unsold tokens (anti-dump protection)
+        // If presale didn't reach hardcap, unsold tokens are burned
+        if (totalRaised < hardCap && totalTokensForSale > 0) {
+            // Calculate unsold tokens proportionally:
+            // unsoldTokens = totalTokensForSale * (hardCap - totalRaised) / hardCap
+            uint256 unsoldTokens = (totalTokensForSale * (hardCap - totalRaised)) / hardCap;
+            
+            if (unsoldTokens > 0) {
+                // Transfer unsold tokens from projectOwner to burn address
+                IERC20(projectToken).safeTransferFrom(
+                    projectOwner,
+                    address(0xdEaD),  // Standard burn address
+                    unsoldTokens
+                );
+                emit UnsoldTokensBurned(unsoldTokens);
+            }
         }
         
         // Set TGE timestamp

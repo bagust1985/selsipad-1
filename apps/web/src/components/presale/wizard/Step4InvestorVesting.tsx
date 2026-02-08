@@ -70,6 +70,7 @@ export function Step4InvestorVesting({ data, onChange, errors }: Step4InvestorVe
         label="Investor"
         value={data.schedule || []}
         onChange={(schedule) => handleChange('schedule', schedule)}
+        tgePercentage={data.tge_percentage || 0}
       />
 
       {errors && typeof errors === 'string' && <p className="text-sm text-red-400">{errors}</p>}

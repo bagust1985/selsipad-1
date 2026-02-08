@@ -8,6 +8,7 @@ interface Step2SaleParamsProps {
   onChange: (data: Partial<PresaleSaleParams>) => void;
   errors?: Partial<Record<keyof PresaleSaleParams, string>>;
   network?: string;
+  totalSupply?: string;
 }
 
 const PAYMENT_TOKENS = [
@@ -16,7 +17,13 @@ const PAYMENT_TOKENS = [
   { value: 'USDT', label: 'USDT', desc: 'Tether stablecoin' },
 ];
 
-export function Step2SaleParams({ data, onChange, errors, network }: Step2SaleParamsProps) {
+export function Step2SaleParams({
+  data,
+  onChange,
+  errors,
+  network,
+  totalSupply,
+}: Step2SaleParamsProps) {
   const handleChange = (field: keyof PresaleSaleParams, value: string) => {
     onChange({ ...data, [field]: value });
   };
@@ -24,7 +31,9 @@ export function Step2SaleParams({ data, onChange, errors, network }: Step2SalePa
   const getMinStartDate = () => {
     const now = new Date();
     now.setHours(now.getHours() + 1);
-    return now.toISOString().slice(0, 16);
+    // Return raw datetime-local format (same as Fairlaunch)
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
   };
 
   return (
@@ -36,6 +45,24 @@ export function Step2SaleParams({ data, onChange, errors, network }: Step2SalePa
           Configure the pricing, amounts, and timeline for your presale.
         </p>
       </div>
+
+      {/* Total Supply Info Banner */}
+      {totalSupply && Number(totalSupply) > 0 && (
+        <div className="p-4 bg-purple-900/20 border border-purple-700/40 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-purple-400" />
+              <span className="text-sm text-purple-300 font-medium">Total Token Supply</span>
+            </div>
+            <span className="text-white font-bold text-lg">
+              {Number(totalSupply).toLocaleString()}
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Auto-detected from your token contract. Tokens for sale must be less than total supply.
+          </p>
+        </div>
+      )}
 
       {/* Token Address */}
       <div>
@@ -215,35 +242,37 @@ export function Step2SaleParams({ data, onChange, errors, network }: Step2SalePa
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label htmlFor="start_at" className="block text-sm font-medium text-white mb-2">
-            Start Date & Time <span className="text-red-400">*</span>
+            Start Time (UTC+7 / WIB) <span className="text-red-400">*</span>
           </label>
           <input
             id="start_at"
             type="datetime-local"
-            value={data.start_at?.slice(0, 16) || ''}
-            onChange={(e) => handleChange('start_at', new Date(e.target.value).toISOString())}
+            value={data.start_at || ''}
+            onChange={(e) => handleChange('start_at', e.target.value)}
             min={getMinStartDate()}
             className={`w-full px-4 py-3 bg-gray-900 border ${
               errors?.start_at ? 'border-red-500' : 'border-gray-700'
             } rounded-lg text-white focus:outline-none focus:border-purple-500`}
           />
+          <p className="text-xs text-gray-500 mt-1">Indonesia Western Time (WIB)</p>
           {errors?.start_at && <p className="mt-2 text-sm text-red-400">{errors.start_at}</p>}
         </div>
 
         <div>
           <label htmlFor="end_at" className="block text-sm font-medium text-white mb-2">
-            End Date & Time <span className="text-red-400">*</span>
+            End Time (UTC+7 / WIB) <span className="text-red-400">*</span>
           </label>
           <input
             id="end_at"
             type="datetime-local"
-            value={data.end_at?.slice(0, 16) || ''}
-            onChange={(e) => handleChange('end_at', new Date(e.target.value).toISOString())}
-            min={data.start_at?.slice(0, 16)}
+            value={data.end_at || ''}
+            onChange={(e) => handleChange('end_at', e.target.value)}
+            min={data.start_at || ''}
             className={`w-full px-4 py-3 bg-gray-900 border ${
               errors?.end_at ? 'border-red-500' : 'border-gray-700'
             } rounded-lg text-white focus:outline-none focus:border-purple-500`}
           />
+          <p className="text-xs text-gray-500 mt-1">Indonesia Western Time (WIB)</p>
           {errors?.end_at && <p className="mt-2 text-sm text-red-400">{errors.end_at}</p>}
         </div>
       </div>

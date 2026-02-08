@@ -50,20 +50,16 @@ export function CreatePresaleWizard({
   const [roundId, setRoundId] = useState<string | null>(null);
 
   // wizard data state  - Extended with contract security fields
-  const [wizardData, setWizardData] = useState<
-    Partial<FullPresaleConfig> & {
-      contract_mode?: 'EXTERNAL_CONTRACT' | 'LAUNCHPAD_TEMPLATE' | null;
-      contract_address?: string;
-      scan_status?: string | null;
-      template_audit_status?: 'VALID' | 'NOT_AUDITED' | null;
-    }
-  >({
+  // Using loose typing because data is filled incrementally across steps.
+  // Each step validates its own section via zod schemas at transition time.
+  const [wizardData, setWizardData] = useState<Record<string, any>>({
+    network: '',
     basics: {},
-    sale_params: {},
+    sale_params: {} as any,
     anti_bot: { whitelist_enabled: false },
     investor_vesting: { tge_percentage: 0, cliff_months: 0, schedule: [] },
     team_vesting: { team_allocation: '0', schedule: [] },
-    lp_lock: { duration_months: 12, percentage: 100, platform: 'UNICRYPT' },
+    lp_lock: { duration_months: 12, percentage: 100 },
     fees_referral: { platform_fee_bps: 500, referral_enabled: true, referral_reward_bps: 100 },
     // Contract security defaults
     contract_mode: null,
@@ -126,6 +122,11 @@ export function CreatePresaleWizard({
     try {
       switch (step) {
         case 0:
+          // Validate network selected
+          if (!wizardData.network) {
+            setErrors({ network: 'Please select a network' });
+            return false;
+          }
           // Validate contract mode selected
           if (!wizardData.contract_mode) {
             setErrors({ contract_mode: 'Please select a contract mode' });
@@ -142,16 +143,19 @@ export function CreatePresaleWizard({
               return false;
             }
           }
-          // For template, require VALID audit status
+          // For template, require token already created
           if (wizardData.contract_mode === 'LAUNCHPAD_TEMPLATE') {
-            if (wizardData.template_audit_status !== 'VALID') {
-              setErrors({ template: 'Selected template is not audited' });
+            if (!wizardData.contract_address) {
+              setErrors({ template: 'Please create your token first before proceeding' });
               return false;
             }
           }
           return true;
         case 1:
-          presaleBasicsSchema.parse(wizardData.basics);
+          presaleBasicsSchema.parse({
+            ...wizardData.basics,
+            network: wizardData.network || wizardData.basics?.network,
+          });
           break;
         case 2:
           presaleSaleParamsSchema.parse(wizardData.sale_params);
@@ -163,10 +167,10 @@ export function CreatePresaleWizard({
           investorVestingSchema.parse(wizardData.investor_vesting);
           break;
         case 5:
-          teamVestingSchema.parse(wizardData.team_vesting);
+          lpLockSchema.parse(wizardData.lp_lock);
           break;
         case 6:
-          lpLockSchema.parse(wizardData.lp_lock);
+          teamVestingSchema.parse(wizardData.team_vesting);
           break;
         case 7:
           feesReferralSchema.parse(wizardData.fees_referral);
@@ -204,7 +208,7 @@ export function CreatePresaleWizard({
   };
 
   const handleBack = () => {
-    if (currentStep > 1) {
+    if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -278,6 +282,7 @@ export function CreatePresaleWizard({
     try {
       const validated = fullPresaleConfigSchema.parse({
         ...wizardData,
+        basics: { ...wizardData.basics, network: wizardData.network || wizardData.basics?.network },
         terms_accepted: termsAccepted,
       });
 
@@ -361,10 +366,20 @@ export function CreatePresaleWizard({
     sc_scan_status: initialScScanStatus,
     investor_vesting_valid:
       (wizardData.investor_vesting?.schedule?.length || 0) > 0 &&
-      wizardData.investor_vesting?.schedule?.reduce((sum, s) => sum + s.percentage, 0) === 100,
+      Math.abs(
+        (wizardData.investor_vesting?.tge_percentage || 0) +
+          (wizardData.investor_vesting?.schedule?.reduce(
+            (sum: number, s: { percentage: number }) => sum + s.percentage,
+            0
+          ) || 0) -
+          100
+      ) < 0.01,
     team_vesting_valid:
       (wizardData.team_vesting?.schedule?.length || 0) > 0 &&
-      wizardData.team_vesting?.schedule?.reduce((sum, s) => sum + s.percentage, 0) === 100,
+      wizardData.team_vesting?.schedule?.reduce(
+        (sum: number, s: { percentage: number }) => sum + s.percentage,
+        0
+      ) === 100,
     lp_lock_valid: (wizardData.lp_lock?.duration_months || 0) >= 12,
   };
 
@@ -401,6 +416,7 @@ export function CreatePresaleWizard({
             onChange={(data) => {
               setWizardData({
                 ...wizardData,
+                network: data.network || wizardData.network,
                 contract_mode: data.contract_mode,
                 contract_address: data.contract_address,
                 scan_status: data.scan_status,
@@ -408,7 +424,7 @@ export function CreatePresaleWizard({
               });
             }}
             projectId={projectId}
-            network={wizardData.basics?.network || 'ethereum'}
+            network={wizardData.network || ''}
             errors={errors}
           />
         )}
@@ -418,21 +434,23 @@ export function CreatePresaleWizard({
             data={wizardData.basics || {}}
             onChange={(data) => setWizardData({ ...wizardData, basics: data })}
             errors={errors}
+            selectedNetwork={wizardData.network}
           />
         )}
 
         {currentStep === 2 && (
           <Step2SaleParams
-            data={wizardData.sale_params || {}}
+            data={(wizardData.sale_params || {}) as any}
             onChange={(data) => setWizardData({ ...wizardData, sale_params: data })}
             errors={errors}
-            network={wizardData.basics?.network}
+            network={wizardData.network || wizardData.basics?.network}
+            totalSupply={wizardData.total_supply}
           />
         )}
 
         {currentStep === 3 && (
           <Step3AntiBot
-            data={wizardData.anti_bot || {}}
+            data={(wizardData.anti_bot || {}) as any}
             onChange={(data) => setWizardData({ ...wizardData, anti_bot: data })}
             errors={errors}
           />
@@ -440,31 +458,34 @@ export function CreatePresaleWizard({
 
         {currentStep === 4 && (
           <Step4InvestorVesting
-            data={wizardData.investor_vesting || {}}
+            data={(wizardData.investor_vesting || {}) as any}
             onChange={(data) => setWizardData({ ...wizardData, investor_vesting: data })}
             errors={errors}
           />
         )}
 
         {currentStep === 5 && (
-          <Step5TeamVesting
-            data={wizardData.team_vesting || {}}
-            onChange={(data) => setWizardData({ ...wizardData, team_vesting: data })}
-            errors={errors}
-          />
-        )}
-
-        {currentStep === 6 && (
           <Step6LpLock
-            data={wizardData.lp_lock || {}}
+            data={(wizardData.lp_lock || {}) as any}
             onChange={(data) => setWizardData({ ...wizardData, lp_lock: data })}
             errors={errors}
           />
         )}
 
+        {currentStep === 6 && (
+          <Step5TeamVesting
+            data={(wizardData.team_vesting || {}) as any}
+            onChange={(data) => setWizardData({ ...wizardData, team_vesting: data })}
+            errors={errors}
+            totalTokenSupply={wizardData.total_supply || '0'}
+            tokensForSale={wizardData.sale_params?.total_tokens || '0'}
+            lpLockPercentage={wizardData.lp_lock?.percentage || 0}
+          />
+        )}
+
         {currentStep === 7 && (
           <Step7Fees
-            data={wizardData.fees_referral || {}}
+            data={(wizardData.fees_referral || {}) as any}
             onChange={(data) => setWizardData({ ...wizardData, fees_referral: data })}
           />
         )}

@@ -182,7 +182,7 @@ describe('Presale E2E via Factory', function () {
     expect(proof(alice.address, allocAlice).length).to.be.greaterThan(0);
 
     // finalize success with merkle root and total allocated
-    await round.connect(ops).finalizeSuccess(root, allocAlice + allocBob);
+    await round.connect(ops).finalizeSuccess(root, allocAlice + allocBob, 0n);
 
     // claim TGE
     const bal0 = await token.balanceOf(alice.address);

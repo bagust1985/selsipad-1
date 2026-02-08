@@ -56,7 +56,7 @@ const FACTORY_ABI = [
 
 // Factory addresses per chain
 const FACTORY_ADDRESSES: Record<string, string> = {
-  '97': '0x237cc0f76e64DA3172bb7705287617f03DC0B016', // BSC Testnet
+  '97': '0xf3935d541A4F8fBED26c39f7E43625CE7b4d11E6', // BSC Testnet (v2.2 auto-burn)
 };
 
 const RPC_URLS: Record<string, string> = {

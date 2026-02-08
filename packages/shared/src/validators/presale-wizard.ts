@@ -21,11 +21,28 @@ export const presaleBasicsSchema = z.object({
     .string()
     .min(50, 'Description must be at least 50 characters')
     .max(2000, 'Description cannot exceed 2000 characters'),
-  logo_url: z.string().url('Invalid logo URL').optional(),
-  banner_url: z.string().url('Invalid banner URL').optional(),
-  network: z.enum(['solana', 'ethereum', 'bsc', 'polygon', 'avalanche'], {
-    errorMap: () => ({ message: 'Please select a valid network' }),
-  }),
+  logo_url: z.string().optional(),
+  banner_url: z.string().optional(),
+  network: z
+    .enum(
+      [
+        'solana',
+        'ethereum',
+        'bsc',
+        'polygon',
+        'avalanche',
+        'bsc_testnet',
+        'sepolia',
+        'base_sepolia',
+        'base',
+        'bnb',
+        'localhost',
+      ],
+      {
+        message: 'Please select a valid network',
+      }
+    )
+    .optional(),
 });
 
 export type PresaleBasics = z.infer<typeof presaleBasicsSchema>;
@@ -54,10 +71,10 @@ export const presaleSaleParamsSchema = z
     max_contribution: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
       message: 'Maximum contribution must be greater than 0',
     }),
-    start_at: z.string().datetime('Invalid start date'),
-    end_at: z.string().datetime('Invalid end date'),
+    start_at: z.string().min(1, 'Start date is required'),
+    end_at: z.string().min(1, 'End date is required'),
     payment_token: z.enum(['NATIVE', 'USDC', 'USDT'], {
-      errorMap: () => ({ message: 'Please select a valid payment token' }),
+      message: 'Please select a valid payment token',
     }),
   })
   .refine(
@@ -95,13 +112,12 @@ export const presaleSaleParamsSchema = z
   )
   .refine(
     (data) => {
+      // datetime-local values are in format 'YYYY-MM-DDTHH:MM'
       const start = new Date(data.start_at);
-      const now = new Date();
-      const minStartTime = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
-      return start >= minStartTime;
+      return !isNaN(start.getTime());
     },
     {
-      message: 'Start date must be at least 1 hour in the future',
+      message: 'Invalid start date format',
       path: ['start_at'],
     }
   );
@@ -140,15 +156,6 @@ export const vestingScheduleSchema = z
   .min(1, 'At least one vesting entry is required')
   .refine(
     (schedule) => {
-      const total = schedule.reduce((sum, entry) => sum + entry.percentage, 0);
-      return Math.abs(total - 100) < 0.01; // Allow for floating point precision
-    },
-    {
-      message: 'Total vesting percentage must equal 100%',
-    }
-  )
-  .refine(
-    (schedule) => {
       const months = schedule.map((s) => s.month);
       const uniqueMonths = new Set(months);
       return months.length === uniqueMonths.size;
@@ -158,14 +165,26 @@ export const vestingScheduleSchema = z
     }
   );
 
-export const investorVestingSchema = z.object({
-  tge_percentage: z
-    .number()
-    .min(0, 'TGE percentage cannot be negative')
-    .max(100, 'TGE percentage cannot exceed 100'),
-  cliff_months: z.number().min(0, 'Cliff duration cannot be negative'),
-  schedule: vestingScheduleSchema,
-});
+export const investorVestingSchema = z
+  .object({
+    tge_percentage: z
+      .number()
+      .min(0, 'TGE percentage cannot be negative')
+      .max(100, 'TGE percentage cannot exceed 100'),
+    cliff_months: z.number().min(0, 'Cliff duration cannot be negative'),
+    schedule: vestingScheduleSchema,
+  })
+  .refine(
+    (data) => {
+      const scheduleTotal = data.schedule.reduce((sum, entry) => sum + entry.percentage, 0);
+      const grandTotal = data.tge_percentage + scheduleTotal;
+      return Math.abs(grandTotal - 100) < 0.01;
+    },
+    {
+      message: 'TGE + vesting schedule must total 100%',
+      path: ['schedule'],
+    }
+  );
 
 export type InvestorVesting = z.infer<typeof investorVestingSchema>;
 
@@ -181,30 +200,13 @@ export type TeamVesting = z.infer<typeof teamVestingSchema>;
 /**
  * Step 6: LP Lock Configuration
  */
-export const lpLockSchema = z
-  .object({
-    duration_months: z.number().min(12, 'LP lock duration must be at least 12 months'),
-    percentage: z
-      .number()
-      .min(1, 'LP lock percentage must be at least 1%')
-      .max(100, 'LP lock percentage cannot exceed 100%'),
-    platform: z.enum(['UNICRYPT', 'TEAM_FINANCE', 'PINKSALE', 'CUSTOM'], {
-      errorMap: () => ({ message: 'Please select a valid LP lock platform' }),
-    }),
-    custom_platform_address: z.string().optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.platform === 'CUSTOM') {
-        return !!data.custom_platform_address;
-      }
-      return true;
-    },
-    {
-      message: 'Custom platform address is required when platform is CUSTOM',
-      path: ['custom_platform_address'],
-    }
-  );
+export const lpLockSchema = z.object({
+  duration_months: z.number().min(12, 'LP lock duration must be at least 12 months'),
+  percentage: z
+    .number()
+    .min(51, 'LP lock percentage must be at least 51%')
+    .max(100, 'LP lock percentage cannot exceed 100%'),
+});
 
 export type LpLock = z.infer<typeof lpLockSchema>;
 
@@ -293,11 +295,10 @@ export function createLinearVesting(
 
   // Adjust last month to ensure total is exactly 100%
   const total = schedule.reduce((sum, s) => sum + s.percentage, 0);
-  if (Math.abs(total - 100) > 0.01) {
-    schedule[schedule.length - 1].percentage += 100 - total;
-    schedule[schedule.length - 1].percentage = Number(
-      schedule[schedule.length - 1].percentage.toFixed(2)
-    );
+  const lastEntry = schedule[schedule.length - 1];
+  if (lastEntry && Math.abs(total - 100) > 0.01) {
+    lastEntry.percentage += 100 - total;
+    lastEntry.percentage = Number(lastEntry.percentage.toFixed(2));
   }
 
   return schedule;

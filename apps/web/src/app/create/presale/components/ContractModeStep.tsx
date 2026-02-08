@@ -33,6 +33,16 @@ export function ContractModeStep({
     ['bnb', 'ethereum', 'base'].includes(network) ? 'mainnet' : 'testnet'
   );
 
+  const isNetworkLocked = !!selectedMode;
+
+  const handleSelectMode = (mode: 'EXTERNAL_CONTRACT' | 'LAUNCHPAD_TEMPLATE') => {
+    if (!network) {
+      alert('Please select a network first before choosing a contract mode.');
+      return;
+    }
+    onSelectMode(mode);
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-4">
@@ -45,29 +55,36 @@ export function ContractModeStep({
         <div className="flex items-center gap-2 mb-4">
           <Globe className="w-5 h-5 text-purple-400" />
           <h3 className="text-base font-semibold text-white">Select Network</h3>
+          {isNetworkLocked && (
+            <span className="ml-auto text-xs text-yellow-400 flex items-center gap-1">
+              🔒 Locked — reset mode to change
+            </span>
+          )}
         </div>
 
         {/* Testnet / Mainnet Tabs */}
         <div className="flex bg-gray-800 rounded-lg p-1 mb-4">
           <button
             type="button"
-            onClick={() => setNetworkTab('testnet')}
+            onClick={() => !isNetworkLocked && setNetworkTab('testnet')}
+            disabled={isNetworkLocked}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
               networkTab === 'testnet'
                 ? 'bg-purple-600 text-white shadow-lg'
                 : 'text-gray-400 hover:text-white'
-            }`}
+            } ${isNetworkLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
             🧪 Testnet
           </button>
           <button
             type="button"
-            onClick={() => setNetworkTab('mainnet')}
+            onClick={() => !isNetworkLocked && setNetworkTab('mainnet')}
+            disabled={isNetworkLocked}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
               networkTab === 'mainnet'
                 ? 'bg-purple-600 text-white shadow-lg'
                 : 'text-gray-400 hover:text-white'
-            }`}
+            } ${isNetworkLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
             🌐 Mainnet
           </button>
@@ -79,12 +96,13 @@ export function ContractModeStep({
             <button
               key={net.id}
               type="button"
-              onClick={() => onNetworkChange?.(net.id)}
+              onClick={() => !isNetworkLocked && onNetworkChange?.(net.id)}
+              disabled={isNetworkLocked}
               className={`relative p-3 rounded-xl border-2 transition-all text-center ${
                 network === net.id
                   ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
                   : 'border-gray-700 bg-gray-800/60 hover:border-gray-500 hover:bg-gray-800'
-              }`}
+              } ${isNetworkLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <img src={net.icon} alt={net.name} className="w-7 h-7 rounded-full mx-auto mb-1" />
               <div className="text-sm font-medium text-white">{net.name}</div>
@@ -103,7 +121,7 @@ export function ContractModeStep({
         {/* External Contract Option */}
         <button
           type="button"
-          onClick={() => onSelectMode('EXTERNAL_CONTRACT')}
+          onClick={() => handleSelectMode('EXTERNAL_CONTRACT')}
           className={`p-6 rounded-xl border-2 transition-all text-left ${
             selectedMode === 'EXTERNAL_CONTRACT'
               ? 'border-purple-600 bg-purple-600/10'
@@ -152,7 +170,7 @@ export function ContractModeStep({
         {/* Launchpad Template Option */}
         <button
           type="button"
-          onClick={() => onSelectMode('LAUNCHPAD_TEMPLATE')}
+          onClick={() => handleSelectMode('LAUNCHPAD_TEMPLATE')}
           className={`p-6 rounded-xl border-2 transition-all text-left ${
             selectedMode === 'LAUNCHPAD_TEMPLATE'
               ? 'border-green-600 bg-green-600/10'

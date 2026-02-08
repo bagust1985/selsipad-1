@@ -42,9 +42,17 @@ export { SimpleTokenFactoryABI };
  * Get token factory address for network
  */
 export function getTokenFactoryAddress(network: string): Address {
-  return (
-    TOKEN_FACTORY_ADDRESSES[network] || ('0x0000000000000000000000000000000000000000' as Address)
-  );
+  const addr = TOKEN_FACTORY_ADDRESSES[network];
+  if (!addr || addr === '0x0000000000000000000000000000000000000000') {
+    throw new Error(
+      `Token factory not deployed on network: "${network}". Available: ${Object.keys(
+        TOKEN_FACTORY_ADDRESSES
+      )
+        .filter((k) => TOKEN_FACTORY_ADDRESSES[k] !== '0x0000000000000000000000000000000000000000')
+        .join(', ')}`
+    );
+  }
+  return addr;
 }
 
 /**

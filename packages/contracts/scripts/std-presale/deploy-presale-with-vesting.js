@@ -22,7 +22,7 @@ async function main() {
 
   const factory = await hre.ethers.getContractAt(
     'PresaleFactory',
-    '0x237cc0f76e64DA3172bb7705287617f03DC0B016'
+    '0xf3935d541A4F8fBED26c39f7E43625CE7b4d11E6'
   );
 
   const signers = await hre.ethers.getSigners();

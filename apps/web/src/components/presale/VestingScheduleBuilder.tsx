@@ -9,6 +9,7 @@ interface VestingScheduleBuilderProps {
   value: VestingEntry[];
   onChange: (schedule: VestingEntry[]) => void;
   label: string;
+  tgePercentage?: number;
   className?: string;
 }
 
@@ -16,14 +17,17 @@ export function VestingScheduleBuilder({
   value,
   onChange,
   label,
+  tgePercentage = 0,
   className = '',
 }: VestingScheduleBuilderProps) {
   const [showLinearWizard, setShowLinearWizard] = useState(false);
   const [linearMonths, setLinearMonths] = useState('10');
   const [linearTGE, setLinearTGE] = useState('0');
 
-  const totalPercentage = value.reduce((sum, entry) => sum + entry.percentage, 0);
-  const isValid = Math.abs(totalPercentage - 100) < 0.01;
+  const schedulePercentage = value.reduce((sum, entry) => sum + entry.percentage, 0);
+  const vestingTarget = 100 - tgePercentage; // Schedule must total this
+  const grandTotal = tgePercentage + schedulePercentage; // Overall total including TGE
+  const isValid = Math.abs(grandTotal - 100) < 0.01;
 
   const handleAddEntry = () => {
     const newEntry: VestingEntry = {
@@ -45,7 +49,7 @@ export function VestingScheduleBuilder({
       newValue[index] = {
         ...newValue[index],
         [field]: numValue,
-      };
+      } as VestingEntry;
       onChange(newValue);
     }
   };
@@ -185,39 +189,62 @@ export function VestingScheduleBuilder({
 
       {/* Progress Bar & Validation */}
       <div className="space-y-2">
+        {/* TGE + Schedule breakdown */}
+        {tgePercentage > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">TGE Unlock</span>
+            <span className="text-purple-400 font-semibold">{tgePercentage.toFixed(2)}%</span>
+          </div>
+        )}
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-400">Total Allocation</span>
+          <span className="text-gray-400">Vesting Schedule</span>
           <span
             className={`font-semibold ${
-              isValid
+              Math.abs(schedulePercentage - vestingTarget) < 0.01
                 ? 'text-green-400'
-                : totalPercentage > 100
+                : schedulePercentage > vestingTarget
                   ? 'text-red-400'
                   : 'text-yellow-400'
             }`}
           >
-            {totalPercentage.toFixed(2)}%
+            {schedulePercentage.toFixed(2)}% / {vestingTarget.toFixed(2)}%
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-sm border-t border-gray-700 pt-2">
+          <span className="text-gray-300 font-medium">Total Allocation</span>
+          <span
+            className={`font-bold ${
+              isValid ? 'text-green-400' : grandTotal > 100 ? 'text-red-400' : 'text-yellow-400'
+            }`}
+          >
+            {grandTotal.toFixed(2)}%
           </span>
         </div>
 
-        <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+        <div className="h-2 bg-gray-800 rounded-full overflow-hidden flex">
+          {tgePercentage > 0 && (
+            <div
+              className="h-full bg-gradient-to-r from-purple-500 to-purple-600"
+              style={{ width: `${Math.min(tgePercentage, 100)}%` }}
+            />
+          )}
           <div
             className={`h-full transition-all duration-300 ${
               isValid
                 ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-                : totalPercentage > 100
+                : grandTotal > 100
                   ? 'bg-gradient-to-r from-red-500 to-orange-500'
                   : 'bg-gradient-to-r from-yellow-500 to-orange-500'
             }`}
-            style={{ width: `${Math.min(totalPercentage, 100)}%` }}
+            style={{ width: `${Math.min(schedulePercentage, 100 - tgePercentage)}%` }}
           />
         </div>
 
         {!isValid && (
           <p className="text-sm text-yellow-400">
-            {totalPercentage > 100
-              ? `⚠️ Total exceeds 100% by ${(totalPercentage - 100).toFixed(2)}%`
-              : `⚠️ ${(100 - totalPercentage).toFixed(2)}% remaining to allocate`}
+            {grandTotal > 100
+              ? `⚠️ Total exceeds 100% by ${(grandTotal - 100).toFixed(2)}%`
+              : `⚠️ Vesting schedule needs ${(vestingTarget - schedulePercentage).toFixed(2)}% more (TGE: ${tgePercentage}% + Schedule: ${schedulePercentage.toFixed(2)}% = ${grandTotal.toFixed(2)}%)`}
           </p>
         )}
       </div>
@@ -227,13 +254,11 @@ export function VestingScheduleBuilder({
         <div className="p-3 bg-gray-800/30 border border-gray-700 rounded-lg text-sm text-gray-300">
           <div className="font-medium mb-1">Schedule Summary:</div>
           <ul className="list-disc list-inside space-y-1 text-gray-400">
-            {(entry) =>
-              entry.month === 0 && entry.percentage > 0 ? (
-                <li key="tge">
-                  TGE: {sortedValue.find((e) => e.month === 0)?.percentage}% unlocked immediately
-                </li>
-              ) : null
-            }
+            {sortedValue.find((e) => e.month === 0 && e.percentage > 0) && (
+              <li key="tge">
+                TGE: {sortedValue.find((e) => e.month === 0)?.percentage}% unlocked immediately
+              </li>
+            )}
             {sortedValue.filter((e) => e.month > 0).length > 0 && (
               <li>Vesting over {Math.max(...sortedValue.map((e) => e.month))} months</li>
             )}

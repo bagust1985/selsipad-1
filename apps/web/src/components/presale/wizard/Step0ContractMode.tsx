@@ -64,6 +64,15 @@ export function Step0ContractMode({
             contractAddress={data.contract_address || ''}
             onContractAddressChange={(address) => onChange({ ...data, contract_address: address })}
             onScanComplete={(status) => onChange({ ...data, scan_status: status })}
+            onTokenInfoRead={(info) => {
+              onChange({
+                ...data,
+                total_supply: info.totalSupply,
+                token_name: info.name,
+                token_symbol: info.symbol,
+                token_decimals: info.decimals,
+              });
+            }}
           />
 
           {errors?.contract_address && (
@@ -93,6 +102,10 @@ export function Step0ContractMode({
                 ...data,
                 contract_address: tokenData.address,
                 template_audit_status: 'VALID',
+                total_supply: tokenData.totalSupply,
+                token_name: tokenData.name,
+                token_symbol: tokenData.symbol,
+                token_decimals: tokenData.decimals,
               });
             }}
           />

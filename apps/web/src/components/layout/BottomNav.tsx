@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Home, Rocket, FileText, User, Plus } from 'lucide-react';
+import { Home, Rocket, FileText, User, Plus, Search } from 'lucide-react';
 
 interface NavItem {
   id: string;
@@ -27,7 +27,7 @@ export const BottomNav: React.FC = () => {
       id: 'project',
       label: 'PROJECT',
       href: '/explore',
-      icon: Rocket,
+      icon: Search,
     },
     {
       id: 'create',

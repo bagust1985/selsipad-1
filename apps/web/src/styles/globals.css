@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    /* Midnight Holographic Gradient */
-    background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #020617 60%);
-    background-attachment: fixed;
-    @apply text-zinc-100 antialiased;
-    @apply font-sans;
+  html, body {
+    @apply h-full overflow-x-hidden;
   }
 
+  body {
+    @apply text-zinc-100 antialiased bg-[#020617];
+    @apply font-sans;
+  }
   /* Border color removed - was causing compilation error */
 
   /* Focus styles for accessibility */

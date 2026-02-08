@@ -5,6 +5,7 @@ import { useWeb3Modal } from '@web3modal/wagmi/react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { signMessageEVM, verifyAndCreateSession } from '@/lib/wallet/signMessage';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Wallet } from 'lucide-react';
 
 /**
  * Multi-Chain Connect Wallet Button with Auto Sign-In
@@ -190,9 +191,21 @@ export function MultiChainConnectWallet() {
         }}
         disabled={isAuthenticating}
       >
-        {isConnected && address
-          ? `${address.slice(0, 6)}...${address.slice(-4)}`
-          : 'Connect Wallet'}
+        {isConnected && address ? (
+          <>
+            <span className="hidden md:inline">{`${address.slice(0, 6)}...${address.slice(-4)}`}</span>
+            <span className="md:hidden">
+              <Wallet className="w-5 h-5" />
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="hidden md:inline">Connect Wallet</span>
+            <span className="inline-flex md:hidden items-center gap-2">
+              Connect <Wallet className="w-4 h-4" />
+            </span>
+          </>
+        )}
       </button>
 
       {/* Sign In Button - shows lock state based on auth status */}
@@ -218,7 +231,7 @@ export function MultiChainConnectWallet() {
           {isAuthenticating ? (
             <span className="flex items-center gap-2">
               <span className="animate-spin">⏳</span>
-              <span>Signing...</span>
+              <span className="hidden md:inline">Signing...</span>
             </span>
           ) : (
             <div className="flex items-center gap-2">
@@ -227,7 +240,7 @@ export function MultiChainConnectWallet() {
                 alt="Auth"
                 className={`w-6 h-6 object-contain transition-transform duration-300 ${isAuthenticated ? '' : 'scale-x-[-1]'}`}
               />
-              <span>{isAuthenticated ? 'Signed In' : 'Sign In'}</span>
+              <span className="hidden md:inline">{isAuthenticated ? 'Signed In' : 'Sign In'}</span>
             </div>
           )}
         </button>

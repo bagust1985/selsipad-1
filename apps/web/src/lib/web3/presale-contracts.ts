@@ -228,3 +228,7 @@ export const STATUS_COLORS: Record<PresaleStatus, string> = {
   [PresaleStatus.FINALIZED_FAILED]: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   [PresaleStatus.CANCELLED]: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
 };
+
+// Aliases used by admin pages
+export const PresaleStatusLabel = STATUS_LABELS;
+export const PresaleStatusColor = STATUS_COLORS;

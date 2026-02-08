@@ -104,8 +104,9 @@ export async function getReferralStats(): Promise<{
         claimedEarnings += amount;
       }
 
-      if (entry.source_type in earningsBySource) {
-        earningsBySource[entry.source_type] += amount;
+      const src = entry.source_type as string;
+      if (src in earningsBySource) {
+        earningsBySource[src] = (earningsBySource[src] ?? 0) + amount;
       }
     });
 
@@ -142,8 +143,8 @@ export async function getReferralStats(): Promise<{
         return {
           userId: rel.referee_id,
           username: profile?.username || `user_${rel.referee_id.substring(0, 6)}`,
-          avatarUrl: profile?.avatar_url,
-          status: rel.activated_at ? 'ACTIVE' : ('PENDING' as const),
+          avatarUrl: profile?.avatar_url || undefined,
+          status: (rel.activated_at ? 'ACTIVE' : 'PENDING') as 'ACTIVE' | 'PENDING',
           joinedAt: rel.created_at,
           activatedAt: rel.activated_at,
           totalContributions,
@@ -162,10 +163,10 @@ export async function getReferralStats(): Promise<{
         pendingEarnings: pendingEarnings.toString(),
         claimedEarnings: claimedEarnings.toString(),
         earningsBySource: {
-          FAIRLAUNCH: earningsBySource.FAIRLAUNCH.toString(),
-          PRESALE: earningsBySource.PRESALE.toString(),
-          BONDING: earningsBySource.BONDING.toString(),
-          BLUECHECK: earningsBySource.BLUECHECK.toString(),
+          FAIRLAUNCH: (earningsBySource.FAIRLAUNCH ?? 0).toString(),
+          PRESALE: (earningsBySource.PRESALE ?? 0).toString(),
+          BONDING: (earningsBySource.BONDING ?? 0).toString(),
+          BLUECHECK: (earningsBySource.BLUECHECK ?? 0).toString(),
         },
         referredUsers,
       },

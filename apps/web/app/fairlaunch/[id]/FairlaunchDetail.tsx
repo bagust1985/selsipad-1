@@ -1213,6 +1213,7 @@ function ClaimTab({ fairlaunch, userAddress }: { fairlaunch: Fairlaunch; userAdd
   const [claimInfo, setClaimInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
+  const [alreadyClaimed, setAlreadyClaimed] = useState(false);
   const [error, setError] = useState('');
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
@@ -1235,6 +1236,9 @@ function ClaimTab({ fairlaunch, userAddress }: { fairlaunch: Fairlaunch; userAdd
       console.log('[ClaimTab] Claim result:', result);
 
       if (result.success) {
+        setClaimInfo(result);
+      } else if (result.alreadyClaimed) {
+        setAlreadyClaimed(true);
         setClaimInfo(result);
       } else {
         console.error('[ClaimTab] Claim error:', result.error);
@@ -1286,8 +1290,7 @@ Transaction: ${hash}
 
 Check your wallet!`);
 
-      // Reload claim info
-      await loadClaimInfo();
+      setAlreadyClaimed(true);
     } catch (err: any) {
       console.error('[ClaimTab] Claim error:', err);
       setError(err.message || 'Claim transaction failed');
@@ -1311,6 +1314,18 @@ Check your wallet!`);
       <div className="text-center py-12">
         <div className="animate-spin text-4xl mb-4">⏳</div>
         <p className="text-gray-400">Loading claim info...</p>
+      </div>
+    );
+  }
+
+  if (alreadyClaimed) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">✅</div>
+        <h3 className="text-xl font-semibold text-green-400 mb-2">Tokens Already Claimed</h3>
+        <p className="text-gray-400">
+          You have successfully claimed your tokens from this fairlaunch.
+        </p>
       </div>
     );
   }

@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { getServerSession } from '@/lib/auth/session';
 
 /**
@@ -14,19 +14,21 @@ export async function claimFairlaunchTokens(roundId: string) {
       return { success: false, error: 'Please connect wallet' };
     }
 
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     // Get fairlaunch details
     const { data: round, error: roundError } = await supabase
       .from('launch_rounds')
-      .select(`
+      .select(
+        `
         id,
         status,
         contract_address,
         chain,
         total_raised,
         params
-      `)
+      `
+      )
       .eq('id', roundId)
       .single();
 
@@ -56,7 +58,10 @@ export async function claimFairlaunchTokens(roundId: string) {
       .eq('status', 'CONFIRMED')
       .single();
 
-    console.log('[claimFairlaunchTokens] Contribution query result:', { contribution, contribError });
+    console.log('[claimFairlaunchTokens] Contribution query result:', {
+      contribution,
+      contribError,
+    });
 
     if (contribError || !contribution) {
       return {
@@ -107,17 +112,14 @@ export async function claimFairlaunchTokens(roundId: string) {
 /**
  * Mark contribution as claimed after successful on-chain transaction
  */
-export async function markTokensClaimed(params: {
-  contributionId: string;
-  txHash: string;
-}) {
+export async function markTokensClaimed(params: { contributionId: string; txHash: string }) {
   try {
     const session = await getServerSession();
     if (!session) {
       return { success: false, error: 'Not authenticated' };
     }
 
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     const { error } = await supabase
       .from('contributions')

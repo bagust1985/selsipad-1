@@ -95,7 +95,7 @@ export async function finalizeFairlaunch(roundId: string, action: FairlaunchActi
     // Get round details
     const { data: round, error: roundError } = await supabase
       .from('launch_rounds')
-      .select('id, status, chain, contract_address, total_raised, params, start_at, end_at')
+      .select('id, status, chain, contract_address, total_raised, params, start_at, end_at, project_id')
       .eq('id', roundId)
       .single();
 
@@ -222,6 +222,15 @@ export async function finalizeFairlaunch(roundId: string, action: FairlaunchActi
       await supabase.from('launch_rounds').update(updateData).eq('id', roundId);
 
       console.log(`[finalizeFairlaunch] DB updated: status=${newResult}, result=${newResult}`);
+
+      // Update project status
+      const newProjectStatus = newResult === 'SUCCESS' ? 'FINALIZED' : 'FAILED';
+      await supabase
+        .from('projects')
+        .update({ status: newProjectStatus, updated_at: new Date().toISOString() })
+        .eq('id', round.project_id);
+
+      console.log(`[finalizeFairlaunch] Project status updated: ${newProjectStatus}`);
 
       // Create allocations for SUCCESS
       if (newResult === 'SUCCESS') {

@@ -8,7 +8,7 @@ import {
   usePresaleStatus,
   usePresaleConfig,
   usePresaleTotalRaised,
-  useFinalizeSuccess,
+  useFinalizeSuccessEscrow,
 } from '@/lib/web3/presale-hooks';
 import { PresaleStatusLabel, PresaleStatusColor } from '@/lib/web3/presale-contracts';
 
@@ -35,19 +35,25 @@ export default function AdminFinalizePage() {
   const [preview, setPreview] = useState<FinalizationPreview | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unsoldToBurn, setUnsoldToBurn] = useState('0');
 
   // Read contract data
-  const { data: status } = usePresaleStatus(preview?.calldata.target || '');
-  const { data: config } = usePresaleConfig(preview?.calldata.target || '');
-  const { data: totalRaised } = usePresaleTotalRaised(preview?.calldata.target || '');
+  const { data: status } = usePresaleStatus(
+    (preview?.calldata.target || undefined) as `0x${string}` | undefined
+  );
+  const config = usePresaleConfig(
+    (preview?.calldata.target || undefined) as `0x${string}` | undefined
+  );
+  const { data: totalRaised } = usePresaleTotalRaised(
+    (preview?.calldata.target || undefined) as `0x${string}` | undefined
+  );
 
-  // Write hook for direct execution (testnet only)
+  // Write hook for direct execution (testnet only) — escrow flow
   const {
-    write: executeFinalize,
-    isLoading: isExecuting,
-    isSuccess: isExecuted,
-    txHash,
-  } = useFinalizeSuccess(preview?.calldata.target || '');
+    finalize: executeFinalize,
+    isPending: isExecuting,
+    hash: txHash,
+  } = useFinalizeSuccessEscrow();
 
   const enableDirectFinalize = process.env.NEXT_PUBLIC_ENABLE_DIRECT_FINALIZE === 'true';
 
@@ -76,14 +82,16 @@ export default function AdminFinalizePage() {
     }
   };
 
-  // Direct execution (testnet only)
+  // Direct execution (testnet only) — escrow-based finalization
   const handleDirectExecute = async () => {
     if (!preview) return;
 
     try {
       await executeFinalize({
+        roundAddress: preview.calldata.target as `0x${string}`,
         merkleRoot: preview.merkleRoot as `0x${string}`,
         totalAllocation: BigInt(preview.totalAllocation),
+        unsoldToBurn: BigInt(unsoldToBurn || '0'),
       });
     } catch (err: any) {
       setError(err.message);
@@ -295,19 +303,35 @@ export default function AdminFinalizePage() {
                 <div className="border border-yellow-300 bg-yellow-50 rounded-lg p-4">
                   <h3 className="font-medium mb-2">2. Direct Execute (Testnet Only)</h3>
                   <p className="text-sm text-yellow-700 mb-3">
-                    ⚠️ Execute immediately without timelock. Only enabled in testnet.
+                    ⚠️ Execute finalizeSuccessEscrow directly. Only enabled in testnet.
                   </p>
+
+                  <div className="mb-3">
+                    <label className="text-sm font-medium text-yellow-800 block mb-1">
+                      Unsold Tokens to Burn (wei)
+                    </label>
+                    <input
+                      type="text"
+                      value={unsoldToBurn}
+                      onChange={(e) => setUnsoldToBurn(e.target.value)}
+                      placeholder="0"
+                      className="w-full border border-yellow-300 rounded px-3 py-1.5 text-sm font-mono bg-white"
+                    />
+                    <p className="text-xs text-yellow-600 mt-1">
+                      Set to 0 if no unsold tokens need burning
+                    </p>
+                  </div>
 
                   <button
                     onClick={handleDirectExecute}
-                    disabled={isExecuting || isExecuted}
+                    disabled={isExecuting || !!txHash}
                     className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition"
                   >
                     {isExecuting
-                      ? 'Executing...'
-                      : isExecuted
+                      ? 'Executing finalizeSuccessEscrow...'
+                      : txHash
                         ? '✅ Executed'
-                        : '⚡ Execute Directly'}
+                        : '⚡ Execute Escrow Finalization'}
                   </button>
 
                   {txHash && (

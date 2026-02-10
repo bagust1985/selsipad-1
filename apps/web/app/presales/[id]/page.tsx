@@ -25,7 +25,7 @@ export default async function PresaleDetailPage({ params }: { params: { id: stri
   // Check user via wallet session (not JWT auth.getUser)
   const session = await getServerSession();
   const userId = session?.userId || null;
-  const isOwner = userId && round.projects?.owner_user_id === userId;
+  const isOwner = !!(userId && round.projects?.owner_user_id === userId);
   const isPublic = ['APPROVED', 'DEPLOYED', 'LIVE', 'ACTIVE', 'ENDED', 'FINALIZED'].includes(
     round.status
   );
@@ -50,7 +50,20 @@ export default async function PresaleDetailPage({ params }: { params: { id: stri
     userContribution = contrib;
   }
 
+  // Fetch ALL contributions for this round (for Transactions tab)
+  const { data: allContributions } = await supabase
+    .from('contributions')
+    .select('id, amount, tx_hash, status, wallet_address, created_at, user_id')
+    .eq('round_id', params.id)
+    .in('status', ['PENDING', 'CONFIRMED'])
+    .order('created_at', { ascending: false });
+
   return (
-    <PresaleDetailClient round={round} userContribution={userContribution} isOwner={isOwner} />
+    <PresaleDetailClient
+      round={round}
+      userContribution={userContribution}
+      allContributions={allContributions || []}
+      isOwner={isOwner}
+    />
   );
 }

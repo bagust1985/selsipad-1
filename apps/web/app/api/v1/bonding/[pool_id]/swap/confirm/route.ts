@@ -11,6 +11,7 @@ import {
   type SwapConfirmRequest,
   type SwapConfirmResponse,
 } from '@selsipad/shared';
+import { verifyTransactionExists } from '@/lib/solana-verification';
 
 export async function POST(
   request: NextRequest,
@@ -75,8 +76,23 @@ export async function POST(
       });
     }
 
-    // TODO: Verify tx_hash with Tx Manager
-    // For now, extract swap details from tx (placeholder)
+    // Verify transaction exists on-chain
+    const txStatus = await verifyTransactionExists(tx_hash);
+    if (!txStatus) {
+      return NextResponse.json(
+        { error: 'Transaction not found on Solana blockchain. Please ensure transaction was submitted.' },
+        { status: 400 }
+      );
+    }
+
+    if (txStatus.err) {
+      return NextResponse.json(
+        { error: `Transaction failed on-chain: ${JSON.stringify(txStatus.err)}` },
+        { status: 400 }
+      );
+    }
+
+    // Extract swap details from tx (placeholder - would be done via tx decoding service)
     const { swap_type, input_amount } = await extractSwapFromTx(tx_hash);
 
     // Calculate actual swap output
@@ -227,17 +243,25 @@ export async function POST(
 
 /**
  * Extract swap details from transaction
- * TODO: Replace with actual Tx Manager integration
+ * TODO: Replace with actual transaction decoder or Solana program event indexer
+ * For now, this is a placeholder that would need to:
+ * 1. Decode the transaction instructions
+ * 2. Parse the bonding curve program instructions
+ * 3. Extract swap_type (BUY/SELL) and input_amount
  */
 async function extractSwapFromTx(
   txHash: string
 ): Promise<{ swap_type: 'BUY' | 'SELL'; input_amount: string }> {
-  // Placeholder: In production, decode transaction from Solana
-  console.log('TODO: Extract swap from tx', txHash);
+  // Placeholder: In production, this should:
+  // 1. Use @solana/web3.js Connection.getTransaction()
+  // 2. Decode transaction instructions
+  // 3. Match against bonding curve program instructions
+  // 4. Extract swap details from instruction data
+  // 5. Return actual values
 
-  // Mock data for development
-  return {
-    swap_type: 'BUY',
+  console.log('TODO: Extract swap from tx via program instruction decoder', txHash);
+
+  // Mock data for development - in production, extract from actual tx
     input_amount: '100000000', // 0.1 SOL
   };
 }

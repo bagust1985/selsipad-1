@@ -12,18 +12,30 @@ export async function GET(request: NextRequest) {
     // Verify admin session
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session_token')?.value;
+    console.log(
+      '[Admin Presale] session_token present:',
+      !!sessionToken,
+      sessionToken?.slice(0, 12)
+    );
 
     if (!sessionToken) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
     // Look up session → wallet → profile
-    const { data: session } = await supabase
+    const { data: session, error: sessionError } = await supabase
       .from('auth_sessions')
       .select('wallets!inner(user_id)')
       .eq('session_token', sessionToken)
       .gt('expires_at', new Date().toISOString())
       .single();
+
+    console.log(
+      '[Admin Presale] session lookup:',
+      JSON.stringify(session),
+      'error:',
+      sessionError?.message
+    );
 
     const userId = (session?.wallets as any)?.user_id;
     if (!userId) {
@@ -33,9 +45,11 @@ export async function GET(request: NextRequest) {
     // Check admin status
     const { data: profile } = await supabase
       .from('profiles')
-      .select('is_admin')
+      .select('is_admin, username, user_id')
       .eq('user_id', userId)
       .single();
+
+    console.log('[Admin Presale] profile check:', JSON.stringify(profile));
 
     if (!profile?.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });

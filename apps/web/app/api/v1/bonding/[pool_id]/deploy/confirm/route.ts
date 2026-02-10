@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { DeployConfirmRequest, DeployConfirmResponse } from '@selsipad/shared';
+import { verifyBondingOperation } from '@/lib/solana-verification';
 
 const DEPLOY_FEE_SOL = 500000000n; // 0.5 SOL in lamports
 const TREASURY_ADDRESS = process.env.TREASURY_ADDRESS || 'TREASURY_PLACEHOLDER';
@@ -72,11 +73,15 @@ export async function POST(
       });
     }
 
-    // TODO: Integrate with Tx Manager to verify on-chain transaction
-    // For now, we'll simulate verification
-    const isValid = await verifyDeploymentFee(fee_tx_hash, TREASURY_ADDRESS, DEPLOY_FEE_SOL);
+    // Verify transaction on-chain via Solana RPC
+    const verification = await verifyBondingOperation(
+      'DEPLOY',
+      fee_tx_hash,
+      TREASURY_ADDRESS,
+      DEPLOY_FEE_SOL
+    );
 
-    if (!isValid) {
+    if (!verification.success) {
       // Record failed attempt
       await serviceSupabase.from('bonding_events').insert({
         pool_id: pool.id,
@@ -84,13 +89,17 @@ export async function POST(
         event_data: {
           intent_id,
           fee_tx_hash,
-          reason: 'Invalid fee payment',
+          reason: verification.error,
+          verification_details: verification,
         },
         triggered_by: user.id,
       });
 
       return NextResponse.json(
-        { error: 'Invalid fee payment. Please ensure 0.5 SOL was sent to treasury.' },
+        {
+          error: verification.error || 'Transaction verification failed',
+          details: verification,
+        },
         { status: 400 }
       );
     }
@@ -149,30 +158,4 @@ export async function POST(
     console.error('Deploy confirm error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
-
-/**
- * Verify deployment fee payment on-chain
- * TODO: Replace with actual Tx Manager integration
- */
-async function verifyDeploymentFee(
-  txHash: string,
-  expectedRecipient: string,
-  expectedAmount: bigint
-): Promise<boolean> {
-  // Placeholder: In production, this should:
-  // 1. Call Tx Manager API to verify transaction
-  // 2. Check recipient matches treasury address
-  // 3. Check amount >= expected amount
-  // 4. Check transaction is confirmed
-  // 5. Implement idempotency (don't double-count same tx)
-
-  console.log('TODO: Verify tx', {
-    txHash,
-    expectedRecipient,
-    expectedAmount: expectedAmount.toString(),
-  });
-
-  // For development, accept any tx_hash
-  return txHash.length > 10;
 }

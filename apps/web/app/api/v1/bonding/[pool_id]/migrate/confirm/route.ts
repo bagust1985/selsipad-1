@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { MigrateConfirmRequest, MigrateConfirmResponse } from '@selsipad/shared';
+import { verifyBondingOperation } from '@/lib/solana-verification';
 
 const MIGRATION_FEE_SOL = 2500000000n; // 2.5 SOL
 const TREASURY_ADDRESS = process.env.TREASURY_ADDRESS || 'TREASURY_PLACEHOLDER';
@@ -75,39 +76,47 @@ export async function POST(
       });
     }
 
-    // TODO: Verify migration fee with Tx Manager
-    const isValid = await verifyMigrationFee(fee_tx_hash, TREASURY_ADDRESS, MIGRATION_FEE_SOL);
+    // Verify migration fee on-chain via Solana RPC
+    const verification = await verifyBondingOperation(
+      'MIGRATE',
+      fee_tx_hash,
+      TREASURY_ADDRESS,
+      MIGRATION_FEE_SOL
+    );
 
-    if (!isValid) {
+    if (!verification.success) {
       await serviceSupabase.from('bonding_events').insert({
         pool_id: pool.id,
         event_type: 'MIGRATION_FAILED',
         event_data: {
           intent_id,
           fee_tx_hash,
-          reason: 'Invalid fee payment',
+          reason: verification.error,
+          verification_details: verification,
         },
         triggered_by: user.id,
       });
 
       return NextResponse.json(
-        { error: 'Invalid migration fee payment. Please ensure 2.5 SOL was sent.' },
+        {
+          error: verification.error || 'Migration fee verification failed',
+          details: verification,
+        },
         { status: 400 }
       );
     }
 
-    // Update migration fee verified
+    // Update migration fee verified with target_dex
     await serviceSupabase
       .from('bonding_pools')
       .update({
         migration_fee_tx_hash: fee_tx_hash,
         migration_fee_verified: true,
-        target_dex: pool.target_dex || 'RAYDIUM',
+        target_dex: pool.target_dex, // Use pool's previously selected DEX
       })
       .eq('id', pool.id);
 
-    // TODO: Execute DEX pool creation (Raydium/Orca SDK)
-    // For now, simulate migration
+    // Execute DEX pool creation (Raydium/Orca SDK)
     const migrationResult = await executeDEXMigration(pool);
 
     // Create LP Lock (FASE 5 integration)
@@ -217,25 +226,9 @@ export async function POST(
 }
 
 /**
- * Verify migration fee payment
- * TODO: Replace with Tx Manager integration
- */
-async function verifyMigrationFee(
-  txHash: string,
-  expectedRecipient: string,
-  expectedAmount: bigint
-): Promise<boolean> {
-  console.log('TODO: Verify migration fee', {
-    txHash,
-    expectedRecipient,
-    expectedAmount: expectedAmount.toString(),
-  });
-  return txHash.length > 10;
-}
-
-/**
  * Execute DEX pool creation and liquidity migration
- * TODO: Replace with actual Raydium/Orca SDK integration
+ * Supports both Raydium and Orca
+ * TODO: Implement actual DEX SDK integration
  */
 async function executeDEXMigration(pool: any): Promise<{
   dex_pool_address: string;
@@ -243,14 +236,28 @@ async function executeDEXMigration(pool: any): Promise<{
   lp_token_mint: string;
   lp_amount: string;
 }> {
+  // TODO: Integration with DEX SDKs
+  // For RAYDIUM:
+  //   - Use @raydium-io/raydium-sdk
+  //   - Call createPool() with SOL + token reserves
+  //   - Add initial liquidity
+  //   - Return pool ID, LP mint, and tx hash
+  //
+  // For ORCA:
+  //   - Use @orca-so/sdk
+  //   - Call createPool() with token pair
+  //   - Set up liquidity provision
+  //   - Return pool address, LP mint, and tx hash
+  //
+  // In both cases:
+  //   - Sign with creator's keypair (via Phantom wallet integration)
+  //   - Broadcast to Solana network
+  //   - Confirm transaction before returning
+
   console.log('TODO: Execute DEX migration for pool', pool.id);
+  console.log('Target DEX:', pool.target_dex || 'RAYDIUM');
 
-  // Placeholder: In production, this should:
-  // 1. Create DEX pool on Raydium/Orca
-  // 2. Add liquidity (SOL + tokens from bonding curve)
-  // 3. Receive LP tokens
-  // 4. Return pool address, tx hash, LP token mint, and LP amount
-
+  // Placeholder: Returns mock data
   return {
     dex_pool_address: `DEX_POOL_${pool.id.substring(0, 8)}`,
     creation_tx_hash: `TX_${Date.now()}`,

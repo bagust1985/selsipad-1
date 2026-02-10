@@ -110,11 +110,33 @@ export const PRESALE_ROUND_ABI = [
     stateMutability: 'nonpayable',
   },
   {
+    name: 'finalizeSuccessEscrow',
+    type: 'function',
+    inputs: [{ type: 'bytes32' }, { type: 'uint256' }, { type: 'uint256' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
     name: 'finalizeFailed',
     type: 'function',
     inputs: [{ type: 'string' }],
     outputs: [],
     stateMutability: 'nonpayable',
+  },
+  // View: escrow finalization state
+  {
+    name: 'burnedAmount',
+    type: 'function',
+    inputs: [],
+    outputs: [{ type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    name: 'bnbDistributed',
+    type: 'function',
+    inputs: [],
+    outputs: [{ type: 'bool' }],
+    stateMutability: 'view',
   },
 ] as const;
 
@@ -192,9 +214,10 @@ export const MERKLE_VESTING_ABI = [
 export const CONTRACTS = {
   bsc_testnet: {
     chainId: 97,
-    factory: '0x237cc0f76e64DA3172bb7705287617f03DC0B016' as `0x${string}`,
-    feeSplitter: '0xce329E6d7415999160bB6f47133b552a91C915a0' as `0x${string}`,
+    factory: '0xb0ee30606d4fA0446d596F1a6523E0cc75C361ff' as `0x${string}`,
+    feeSplitter: '0x9CE09C9e370a3974f4D0c55D6a15C4d9F186d161' as `0x${string}`,
     timelockExecutor: '0xdce552fa663879e2453f2259ced9f06a0c4a6a2d' as `0x${string}`,
+    // Previous v2.2: factory 0xf3935d541A4F8fBED26c39f7E43625CE7b4d11E6, feeSplitter 0xa91e51F043Bc455dAae1f74Ad1991Df4C711b5ED
   },
 } as const;
 

@@ -14,6 +14,7 @@ interface IFeeSplitter {
 
 interface IMerkleVesting {
     function setMerkleRoot(bytes32 root, uint256 totalAllocated) external;
+    function merkleRoot() external view returns (bytes32);
 }
 
 /**
@@ -66,6 +67,10 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
     uint256 public totalRaised;
     uint256 public tgeTimestamp; // Set at finalization
     
+    // Escrow finalization idempotency tracking
+    uint256 public burnedAmount;   // Amount of unsold tokens burned (0 = not yet burned)
+    bool public bnbDistributed;
+    
     // Mappings
     mapping(address => uint256) public contributions;
     mapping(address => address) public referrers; // contributor => referrer
@@ -79,6 +84,14 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
     event FeeConfigUpdated(FeeConfig newConfig);
     event StatusSynced(Status oldStatus, Status newStatus);
     event UnsoldTokensBurned(uint256 amount);
+    event FinalizedSuccessEscrow(
+        uint256 totalNative,
+        uint256 fee,
+        uint256 net,
+        uint256 vestingTopUp,
+        uint256 burned,
+        bytes32 merkleRoot
+    );
     
     // Errors
     error InvalidStatus();
@@ -91,6 +104,11 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
     error InvalidFeeConfig();
     error ConfigLocked();
     error InvalidAddress();
+    error AlreadyFinalized();
+    error InsufficientTokenBalance();
+    error NativeTransferFailed();
+    error InvalidMerkleRoot();
+    error FeeDistributionFailed();
     error VestingFundingFailed();
     
     constructor(
@@ -416,4 +434,115 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
             tgeTimestamp
         );
     }
+    
+    // ────────────────────────────────────────────────────────
+    //  ESCROW-BASED FINALIZATION (v2.3)
+    // ────────────────────────────────────────────────────────
+    
+    /**
+     * @notice Finalize presale using tokens held in THIS contract (released from escrow)
+     * @dev 2-step flow: (1) escrow.release(projectId, address(this)) → tokens land here
+     *                   (2) this function settles everything from own balance
+     * @param _merkleRoot Merkle root for vesting claims (ignored if already set)
+     * @param totalVestingAllocation Total tokens for investor vesting
+     * @param unsoldToBurn Tokens to send to burn address (0xdEaD)
+     */
+    function finalizeSuccessEscrow(
+        bytes32 _merkleRoot,
+        uint256 totalVestingAllocation,
+        uint256 unsoldToBurn
+    ) external onlyRole(ADMIN_ROLE) nonReentrant {
+        // Prevent double finalize
+        if (status == Status.FINALIZED_SUCCESS) revert AlreadyFinalized();
+        
+        // Sync status (ACTIVE → ENDED if endTime passed)
+        _syncStatus();
+        
+        // Must be ENDED with softcap met
+        if (status != Status.ENDED) revert InvalidStatus();
+        if (totalRaised < softCap) revert SoftCapNotMet();
+        
+        // ── Step 1: Fund vesting vault (balance-based, idempotent) ──
+        uint256 vestingTopUp = 0;
+        {
+            uint256 vaultBalance = IERC20(projectToken).balanceOf(vestingVault);
+            if (vaultBalance < totalVestingAllocation) {
+                vestingTopUp = totalVestingAllocation - vaultBalance;
+                uint256 roundBalance = IERC20(projectToken).balanceOf(address(this));
+                if (roundBalance < vestingTopUp) revert InsufficientTokenBalance();
+                IERC20(projectToken).safeTransfer(vestingVault, vestingTopUp);
+            }
+        }
+        
+        // ── Step 2: Set merkle root (idempotent — skip if already set) ──
+        // Tweak #2: Validate merkle root input
+        bytes32 usedRoot = _merkleRoot;
+        bytes32 onChainRoot = IMerkleVesting(vestingVault).merkleRoot();
+        if (onChainRoot == bytes32(0)) {
+            if (_merkleRoot == bytes32(0)) revert InvalidMerkleRoot();
+            IMerkleVesting(vestingVault).setMerkleRoot(_merkleRoot, totalVestingAllocation);
+        } else {
+            // Already set — record what's on-chain
+            usedRoot = onChainRoot;
+        }
+        
+        // ── Step 3: Burn unsold tokens (amount-tracked, idempotent) ──
+        // Tweak #3: Track burned amount for resume safety
+        uint256 actualBurned = 0;
+        if (unsoldToBurn > 0 && burnedAmount < unsoldToBurn) {
+            uint256 toBurn = unsoldToBurn - burnedAmount;
+            uint256 roundBalance = IERC20(projectToken).balanceOf(address(this));
+            if (roundBalance < toBurn) revert InsufficientTokenBalance();
+            IERC20(projectToken).safeTransfer(address(0xdEaD), toBurn);
+            burnedAmount = unsoldToBurn;
+            actualBurned = toBurn;
+            emit UnsoldTokensBurned(toBurn);
+        }
+        
+        // ── Step 4: Finalize state BEFORE external calls (CEI pattern) ──
+        // Tweak #1: State changes before external native transfers
+        tgeTimestamp = block.timestamp;
+        status = Status.FINALIZED_SUCCESS;
+        
+        // ── Step 5: BNB distribution (fee + net to owner) ──
+        uint256 totalNative = address(this).balance;
+        uint256 feeAmount = 0;
+        uint256 netAmount = 0;
+        if (totalNative > 0 && !bnbDistributed) {
+            feeAmount = (totalNative * feeConfig.totalBps) / 10000;
+            netAmount = totalNative - feeAmount;
+            
+            bnbDistributed = true; // Set flag before external calls
+            
+            // Tweak #4: FeeSplitter wrapped with try/catch
+            if (feeAmount > 0) {
+                try IFeeSplitter(feeSplitter).distributeFeeNative{value: feeAmount}() {
+                    // Fee distributed successfully
+                } catch {
+                    revert FeeDistributionFailed();
+                }
+            }
+            
+            // Transfer net to project owner
+            if (netAmount > 0) {
+                (bool ok, ) = projectOwner.call{value: netAmount}("");
+                if (!ok) revert NativeTransferFailed();
+            }
+        }
+        
+        emit FinalizedSuccessEscrow(
+            totalNative,
+            feeAmount,
+            netAmount,
+            vestingTopUp,
+            actualBurned,
+            usedRoot
+        );
+    }
+    
+    /**
+     * @notice Receive function to accept native tokens (BNB/ETH)
+     * @dev Required for contributions with native token payment
+     */
+    receive() external payable {}
 }

@@ -4,6 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ExternalLink, TrendingUp, Lock } from 'lucide-react';
 import { StatusPill } from '@/components/presale/StatusPill';
+import {
+  FeeSplitDisplay,
+  GraduationProgress,
+  DEXMigrationDetails,
+} from '@/components/bonding/DEXSelector';
 
 interface BondingPool {
   id: string;
@@ -174,6 +179,22 @@ function OverviewTab({ pool }: { pool: BondingPool }) {
 
   return (
     <div className="space-y-6">
+      {/* Graduation Progress */}
+      <GraduationProgress
+        actualSol={pool.actual_sol_reserves.toString()}
+        thresholdSol={pool.graduation_threshold_sol.toString()}
+        status={pool.status}
+      />
+
+      {/* Fee Split Display */}
+      <FeeSplitDisplay
+        swapFeeBps={pool.swap_fee_bps}
+        totalVolume={pool.actual_sol_reserves.toString()}
+      />
+
+      {/* DEX Migration Info */}
+      <DEXMigrationDetails targetDex={pool.target_dex} status={pool.status} />
+
       {/* Bonding Curve Mechanics */}
       <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-white mb-4">⚡ Bonding Curve Mechanics</h3>

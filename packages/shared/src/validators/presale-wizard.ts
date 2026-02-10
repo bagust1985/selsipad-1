@@ -23,6 +23,12 @@ export const presaleBasicsSchema = z.object({
     .max(2000, 'Description cannot exceed 2000 characters'),
   logo_url: z.string().optional(),
   banner_url: z.string().optional(),
+  // Social media links (optional) - simple optional strings for now
+  website_url: z.string().optional(),
+  twitter_url: z.string().optional(),
+  telegram_url: z.string().optional(),
+  discord_url: z.string().optional(),
+  github_url: z.string().optional(),
   network: z
     .enum(
       [

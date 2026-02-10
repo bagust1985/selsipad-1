@@ -36,6 +36,7 @@ import { parseEther } from 'viem';
 interface PresaleDetailClientProps {
   round: any;
   userContribution: any;
+  allContributions: any[];
   isOwner: boolean;
 }
 
@@ -116,6 +117,7 @@ function getExplorerUrl(chain: string): string {
 export function PresaleDetailClient({
   round,
   userContribution,
+  allContributions,
   isOwner,
 }: PresaleDetailClientProps) {
   const [activeTab, setActiveTab] = useState<string>('overview');
@@ -885,36 +887,50 @@ export function PresaleDetailClient({
         {/* ═══════════════════ TRANSACTIONS TAB ═══════════════════ */}
         {activeTab === 'transactions' && (
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Your Transactions</h3>
-            {userContribution ? (
-              <div className="bg-gray-800 rounded-lg p-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium text-white">Contribution</p>
-                    <p className="text-sm text-gray-400" suppressHydrationWarning>
-                      {new Date(userContribution.created_at).toLocaleString()}
-                    </p>
+            <h3 className="text-lg font-semibold text-white mb-4">All Transactions</h3>
+            {allContributions && allContributions.length > 0 ? (
+              <div className="space-y-3">
+                {allContributions.map((contrib: any, idx: number) => (
+                  <div key={contrib.id || idx} className="bg-gray-800 rounded-lg p-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-white flex items-center gap-2">
+                          <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">
+                            #{allContributions.length - idx}
+                          </span>
+                          Contribution
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 font-mono">
+                          {contrib.wallet_address
+                            ? `${contrib.wallet_address.slice(0, 6)}...${contrib.wallet_address.slice(-4)}`
+                            : 'Unknown wallet'}
+                        </p>
+                        <p className="text-sm text-gray-400 mt-1" suppressHydrationWarning>
+                          {new Date(contrib.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-white">
+                          {contrib.amount} {round.raise_asset || nativeCurrency}
+                        </p>
+                        <StatusPill status={contrib.status} />
+                      </div>
+                    </div>
+                    {contrib.tx_hash && (
+                      <div className="mt-3 pt-3 border-t border-gray-700">
+                        <a
+                          href={`${explorerBase}/tx/${contrib.tx_hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          View on Explorer
+                        </a>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-white">
-                      {userContribution.amount} {round.raise_asset || nativeCurrency}
-                    </p>
-                    <StatusPill status={userContribution.status} />
-                  </div>
-                </div>
-                {userContribution.tx_hash && (
-                  <div className="mt-3 pt-3 border-t border-gray-700">
-                    <a
-                      href={`${explorerBase}/tx/${userContribution.tx_hash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      View on Explorer
-                    </a>
-                  </div>
-                )}
+                ))}
               </div>
             ) : (
               <p className="text-gray-400 text-center py-8">No transactions yet</p>

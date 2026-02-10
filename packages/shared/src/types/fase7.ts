@@ -246,6 +246,7 @@ export interface MigrateConfirmRequest {
   pool_id: string;
   intent_id: string;
   fee_tx_hash: string;
+  target_dex: DEXType; // RAYDIUM or ORCA
 }
 
 export interface MigrateConfirmResponse {

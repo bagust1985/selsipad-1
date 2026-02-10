@@ -10,38 +10,53 @@
  * 3. Compute token allocations
  * 4. Generate merkle tree (2+ leaves enforced)
  * 5. Persist root + proofs to DB
- * 6. Return proposal payload + calldata
+ * 6. Return proposal payload
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 import { generateMerkleTree } from '@/lib/server/merkle/generate-tree';
-import { parseEther, encodeFunctionData } from 'viem';
-import { PRESALE_ROUND_ABI } from '@/lib/web3/presale-contracts';
+import { parseEther } from 'viem';
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const supabase = createClient();
+    // 1. Verify admin auth via wallet session (service-role bypasses RLS)
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session_token')?.value;
 
-    // 1. Verify admin auth
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    if (!sessionToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is admin
-    const { data: profile } = await supabase
+    const { data: session } = await supabaseAdmin
+      .from('auth_sessions')
+      .select('wallets!inner(user_id)')
+      .eq('session_token', sessionToken)
+      .gt('expires_at', new Date().toISOString())
+      .single();
+
+    const userId = (session?.wallets as any)?.user_id;
+    if (!userId) {
+      return NextResponse.json({ error: 'Session expired' }, { status: 401 });
+    }
+
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('is_admin')
-      .eq('id', user.id)
+      .eq('user_id', userId)
       .single();
 
     if (!profile?.is_admin) {
       return NextResponse.json({ error: 'Forbidden - Admin only' }, { status: 403 });
     }
+
+    const supabase = supabaseAdmin;
 
     // 2. Load presale round data
     const { data: round, error: roundError } = await supabase
@@ -119,14 +134,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       })
       .eq('id', params.id);
 
-    // 7. Generate calldata for timelock/multisig execution
-    const calldataSetMerkleRoot = encodeFunctionData({
-      abi: PRESALE_ROUND_ABI,
-      functionName: 'finalizeSuccess',
-      args: [merkleData.root as `0x${string}`, merkleData.totalAllocation],
-    });
-
-    // 8. Return proposal payload
+    // 7. Return proposal payload
     return NextResponse.json({
       success: true,
       merkleRoot: merkleData.root,
@@ -137,7 +145,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         allocationFormatted: (Number(a.allocation) / 1e18).toFixed(6),
       })),
       snapshotHash: merkleData.snapshotHash,
-      calldata: calldataSetMerkleRoot,
       target: round.round_address,
       message: 'Merkle tree generated and persisted. Ready for finalization.',
     });

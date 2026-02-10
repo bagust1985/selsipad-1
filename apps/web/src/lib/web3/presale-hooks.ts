@@ -316,6 +316,41 @@ export function useFinalizeSuccess() {
 }
 
 /**
+ * Hook for admin escrow-based finalization (success)
+ * Calls finalizeSuccessEscrow(merkleRoot, totalAllocation, unsoldToBurn)
+ * Use this for presales deployed via Factory v2.3+
+ */
+export function useFinalizeSuccessEscrow() {
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+
+  const finalize = async ({
+    roundAddress,
+    merkleRoot,
+    totalAllocation,
+    unsoldToBurn = 0n,
+  }: {
+    roundAddress: Address;
+    merkleRoot: `0x${string}`;
+    totalAllocation: bigint;
+    unsoldToBurn?: bigint;
+  }) => {
+    return writeContract({
+      address: roundAddress,
+      abi: PRESALE_ROUND_ABI,
+      functionName: 'finalizeSuccessEscrow',
+      args: [merkleRoot, totalAllocation, unsoldToBurn],
+    });
+  };
+
+  return {
+    finalize,
+    hash,
+    isPending,
+    error,
+  };
+}
+
+/**
  * Hook for waiting for transaction confirmation
  */
 export function useTransactionConfirmation(hash: `0x${string}` | undefined) {

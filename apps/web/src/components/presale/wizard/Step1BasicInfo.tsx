@@ -102,6 +102,104 @@ export function Step1BasicInfo({ data, onChange, errors, selectedNetwork }: Step
         {errors?.banner_url && <p className="mt-2 text-sm text-red-400">{errors.banner_url}</p>}
       </div>
 
+      {/* Social Media Links */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-white">Social Media Links (Optional)</h3>
+        <p className="text-sm text-gray-400">Add your project's social media presence</p>
+
+        {/* Website */}
+        <div>
+          <label htmlFor="website_url" className="block text-sm font-medium text-white mb-2">
+            Website
+          </label>
+          <input
+            id="website_url"
+            type="url"
+            value={data.website_url || ''}
+            onChange={(e) => handleChange('website_url', e.target.value)}
+            placeholder="https://yourproject.com"
+            className={`w-full px-4 py-3 bg-gray-900 border ${
+              errors?.website_url ? 'border-red-500' : 'border-gray-700'
+            } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors`}
+          />
+          {errors?.website_url && <p className="mt-2 text-sm text-red-400">{errors.website_url}</p>}
+        </div>
+
+        {/* X (Twitter) */}
+        <div>
+          <label htmlFor="twitter_url" className="block text-sm font-medium text-white mb-2">
+            X (Twitter)
+          </label>
+          <input
+            id="twitter_url"
+            type="url"
+            value={data.twitter_url || ''}
+            onChange={(e) => handleChange('twitter_url', e.target.value)}
+            placeholder="https://x.com/yourproject"
+            className={`w-full px-4 py-3 bg-gray-900 border ${
+              errors?.twitter_url ? 'border-red-500' : 'border-gray-700'
+            } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors`}
+          />
+          {errors?.twitter_url && <p className="mt-2 text-sm text-red-400">{errors.twitter_url}</p>}
+        </div>
+
+        {/* Telegram */}
+        <div>
+          <label htmlFor="telegram_url" className="block text-sm font-medium text-white mb-2">
+            Telegram
+          </label>
+          <input
+            id="telegram_url"
+            type="url"
+            value={data.telegram_url || ''}
+            onChange={(e) => handleChange('telegram_url', e.target.value)}
+            placeholder="https://t.me/yourproject"
+            className={`w-full px-4 py-3 bg-gray-900 border ${
+              errors?.telegram_url ? 'border-red-500' : 'border-gray-700'
+            } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors`}
+          />
+          {errors?.telegram_url && (
+            <p className="mt-2 text-sm text-red-400">{errors.telegram_url}</p>
+          )}
+        </div>
+
+        {/* Discord */}
+        <div>
+          <label htmlFor="discord_url" className="block text-sm font-medium text-white mb-2">
+            Discord
+          </label>
+          <input
+            id="discord_url"
+            type="url"
+            value={data.discord_url || ''}
+            onChange={(e) => handleChange('discord_url', e.target.value)}
+            placeholder="https://discord.gg/yourproject"
+            className={`w-full px-4 py-3 bg-gray-900 border ${
+              errors?.discord_url ? 'border-red-500' : 'border-gray-700'
+            } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors`}
+          />
+          {errors?.discord_url && <p className="mt-2 text-sm text-red-400">{errors.discord_url}</p>}
+        </div>
+
+        {/* GitHub */}
+        <div>
+          <label htmlFor="github_url" className="block text-sm font-medium text-white mb-2">
+            GitHub
+          </label>
+          <input
+            id="github_url"
+            type="url"
+            value={data.github_url || ''}
+            onChange={(e) => handleChange('github_url', e.target.value)}
+            placeholder="https://github.com/yourproject"
+            className={`w-full px-4 py-3 bg-gray-900 border ${
+              errors?.github_url ? 'border-red-500' : 'border-gray-700'
+            } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors`}
+          />
+          {errors?.github_url && <p className="mt-2 text-sm text-red-400">{errors.github_url}</p>}
+        </div>
+      </div>
+
       {/* Network Display (Read-Only — selected in Step 0) */}
       <div>
         <label className="block text-sm font-medium text-white mb-3">

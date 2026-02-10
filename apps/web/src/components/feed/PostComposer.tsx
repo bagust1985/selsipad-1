@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Image, Smile, X } from 'lucide-react';
+import { Image, Smile, X, User, Send } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 interface PostComposerProps {
@@ -30,7 +30,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
   // Extract hashtags for counting
   const extractHashtags = (text: string): string[] => {
     const matches = text.match(/#\w+/g);
-    return matches ? [...new Set(matches.map(tag => tag.toLowerCase()))] : [];
+    return matches ? [...new Set(matches.map((tag) => tag.toLowerCase()))] : [];
   };
 
   const hashtags = extractHashtags(content);
@@ -253,11 +253,16 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `posts/${fileName}`;
 
-        console.log('[Upload] Starting upload:', { fileName, filePath, size: file.size, type: file.type });
+        console.log('[Upload] Starting upload:', {
+          fileName,
+          filePath,
+          size: file.size,
+          type: file.type,
+        });
 
         const { data, error } = await supabase.storage.from('public-files').upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
         });
 
         if (error) {
@@ -283,7 +288,9 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
       console.error('[Upload] Error name:', error?.name);
       console.error('[Upload] Error message:', error?.message);
       console.error('[Upload] Error details:', error?.details);
-      alert(`Failed to upload images: ${error.message || 'Unknown error'}. Check console for details.`);
+      alert(
+        `Failed to upload images: ${error.message || 'Unknown error'}. Check console for details.`
+      );
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -318,48 +325,53 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
   const canPost = (content.trim() || images.length > 0) && !isOverLimit && isEligible;
 
   return (
-    <div className="bg-bg-elevated rounded-xl shadow-sm border border-border-subtle p-4">
-      <div className="flex gap-3">
+    <div className="bg-white/5 rounded-2xl border border-white/10 p-5 shadow-xl backdrop-blur-sm relative overflow-hidden group/composer transition-all hover:bg-white/[0.07] hover:border-cyan-500/30 hover:shadow-cyan-500/10">
+      {/* Background Glow Effect */}
+      <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl group-hover/composer:bg-purple-500/30 transition-all pointer-events-none" />
+      <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-cyan-500/20 rounded-full blur-3xl group-hover/composer:bg-cyan-500/30 transition-all pointer-events-none" />
+
+      <div className="flex gap-4 relative z-10">
         {/* Avatar */}
         <div className="flex-shrink-0">
           {userProfile?.avatar_url ? (
             <img
               src={userProfile.avatar_url}
               alt={userProfile.username}
-              className="w-12 h-12 rounded-full object-cover"
+              className="w-12 h-12 rounded-full object-cover border-2 border-white/10 ring-2 ring-transparent group-hover/composer:ring-cyan-500/30 transition-all"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
-              {userProfile?.username?.[0]?.toUpperCase() || '?'}
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center text-gray-400 font-semibold group-hover/composer:text-white transition-colors">
+              <User className="w-6 h-6" />
             </div>
           )}
         </div>
 
         {/* Composer Content */}
-        <div className="flex-1 space-y-3">
+        <div className="flex-1 space-y-4">
           {/* Textarea */}
           <textarea
-            placeholder="Apa yang sedang terjadi?"
+            ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
+            placeholder="What's happening in crypto?"
+            className="w-full bg-transparent border-none focus:ring-0 text-lg placeholder-gray-500 resize-none min-h-[100px] text-white font-twitter disabled:opacity-50 disabled:cursor-not-allowed selection:bg-cyan-500/30"
             disabled={!isEligible}
-            className="w-full min-h-[80px] bg-transparent text-text-primary text-lg placeholder:text-text-secondary focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
             maxLength={maxLength + 50}
           />
 
           {/* Image Preview Grid */}
           {images.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 mt-2">
+            <div className="grid grid-cols-2 gap-3 mt-3">
               {images.map((url, index) => (
                 <div key={index} className="relative group">
                   <img
                     src={url}
                     alt={`Upload ${index + 1}`}
-                    className="w-full h-32 object-cover rounded-lg border border-border-subtle"
+                    className="w-full h-40 object-cover rounded-xl border border-white/10"
                   />
                   <button
                     onClick={() => handleRemoveImage(index)}
-                    className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-full opacity-0 group-hover:opacity-100 transition-all"
                   >
                     <X className="w-4 h-4 text-white" />
                   </button>
@@ -369,7 +381,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
           )}
 
           {/* Toolbar */}
-          <div className="flex items-center justify-between pt-2 border-t border-border-subtle">
+          <div className="flex items-center justify-between pt-3 border-t border-white/5">
             {/* Media Icons */}
             <div className="flex items-center gap-1">
               <input
@@ -384,32 +396,32 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!isEligible || uploading}
-                className="p-2 text-primary-main hover:bg-primary-main/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 text-cyan-400 hover:bg-cyan-400/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed group/icon"
                 title="Add image"
               >
-                <Image className="w-5 h-5" />
+                <Image className="w-5 h-5 group-hover/icon:scale-110 transition-transform" />
               </button>
               <div className="relative" ref={emojiPickerRef}>
                 <button
                   type="button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   disabled={!isEligible}
-                  className="p-2 text-primary-main hover:bg-primary-main/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 text-cyan-400 hover:bg-cyan-400/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed group/icon"
                   title="Add emoji"
                 >
-                  <Smile className="w-5 h-5" />
+                  <Smile className="w-5 h-5 group-hover/icon:scale-110 transition-transform" />
                 </button>
 
                 {/* Emoji Picker Dropdown */}
                 {showEmojiPicker && (
-                  <div className="absolute bottom-full left-0 mb-2 bg-bg-elevated border border-border-subtle rounded-xl shadow-lg p-3 w-64 max-h-64 overflow-y-auto z-50">
+                  <div className="absolute top-full left-0 mt-2 bg-[#1A1A1A] border border-white/10 rounded-2xl shadow-2xl p-3 w-72 max-h-64 overflow-y-auto z-50 backdrop-blur-xl">
                     <div className="grid grid-cols-8 gap-1">
                       {emojis.map((emoji, index) => (
                         <button
                           key={index}
                           type="button"
                           onClick={() => handleEmojiSelect(emoji)}
-                          className="p-2 hover:bg-bg-page rounded text-xl transition-colors"
+                          className="p-2 hover:bg-white/10 rounded-lg text-xl transition-colors"
                         >
                           {emoji}
                         </button>
@@ -421,18 +433,18 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
             </div>
 
             {/* Character Count and Post Button */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {/* Hashtag Counter - Info Only */}
               {hashtagCount > 0 && (
-                <div className="flex items-center gap-1 text-xs text-gray-400">
-                  <span>#</span>
+                <div className="flex items-center gap-1 text-xs text-gray-500 bg-white/5 px-2 py-1 rounded-full border border-white/5">
+                  <span className="text-cyan-400">#</span>
                   <span>{hashtagCount}</span>
                 </div>
               )}
               {charCount > 0 && (
                 <span
-                  className={`text-sm ${
-                    isOverLimit ? 'text-status-error-text font-semibold' : 'text-text-secondary'
+                  className={`text-xs font-medium ${
+                    isOverLimit ? 'text-red-400' : 'text-gray-500'
                   }`}
                 >
                   {charCount}/{maxLength}
@@ -441,9 +453,19 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
               <button
                 onClick={handleSubmit}
                 disabled={!canPost || submitting}
-                className="px-5 py-2 bg-primary-main text-primary-text text-sm font-semibold rounded-full hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-bold rounded-full hover:shadow-[0_0_20px_-5px_var(--color-cyan-500)] hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none transition-all duration-200 flex items-center gap-2"
               >
-                {submitting ? 'Posting...' : 'Post'}
+                {submitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Posting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Post</span>
+                    <Send className="w-3.5 h-3.5" />
+                  </>
+                )}
               </button>
             </div>
           </div>

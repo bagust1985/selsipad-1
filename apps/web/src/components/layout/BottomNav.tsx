@@ -50,8 +50,8 @@ export const BottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[360px] px-4 md:hidden">
-      <div className="bg-black/40 backdrop-blur-xl border border-[#39AEC4]/20 rounded-full px-2 py-2 shadow-2xl shadow-black/50 flex items-center justify-between relative overflow-hidden">
+    <nav className="fixed bottom-0 left-0 z-50 w-full md:hidden safe-bottom">
+      <div className="bg-black/80 backdrop-blur-xl border-t border-[#39AEC4]/20 px-6 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.4)] flex items-center justify-between relative overflow-hidden">
         {/* Glass Reflection Effect */}
         <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
 
@@ -67,7 +67,7 @@ export const BottomNav: React.FC = () => {
             >
               <div
                 className={cn(
-                  'p-2 rounded-xl transition-all duration-300',
+                  'p-1.5 rounded-xl transition-all duration-300',
                   isActive
                     ? 'text-[#39AEC4] bg-[#39AEC4]/10 shadow-[0_0_10px_rgba(57,174,196,0.2)]'
                     : 'text-gray-500 group-hover:text-gray-300'
@@ -75,7 +75,7 @@ export const BottomNav: React.FC = () => {
               >
                 <item.icon
                   className={cn(
-                    'w-5 h-5 transition-transform duration-300',
+                    'w-6 h-6 transition-transform duration-300',
                     isActive ? 'scale-110' : 'group-hover:scale-105'
                   )}
                   strokeWidth={isActive ? 2.5 : 2}

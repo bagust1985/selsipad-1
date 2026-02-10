@@ -121,73 +121,68 @@ export function ProfileEditForm({ initialNickname, initialAvatarUrl }: ProfileEd
   const hasAvatar = currentAvatarUrl || avatarFile;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
       {/* Avatar Section */}
-      <Card>
-        <CardContent className="space-y-4">
-          <h3 className="text-heading-md text-text-primary">Profile Picture</h3>
+      <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+        <h3 className="text-xl font-bold text-white mb-4">Profile Picture</h3>
 
-          {/* Avatar Preview */}
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative w-32 h-32 rounded-full overflow-hidden bg-bg-elevated border-2 border-border-subtle">
-              {currentAvatarUrl ? (
-                <Image src={currentAvatarUrl} alt="Avatar" fill className="object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-4xl text-text-tertiary">
-                  <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                </div>
-              )}
-            </div>
+        {/* Avatar Preview */}
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-32 h-32 rounded-full overflow-hidden bg-black border-2 border-white/10">
+            {currentAvatarUrl ? (
+              <Image src={currentAvatarUrl || ''} alt="Avatar" fill className="object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-4xl text-gray-600">
+                <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+            )}
+          </div>
 
-            {/* Upload/Remove Buttons */}
-            <div className="flex gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/webp"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+          {/* Upload/Remove Buttons */}
+          <div className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 transition-colors text-sm font-bold"
+            >
+              {hasAvatar ? 'Change Photo' : 'Upload Photo'}
+            </button>
+
+            {hasAvatar && (
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-primary-main text-white rounded-lg hover:bg-primary-hover transition-colors text-body-sm font-medium"
+                onClick={handleDeleteAvatar}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/20 transition-colors text-sm font-bold disabled:opacity-50"
               >
-                {hasAvatar ? 'Change Photo' : 'Upload Photo'}
+                {isDeleting ? 'Removing...' : 'Remove'}
               </button>
-
-              {hasAvatar && (
-                <button
-                  type="button"
-                  onClick={handleDeleteAvatar}
-                  disabled={isDeleting}
-                  className="px-4 py-2 bg-error-main text-white rounded-lg hover:bg-error-hover transition-colors text-body-sm font-medium disabled:opacity-50"
-                >
-                  {isDeleting ? 'Removing...' : 'Remove'}
-                </button>
-              )}
-            </div>
-
-            <p className="text-caption text-text-tertiary text-center">JPG, PNG or WebP. Max 2MB</p>
+            )}
           </div>
-        </CardContent>
-      </Card>
+
+          <p className="text-xs text-gray-500 text-center">JPG, PNG or WebP. Max 2MB</p>
+        </div>
+      </div>
 
       {/* Nickname Section */}
-      <Card>
-        <CardContent className="space-y-4">
-          <div>
-            <label
-              htmlFor="nickname"
-              className="block text-body-md font-medium text-text-primary mb-2"
-            >
+      <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label htmlFor="nickname" className="block text-sm font-bold text-gray-300 mb-2">
               Username
             </label>
             <input
@@ -197,40 +192,40 @@ export function ProfileEditForm({ initialNickname, initialAvatarUrl }: ProfileEd
               onChange={(e) => handleNicknameChange(e.target.value)}
               placeholder="Enter your username"
               maxLength={20}
-              className="w-full px-4 py-2 bg-bg-elevated border border-border-subtle rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-main"
+              className="w-full px-4 py-2 bg-black border border-white/10 rounded-lg text-white placeholder:text-gray-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all font-mono"
             />
-            {nicknameError && <p className="mt-1 text-caption text-error-main">{nicknameError}</p>}
-            <p className="mt-1 text-caption text-text-tertiary">
+            {nicknameError && <p className="mt-1 text-xs text-red-400">{nicknameError}</p>}
+            <p className="mt-1 text-xs text-gray-500">
               3-20 characters. Letters, numbers, and underscores only.
             </p>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Error Message */}
-      {error && (
-        <div className="p-4 bg-error-soft border border-error-main rounded-lg">
-          <p className="text-body-sm text-error-main">❌ {error}</p>
-        </div>
-      )}
+          {/* Error Message */}
+          {error && (
+            <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-lg mb-4">
+              <p className="text-sm text-red-400">❌ {error}</p>
+            </div>
+          )}
 
-      {/* Action Buttons */}
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="flex-1 px-4 py-3 bg-bg-elevated border border-border-subtle text-text-primary rounded-lg hover:bg-bg-card transition-colors font-medium"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting || !!nicknameError}
-          className="flex-1 px-4 py-3 bg-primary-main text-white rounded-lg hover:bg-primary-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSubmitting ? 'Saving...' : 'Save Changes'}
-        </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="flex-1 px-4 py-3 bg-white/5 border border-white/10 text-gray-300 rounded-lg hover:bg-white/10 transition-colors font-bold"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || !!nicknameError}
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg hover:from-cyan-500 hover:to-blue-500 transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-cyan-900/20"
+            >
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   );
 }

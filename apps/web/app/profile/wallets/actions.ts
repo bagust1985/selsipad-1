@@ -11,6 +11,8 @@ export interface Wallet {
   is_primary: boolean;
   wallet_role: 'PRIMARY' | 'SECONDARY';
   created_at: string;
+  network?: string;
+  label?: string;
 }
 
 /**

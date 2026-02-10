@@ -21,6 +21,9 @@ export interface Post {
   is_liked: boolean;
   image_urls?: string[];
   hashtags?: string[];
+  view_count?: number;
+  edit_count?: number;
+  last_edited_at?: string;
 }
 
 /**

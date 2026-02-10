@@ -41,14 +41,49 @@ export default function FeedClientContent({
   };
 
   return (
-    <div className="min-h-screen bg-bg-page">
-      <PageHeader title="Feed" />
+    <div className="min-h-screen bg-black text-white selection:bg-cyan-500/30">
+      {/* Custom Header */}
+      <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-white/10">
+        <div className="w-full max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-gray-400 hover:text-white transition-colors">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
+                Selsi Feed
+              </h1>
+              <p className="text-xs text-gray-500 font-medium">Community Updates</p>
+            </div>
+          </div>
+
+          <Link
+            href="/profile"
+            className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group"
+          >
+            <span className="text-sm font-medium text-gray-300 group-hover:text-white">
+              Profile
+            </span>
+          </Link>
+        </div>
+      </div>
 
       {/* Feed Container */}
-      <div className="max-w-2xl mx-auto border-x border-border-subtle bg-bg-page min-h-screen">
+      <div className="w-full max-w-4xl mx-auto min-h-screen md:border-x border-white/5 bg-black">
         {/* Info Banner for non-eligible users */}
         {!userEligible && (
-          <div className="border-b border-border-subtle p-4">
+          <div className="border-b border-white/10 p-4 bg-white/5">
             <Banner
               type="info"
               message="Want to post on the feed?"
@@ -63,7 +98,7 @@ export default function FeedClientContent({
 
         {/* Post Composer */}
         {userEligible && (
-          <div className="border-b-8 border-bg-page">
+          <div className="p-4 md:p-6 border-b border-white/10 bg-black/40 backdrop-blur-sm sticky top-16 z-20">
             <PostComposer
               userProfile={userProfile}
               isEligible={userEligible}
@@ -72,35 +107,31 @@ export default function FeedClientContent({
           </div>
         )}
 
-        {/* Feed Posts */}
-        {posts.length === 0 ? (
-          <div className="p-8">
-            <Card>
-              <CardContent>
-                <EmptyState
-                  icon={<EmptyIcon />}
-                  title="Feed is empty"
-                  description="Feed will be filled with project updates and trending posts"
-                  action={{
-                    label: 'Explore Projects',
-                    onClick: () => (window.location.href = '/explore'),
-                  }}
-                />
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <div>
-            {posts.map((post) => (
+        {/* Posts List */}
+        <div className="p-4 md:p-6 flex flex-col gap-4 md:gap-6 pb-20">
+          {posts.length === 0 ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
+                <EmptyIcon className="w-8 h-8 text-gray-500" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">No posts yet</h3>
+              <p className="text-gray-400 max-w-sm">
+                Be the first to share something with the community!
+              </p>
+            </div>
+          ) : (
+            posts.map((post) => (
               <FeedPost
                 key={post.id}
                 post={post}
                 currentUserId={userProfile?.id}
-                onDelete={() => setPosts(posts.filter((p) => p.id !== post.id))}
+                onDelete={async () => {
+                  setPosts(posts.filter((p) => p.id !== post.id));
+                }}
               />
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

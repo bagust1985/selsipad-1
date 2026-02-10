@@ -3,14 +3,22 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Card, CardContent, StatusBadge, Avatar } from '@/components/ui';
-import { PageHeader, PageContainer } from '@/components/layout';
-import { Wallet, Shield, CheckCircle } from 'lucide-react';
+import { Card, CardContent, Avatar } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import {
+  Wallet,
+  Shield,
+  CheckCircle,
+  Copy,
+  ExternalLink,
+  Plus,
+  History,
+  Edit,
+  Rocket,
+} from 'lucide-react';
 import type { UserProfile } from '@/lib/data/profile';
 import type { UserStatsMultiChain } from '@/types/multi-chain';
-import { formatChainName } from '@/lib/utils/chain';
 import { formatDistance } from 'date-fns';
-import { Rocket, ArrowRight } from 'lucide-react';
 
 interface ProfileClientContentProps {
   initialProfile: UserProfile;
@@ -22,370 +30,292 @@ export function ProfileClientContent({
   multiChainStats,
 }: ProfileClientContentProps) {
   const [profile] = useState<UserProfile>(initialProfile);
-
   const primaryWallet = profile.wallets.find((w) => w.is_primary);
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    // You might want to add a toast/notification here
+  };
+
   return (
-    <div className="min-h-screen bg-bg-page pb-20">
-      <PageHeader
-        title="Profile"
-        actions={
+    <div className="min-h-screen bg-black text-white pb-20 font-sans selection:bg-cyan-500/30">
+      {/* Custom Header */}
+      <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-white/10">
+        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-gray-400 hover:text-white transition-colors">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <div>
+              <h1 className="text-xl font-bold text-white">Profile</h1>
+              <p className="text-xs text-gray-500 font-medium">Manage your account</p>
+            </div>
+          </div>
+
           <Link
             href="/profile/edit"
-            className="px-4 py-2 bg-primary-main text-white rounded-lg hover:bg-primary-hover transition-colors text-body-sm font-medium"
+            className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 hover:bg-cyan-500/30 hover:border-cyan-500/50 transition-all group"
           >
-            Edit Profile
+            <Edit className="w-3.5 h-3.5 text-cyan-400 group-hover:text-white transition-colors" />
+            <span className="text-sm font-medium text-cyan-400 group-hover:text-white transition-colors">
+              Edit Profile
+            </span>
           </Link>
-        }
-      />
+        </div>
+      </div>
 
-      <PageContainer className="py-4 space-y-6">
-        {/* Profile Card */}
-        {/* Profile Card */}
-        <div className="relative overflow-hidden rounded-xl border border-gray-800 bg-gray-900/50 p-6 backdrop-blur-xl">
-          <div className="flex items-center gap-6">
+      <PageContainer className="py-8 max-w-3xl space-y-8">
+        {/* Profile Header Section */}
+        <div className="bg-black border border-white/10 rounded-2xl p-6 relative overflow-hidden">
+          {/* Background Glow */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+          <div className="flex items-start gap-6 relative z-10">
             <div className="relative">
-              <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary-main to-purple-600 opacity-20 blur-sm" />
-              <Avatar
-                src={profile.avatar_url}
-                alt={profile.username || 'User'}
-                size="xl"
-                fallback={profile.username?.slice(0, 2).toUpperCase() || 'U'}
-                className="relative border-4 border-gray-900"
-              />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-white mb-1">{profile.username || 'Anonymous User'}</h2>
-              {profile.bio && (
-                <p className="text-sm text-gray-400 max-w-lg">{profile.bio}</p>
+              <div className="w-20 h-20 rounded-full border-2 border-white/10 p-0.5 bg-black">
+                <Avatar
+                  src={profile.avatar_url}
+                  alt={profile.username || 'User'}
+                  size="xl"
+                  fallback={profile.username?.slice(0, 2).toUpperCase() || 'U'}
+                  className="w-full h-full rounded-full"
+                />
+              </div>
+              {profile.bluecheck_status === 'active' && (
+                <div className="absolute -bottom-1 -right-1 bg-black p-0.5 rounded-full">
+                  <div className="bg-cyan-500 rounded-full p-1">
+                    <CheckCircle className="w-3 h-3 text-black fill-current" />
+                  </div>
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Stats Grid */}
-          <div className="mt-6 grid grid-cols-2 gap-4 border-t border-gray-800 pt-6">
-            <div className="rounded-lg bg-gray-800/50 p-3 text-center transition-colors hover:bg-gray-800">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Followers</p>
-              <p className="text-xl font-bold text-white">{profile.follower_count || 0}</p>
-            </div>
-            <div className="rounded-lg bg-gray-800/50 p-3 text-center transition-colors hover:bg-gray-800">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Following</p>
-              <p className="text-xl font-bold text-white">{profile.following_count || 0}</p>
+            <div className="flex-1 pt-1">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="px-2 py-0.5 bg-cyan-500 rounded text-xs font-bold text-black uppercase">
+                  User
+                </span>
+                <h2 className="text-xl font-bold text-white tracking-wide font-mono">
+                  {profile.username || 'Anonymous'}
+                </h2>
+              </div>
+
+              <div className="flex gap-8 mt-4">
+                <div className="text-center md:text-left">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-0.5">
+                    Followers
+                  </p>
+                  <p className="text-lg font-bold text-cyan-400 font-mono">
+                    {profile.follower_count || 0}
+                  </p>
+                </div>
+                <div className="text-center md:text-left">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-0.5">
+                    Following
+                  </p>
+                  <p className="text-lg font-bold text-cyan-400 font-mono">
+                    {profile.following_count || 0}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Multi-Chain Contributions */}
-        {multiChainStats && multiChainStats.contributions.length > 0 && (
-          <Card>
-            <CardContent className="space-y-3">
-              <h3 className="text-heading-md">Contributions</h3>
-              {multiChainStats.contributions.map((chainStat) => (
-                <div key={chainStat.chain} className="flex justify-between items-center py-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-bg-elevated rounded-full flex items-center justify-center text-caption font-semibold">
-                      {chainStat.nativeToken.slice(0, 1)}
-                    </div>
-                    <span className="text-text-secondary text-body-sm">
-                      {formatChainName(chainStat.chain)}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-heading-sm font-semibold">
-                      {chainStat.totalContributed.toFixed(4)} {chainStat.nativeToken}
-                    </p>
-                    {chainStat.usdEstimate && (
-                      <p className="text-caption text-text-tertiary">
-                        ~${chainStat.usdEstimate.toFixed(2)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {multiChainStats.totalContributedUSD > 0 && (
-                <div className="pt-3 border-t border-border-subtle flex justify-between">
-                  <span className="text-text-secondary">Total (All Chains)</span>
-                  <span className="text-heading-md font-bold">
-                    ~${multiChainStats.totalContributedUSD.toFixed(2)}
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Total Contributed */}
+          <div className="bg-black border border-white/10 rounded-xl p-5 relative overflow-hidden group hover:border-white/20 transition-colors">
+            <p className="text-xs text-gray-400 font-medium mb-1">Total Contributed</p>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-white font-mono group-hover:text-cyan-400 transition-colors">
+                {multiChainStats?.totalContributedUSD
+                  ? `$${multiChainStats.totalContributedUSD.toFixed(2)}`
+                  : '0'}
+              </span>
+            </div>
+          </div>
 
-        {/* Multi-Chain Rewards */}
-        {multiChainStats && multiChainStats.rewards.length > 0 && (
-          <Card>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-heading-md">Claimable Rewards</h3>
-                <Link
-                  href="/rewards"
-                  className="text-primary-main text-body-sm font-medium hover:underline"
-                >
-                  View All
-                </Link>
-              </div>
-              {multiChainStats.rewards.map((rewardStat, idx) => (
-                <div
-                  key={`${rewardStat.chain}-${rewardStat.token}-${idx}`}
-                  className="flex justify-between items-center py-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-success-subtle rounded-full flex items-center justify-center text-caption font-semibold text-success-main">
-                      {rewardStat.token.slice(0, 1)}
-                    </div>
-                    <span className="text-text-secondary text-body-sm">
-                      {formatChainName(rewardStat.chain)}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-heading-sm font-semibold text-success-main">
-                      {rewardStat.amount.toFixed(2)} {rewardStat.token}
-                    </p>
-                    {rewardStat.usdEstimate && (
-                      <p className="text-caption text-text-tertiary">
-                        ~${rewardStat.usdEstimate.toFixed(2)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Legacy Stats Card - Show if no multi-chain data */}
-        {(!multiChainStats ||
-          (multiChainStats.contributions.length === 0 && multiChainStats.rewards.length === 0)) && (
-          <Card>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-caption text-text-secondary">Total Contributed</p>
-                  <p className="text-heading-md">
-                    {profile.total_contributions}{' '}
-                    {profile.wallets.find((w) => w.is_primary)?.network === 'EVM' ? 'BNB' : 'SOL'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-caption text-text-secondary">Tokens Claimed</p>
-                  <p className="text-heading-md">{profile.total_claimed.toLocaleString()}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          {/* Tokens Claimed */}
+          <div className="bg-black border border-white/10 rounded-xl p-5 relative overflow-hidden group hover:border-white/20 transition-colors">
+            <p className="text-xs text-gray-400 font-medium mb-1">Tokens Claimed</p>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-white font-mono group-hover:text-purple-400 transition-colors">
+                {profile.total_claimed || 0}
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* Badge Collection */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
-            <h3 className="text-heading-md text-text-primary">Badge Collection</h3>
-            <p className="text-caption text-text-secondary mt-1">
-              Your earned badges and achievements
-            </p>
+            <h3 className="text-lg font-bold text-white">Badge Collection</h3>
+            <p className="text-sm text-gray-500">Your earned badges and achievements</p>
           </div>
 
-          {/* Blue Check Status */}
-          <Link href="/profile/blue-check">
-            <div className="group relative overflow-hidden rounded-xl border border-blue-900/30 bg-gray-900/50 p-1 transition-all hover:border-blue-500/30 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]">
-              <div className="relative flex items-center justify-between rounded-lg bg-gray-900 p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="relative flex h-12 w-12 items-center justify-center rounded-lg bg-blue-500/10 transition-colors group-hover:bg-blue-500/20">
-                      <Image
-                        src="/bluecheck-badge.png"
-                        alt="Blue Check"
-                        width={32}
-                        height={32}
-                        className={`object-contain transition-all duration-300 ${
-                          profile.bluecheck_status === 'active'
-                            ? 'opacity-100 scale-110 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]'
-                            : 'opacity-40 grayscale'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-white group-hover:text-blue-400 transition-colors">Blue Check</h4>
-                      <p className="text-sm text-gray-500">
-                        {profile.bluecheck_status === 'active' && profile.bluecheck_expires_at
-                          ? `Expires ${formatDistance(new Date(profile.bluecheck_expires_at), new Date(), { addSuffix: true })}`
-                          : 'Premium verification badge'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide border ${
-                    profile.bluecheck_status === 'active' 
-                      ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]' 
-                      : 'bg-gray-800 text-gray-500 border-gray-700'
-                  }`}>
-                    {profile.bluecheck_status === 'active' ? 'Verified' : 'Inactive'}
-                  </div>
-              </div>
-            </div>
-          </Link>
-
-          {/* KYC Status */}
-          <Link href="/profile/kyc">
-            <div className="group relative overflow-hidden rounded-xl border border-yellow-900/30 bg-gray-900/50 p-1 transition-all hover:border-yellow-500/30 hover:shadow-[0_0_20px_rgba(234,179,8,0.1)]">
-              <div className="relative flex items-center justify-between rounded-lg bg-gray-900 p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="relative flex h-12 w-12 items-center justify-center rounded-lg bg-yellow-500/10 transition-colors group-hover:bg-yellow-500/20">
-                      <Image
-                        src="/developer-kyc-badge.png"
-                        alt="Developer KYC"
-                        width={32}
-                        height={32}
-                        className={`object-contain transition-all duration-300 ${
-                          profile.kyc_status === 'verified' ? 'opacity-100 scale-110 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]' : 'opacity-40 grayscale'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-white group-hover:text-yellow-400 transition-colors">Developer KYC</h4>
-                      <p className="text-sm text-gray-500">
-                        {profile.kyc_status === 'verified'
-                          ? 'Identity verified'
-                          : 'Required for creators'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide border ${
-                    profile.kyc_status === 'verified'
-                      ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 shadow-[0_0_10px_rgba(234,179,8,0.2)]'
-                      : 'bg-gray-800 text-gray-500 border-gray-700'
-                  }`}>
-                    {profile.kyc_status === 'verified' ? 'Verified' : 'Unverified'}
-                  </div>
-              </div>
-            </div>
-          </Link>
-        </div>
-
-        {/* My Projects Shortcut */}
-        <Link href="/profile/projects">
-          <div className="group relative overflow-hidden rounded-xl border border-primary-main/30 bg-gradient-to-br from-gray-900 to-gray-900 shadow-lg transition-all hover:scale-[1.01] hover:border-primary-main/50 hover:shadow-primary-main/10">
-            {/* Background Glow */}
-            <div className="absolute top-0 right-0 -mt-8 -mr-8 h-32 w-32 rounded-full bg-primary-main/10 blur-3xl transition-all group-hover:bg-primary-main/20" />
-            
-            <div className="relative p-5 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary-main/10 border border-primary-main/20 shadow-inner group-hover:bg-primary-main/20 transition-all">
-                  <Rocket className="h-6 w-6 text-primary-main" />
+          <div className="space-y-3">
+            {/* Blue Check Badge */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:bg-white/[0.07] transition-colors relative overflow-hidden">
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:border-blue-500/50 transition-colors">
+                  <CheckCircle className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
-                  <h4 className="text-lg font-bold text-white group-hover:text-primary-main transition-colors">
-                    My Projects
+                  <h4 className="font-bold text-white text-sm group-hover:text-blue-400 transition-colors">
+                    Blue Check
                   </h4>
-                  <p className="text-sm text-gray-400">
-                    Track your Fairlaunch & Presale campaigns
-                  </p>
+                  <p className="text-xs text-gray-500">Premium verification badge</p>
                 </div>
               </div>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 text-gray-400 opacity-50 transition-all group-hover:bg-primary-main group-hover:text-white group-hover:opacity-100">
-                <ArrowRight size={16} />
+              <div
+                className={`px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide ${
+                  profile.bluecheck_status === 'active'
+                    ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+                    : 'bg-white/5 border-white/10 text-gray-500'
+                }`}
+              >
+                {profile.bluecheck_status === 'active' ? 'Unlocked' : 'Locked'}
               </div>
+
+              {/* Link Wrapper */}
+              <Link href="/profile/blue-check" className="absolute inset-0 z-20" />
+            </div>
+
+            {/* Developer KYC Badge */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:bg-white/[0.07] transition-colors relative overflow-hidden">
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 group-hover:border-yellow-500/50 transition-colors">
+                  <Shield className="w-5 h-5 text-yellow-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm group-hover:text-yellow-400 transition-colors">
+                    Developer KYC
+                  </h4>
+                  <p className="text-xs text-gray-500">Required for creator</p>
+                </div>
+              </div>
+              <div
+                className={`px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide ${
+                  profile.kyc_status === 'verified'
+                    ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+                    : 'bg-white/5 border-white/10 text-gray-500'
+                }`}
+              >
+                {profile.kyc_status === 'verified' ? 'Unlocked' : 'Locked'}
+              </div>
+
+              {/* Link Wrapper */}
+              <Link href="/profile/kyc" className="absolute inset-0 z-20" />
+            </div>
+
+            {/* My Projects Badge (Placeholder logic for now) */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:bg-white/[0.07] transition-colors relative overflow-hidden">
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20 group-hover:border-purple-500/50 transition-colors">
+                  <Rocket className="w-5 h-5 text-purple-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm group-hover:text-purple-400 transition-colors">
+                    My Projects
+                  </h4>
+                  <p className="text-xs text-gray-500">Track your projects</p>
+                </div>
+              </div>
+              <div className="px-3 py-1 rounded-full border bg-cyan-500/10 border-cyan-500/30 text-cyan-400 text-[10px] font-bold uppercase tracking-wide">
+                Unlocked
+              </div>
+
+              {/* Link Wrapper */}
+              <Link href="/profile/projects" className="absolute inset-0 z-20" />
             </div>
           </div>
-        </Link>
+        </div>
 
-        {/* Wallet Management */}
-        <div className="space-y-3">
+        {/* Wallets Section */}
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-heading-md text-text-primary">Wallets</h3>
+            <h3 className="text-lg font-bold text-white">Wallets</h3>
             <Link
               href="/profile/wallets"
-              className="text-body-sm text-primary-main hover:underline"
+              className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
             >
               Manage
             </Link>
           </div>
 
           {primaryWallet ? (
-            <div className="relative overflow-hidden rounded-xl border border-primary-main/30 bg-gradient-to-br from-gray-900 via-gray-900 to-primary-main/10 p-5 shadow-[0_0_30px_rgba(var(--primary-rgb),0.05)]">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-primary-main/10 rounded-lg text-primary-main">
-                    <Wallet size={16} />
-                  </div>
-                  <span className="text-sm font-medium text-primary-main">Primary Wallet</span>
-                </div>
-                <div className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-primary-main text-white">
-                  {primaryWallet.network}
-                </div>
+            <div className="bg-black border border-cyan-500/30 rounded-xl p-5 relative overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.05)]">
+              {/* Glowing border effect */}
+              <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500" />
+
+              <div className="flex items-center gap-2 mb-3">
+                <Wallet className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
+                  Primary Wallet
+                </span>
               </div>
-              <div className="space-y-1">
-                <h4 className="font-mono text-lg text-white font-medium tracking-tight break-all">
+
+              <div className="flex items-center justify-between gap-4">
+                <code className="text-sm text-white font-mono bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 w-full overflow-hidden text-ellipsis">
                   {primaryWallet.address}
-                </h4>
-                <p className="text-sm text-gray-500">
-                  {primaryWallet.label || 'No label set'}
-                </p>
+                </code>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => copyToClipboard(primaryWallet.address)}
+                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                  <button className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
-            <Card>
-              <CardContent className="text-center py-6">
-                <p className="text-body-sm text-text-secondary mb-3">No primary wallet set</p>
-                <Link href="/profile/wallets">
-                  <button className="px-4 py-2 bg-primary-main text-primary-text rounded-md text-body-sm font-medium hover:bg-primary-hover transition-colors">
-                    Add Wallet
-                  </button>
-                </Link>
-              </CardContent>
-            </Card>
+            <div className="bg-white/5 border border-white/10 border-dashed rounded-xl p-6 text-center">
+              <p className="text-sm text-gray-400 mb-4">No primary wallet connected</p>
+              <Link href="/profile/wallets">
+                <button className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-bold transition-colors">
+                  Connect Wallet
+                </button>
+              </Link>
+            </div>
           )}
 
-          {profile.wallets.length > 1 && (
-            <p className="text-caption text-text-secondary">
-              +{profile.wallets.length - 1} more wallet{profile.wallets.length > 2 ? 's' : ''}
-            </p>
-          )}
+          <div className="grid grid-cols-2 gap-3">
+            <Link href="/profile/wallets">
+              <button className="w-full py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-sm font-bold text-white flex items-center justify-center gap-2">
+                <Plus className="w-4 h-4" />
+                Add Wallet
+              </button>
+            </Link>
+            <button className="w-full py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-sm font-bold text-white flex items-center justify-center gap-2">
+              <Plus className="w-4 h-4" />
+              Connect
+            </button>
+          </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/profile/wallets">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-6 text-center">
-                <svg
-                  className="w-8 h-8 text-primary-main mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                <h4 className="text-heading-sm">Add Wallet</h4>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/profile/security">
-            <Card hover className="h-full">
-              <CardContent className="flex flex-col items-center justify-center py-6 text-center">
-                <svg
-                  className="w-8 h-8 text-primary-main mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-                <h4 className="text-heading-sm">Security</h4>
-              </CardContent>
-            </Card>
-          </Link>
+        {/* Transaction History Button */}
+        <div className="pt-4">
+          <button className="w-full py-4 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 border border-white/10 hover:border-white/20 transition-all text-center group">
+            <span className="text-sm font-bold text-white group-hover:text-cyan-400 transition-colors flex items-center justify-center gap-2">
+              Transaction History
+            </span>
+          </button>
         </div>
       </PageContainer>
     </div>

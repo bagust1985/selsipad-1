@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Shield, TrendingUp, Loader2 } from 'lucide-react';
 import { SBTVerifyCard } from '@/components/staking/SBTVerifyCard';
 import { StakePanel } from '@/components/staking/StakePanel';
@@ -56,21 +57,33 @@ export default function SBTStakingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 py-12">
-      <div className="container mx-auto px-4 max-w-4xl">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-purple-500/20 rounded-lg">
-              <Shield className="w-8 h-8 text-purple-400" />
-            </div>
+    <div className="min-h-screen bg-black text-white pb-20 font-sans selection:bg-cyan-500/30">
+      <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-gray-400 hover:text-white transition-colors">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </Link>
             <div>
-              <h1 className="text-3xl font-bold text-white">SBT Staking Pool</h1>
-              <p className="text-gray-400">Proof of Human Verification</p>
+              <h1 className="text-xl font-bold text-white">SBT Staking Pool</h1>
+              <p className="text-xs text-gray-500 font-medium">Proof of Human Verification</p>
             </div>
           </div>
         </div>
+      </div>
 
+      <div className="container mx-auto px-4 max-w-4xl py-12">
         {/* Pool Stats */}
         {rewardInfo && (
           <div className="grid grid-cols-3 gap-4 mb-8">

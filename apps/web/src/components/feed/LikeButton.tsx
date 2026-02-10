@@ -53,22 +53,18 @@ export function LikeButton({ postId, initialLiked, initialCount }: LikeButtonPro
     <button
       onClick={handleLike}
       disabled={loading}
-      className={`flex items-center gap-2 transition-colors group ${loading ? 'opacity-50' : ''}`}
+      className={`group/like flex items-center gap-1.5 transition-colors ${loading ? 'opacity-50' : ''} ${liked ? 'text-pink-500' : 'text-gray-500 hover:text-pink-500'}`}
     >
       <div
         className={`p-2 rounded-full transition-colors ${
-          liked
-            ? 'text-red-500 group-hover:bg-red-500/10'
-            : 'text-gray-500 group-hover:text-red-500 group-hover:bg-red-500/10'
+          liked ? 'bg-pink-500/10' : 'group-hover/like:bg-pink-500/10'
         }`}
       >
         <Heart
-          className={`w-[18px] h-[18px] transition-transform ${liked ? 'fill-current scale-110' : ''}`}
+          className={`w-[18px] h-[18px] transition-transform ${liked ? 'fill-current scale-110' : 'group-hover/like:scale-110'}`}
         />
       </div>
-      <span className={`text-sm ${liked ? 'text-red-500' : 'text-gray-500'}`}>
-        {count > 0 ? formatCount(count) : ''}
-      </span>
+      <span className="text-sm font-medium">{count > 0 ? formatCount(count) : ''}</span>
     </button>
   );
 }

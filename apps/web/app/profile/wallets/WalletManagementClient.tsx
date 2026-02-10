@@ -103,14 +103,32 @@ export function WalletManagementClient({ initialWallets }: WalletManagementClien
   };
 
   return (
-    <div className="min-h-screen bg-bg-page pb-20">
-      <PageHeader
-        showBack
-        title="Wallet Management"
-        actions={
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-cyan-500/30">
+      <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-white/10">
+        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.history.back()}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h1 className="text-xl font-bold text-white">Wallet Management</h1>
+          </div>
           <button
             onClick={() => setAddSheetOpen(true)}
-            className="p-2 text-primary-main hover:bg-bg-elevated rounded-md transition-colors"
+            className="p-2 text-cyan-400 hover:bg-white/10 rounded-md transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -121,70 +139,67 @@ export function WalletManagementClient({ initialWallets }: WalletManagementClien
               />
             </svg>
           </button>
-        }
-      />
+        </div>
+      </div>
 
       <PageContainer className="py-4 space-y-4">
         {/* Wallet List */}
         {wallets.map((wallet) => (
-          <Card
+          <div
             key={wallet.id}
-            variant={wallet.is_primary ? 'bordered' : 'default'}
-            className={wallet.is_primary ? 'border-l-4 border-primary-main' : ''}
+            className={`bg-white/5 border border-white/10 rounded-xl overflow-hidden mb-4 ${
+              wallet.is_primary ? 'border-l-4 border-l-cyan-500' : ''
+            }`}
           >
-            <CardContent>
+            <div className="p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-heading-sm font-mono truncate">{wallet.address}</h3>
+                    <h3 className="text-sm font-mono truncate text-gray-200">{wallet.address}</h3>
                     {wallet.is_primary && (
-                      <span className="px-2 py-0.5 bg-primary-soft/20 text-primary-main text-caption rounded-full border border-primary-main/30 flex-shrink-0">
+                      <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded-full border border-cyan-500/30 flex-shrink-0">
                         Primary
                       </span>
                     )}
                     {wallet.wallet_role === 'PRIMARY' && (
-                      <span className="px-2 py-0.5 bg-success-soft/20 text-success-main text-caption rounded-full border border-success-main/30 flex-shrink-0">
+                      <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30 flex-shrink-0">
                         Identity
                       </span>
                     )}
                     {wallet.wallet_role === 'SECONDARY' && (
-                      <span className="px-2 py-0.5 bg-bg-elevated text-text-secondary text-caption rounded-full border border-border-subtle flex-shrink-0">
+                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full border border-purple-500/30 flex-shrink-0">
                         Feature Wallet
                       </span>
                     )}
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-bg-elevated text-text-secondary text-caption rounded-full">
+                    <span className="px-2 py-0.5 bg-white/10 text-gray-300 text-xs rounded-full">
                       {wallet.network}
                     </span>
-                    {wallet.label && (
-                      <span className="text-caption text-text-tertiary">{wallet.label}</span>
-                    )}
+                    {wallet.label && <span className="text-xs text-gray-500">{wallet.label}</span>}
                   </div>
                 </div>
 
                 <ActionMenu items={getMenuItems(wallet)} />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
 
         {/* Info Note */}
-        <Card variant="bordered" className="border-l-4 border-status-info-text">
-          <CardContent>
-            <div className="space-y-2">
-              <p className="text-body-sm text-text-secondary">
-                💡 <strong>Identity Wallet (EVM):</strong> Your primary wallet for login, profile,
-                and transactions. Cannot be removed.
-              </p>
-              <p className="text-body-sm text-text-secondary">
-                💡 <strong>Feature Wallets (Solana):</strong> Additional wallets for chain-specific
-                features like Bonding Curve. Can be removed anytime.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-blue-900/20 border-l-4 border-blue-500 rounded-r-xl p-4">
+          <div className="space-y-2">
+            <p className="text-sm text-blue-200">
+              💡 <strong>Identity Wallet (EVM):</strong> Your primary wallet for login, profile, and
+              transactions. Cannot be removed.
+            </p>
+            <p className="text-sm text-blue-200">
+              💡 <strong>Feature Wallets (Solana):</strong> Additional wallets for chain-specific
+              features like Bonding Curve. Can be removed anytime.
+            </p>
+          </div>
+        </div>
       </PageContainer>
 
       {/* Add Wallet Bottom Sheet */}

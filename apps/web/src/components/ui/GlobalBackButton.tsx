@@ -7,8 +7,18 @@ export function GlobalBackButton() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Don't show on homepage
-  if (pathname === '/') return null;
+  // Don't show on homepage or pages with custom headers
+  if (
+    pathname === '/' ||
+    pathname.startsWith('/feed') ||
+    pathname.startsWith('/profile') ||
+    pathname.startsWith('/rewards') ||
+    pathname.startsWith('/lock') ||
+    pathname.startsWith('/staking') ||
+    pathname.startsWith('/create')
+  ) {
+    return null;
+  }
 
   return (
     <button

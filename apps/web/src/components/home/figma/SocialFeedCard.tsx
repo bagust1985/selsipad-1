@@ -63,9 +63,7 @@ export function SocialFeedCard() {
                 <div className="flex-1">
                   <div className="flex items-center gap-1">
                     <p className="text-sm font-semibold text-[#39AEC4]">@{post.author.username}</p>
-                    {post.author.bluecheck === 'active' && (
-                      <span className="text-xs text-blue-400">✓</span>
-                    )}
+                    {post.author.bluecheck && <span className="text-xs text-blue-400">✓</span>}
                   </div>
                   <p className="text-xs text-gray-500">
                     {formatDistance(new Date(post.created_at), new Date(), { addSuffix: true })}
@@ -74,7 +72,7 @@ export function SocialFeedCard() {
               </div>
 
               {/* Content */}
-              <p className="text-sm sm:text-base text-gray-200 mb-3 whitespace-pre-wrap line-clamp-3">
+              <p className="text-gray-100 mb-3 whitespace-pre-wrap line-clamp-3 text-[15px] leading-relaxed font-normal tracking-wide font-sans">
                 {post.content}
               </p>
 

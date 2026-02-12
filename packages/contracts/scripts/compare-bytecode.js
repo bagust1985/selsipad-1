@@ -7,7 +7,7 @@ async function main() {
 
   // Contracts to check
   const deployedContract = '0xa547bC5Ea05Daa1e13492887ebfc3768F1446500';
-  const factory = '0x12c426d52B936c799ea3b1c28d0979d4CDbCB05E';
+  const factory = '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175';
 
   console.log('Deployed Fairlaunch:', deployedContract);
   console.log('Factory:', factory);

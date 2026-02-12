@@ -13,11 +13,11 @@ import TeamVestingABI from './abis/TeamVesting.json';
 export const FACTORY_ADDRESSES: Record<string, Address> = {
   localhost: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512', // Local Hardhat
   ethereum: '0x0000000000000000000000000000000000000000', // TBD
-  bnb: '0x0000000000000000000000000000000000000000',      // TBD
-  base: '0x0000000000000000000000000000000000000000',     // TBD
-  sepolia: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE',  // ✅ Deployed 2026-01-29
-  bsc_testnet: '0x10250DAee0baB6bf0f776Ad17b11E09dA9dB2B81', // ✅ Deployed 2026-02-01 (Fixed LP calc)
-  base_sepolia: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // ✅ Deployed 2026-01-29
+  bnb: '0x0000000000000000000000000000000000000000', // TBD
+  base: '0x0000000000000000000000000000000000000000', // TBD
+  sepolia: '0x53850a56397379Da8572A6a47003bca88bB52A24', // ✅ Deployed 2026-02-12 (V2 Router Fix)
+  bsc_testnet: '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175', // ✅ Deployed 2026-02-12 (Pair Pre-Create Fix)
+  base_sepolia: '0xeEf8C1da1b94111237c419AB7C6cC30761f31572', // ✅ Deployed 2026-02-12 (Full Infra)
 } as const;
 
 // ===== TYPE DEFINITIONS =====
@@ -88,7 +88,7 @@ const DEX_IDS: Record<string, `0x${string}`> = {
  * Deployment fees by network (in native token)
  */
 const DEPLOYMENT_FEES: Record<string, bigint> = {
-  localhost: parseEther('0.01'),    // Local testing
+  localhost: parseEther('0.01'), // Local testing
   ethereum: parseEther('0.1'),
   bnb: parseEther('0.2'),
   base: parseEther('0.05'),
@@ -106,12 +106,12 @@ export function getPaymentTokenAddress(token: string, network: string): Address 
   if (token === 'NATIVE') {
     return '0x0000000000000000000000000000000000000000';
   }
-  
+
   const address = PAYMENT_TOKEN_ADDRESSES[network]?.[token];
   if (!address) {
     throw new Error(`Payment token ${token} not supported on ${network}`);
   }
-  
+
   return address;
 }
 
@@ -121,12 +121,12 @@ export function getPaymentTokenAddress(token: string, network: string): Address 
 export function getDexId(platform: string): `0x${string}` {
   const normalized = platform.toLowerCase();
   const dexId = DEX_IDS[normalized];
-  
+
   if (!dexId) {
     // Default to pancakeswap
     return DEX_IDS.pancakeswap!;
   }
-  
+
   return dexId;
 }
 
@@ -142,7 +142,10 @@ export function getDeploymentFee(network: string): bigint {
 /**
  * Parse wizard data to contract parameters
  */
-export function parseWizardDataToContractParams(wizardData: any, walletAddress: Address): {
+export function parseWizardDataToContractParams(
+  wizardData: any,
+  walletAddress: Address
+): {
   params: CreateFairlaunchParams;
   vestingParams: TeamVestingParams;
   lpPlan: LPLockPlan;
@@ -153,10 +156,7 @@ export function parseWizardDataToContractParams(wizardData: any, walletAddress: 
   // Parse CreateFairlaunchParams struct
   const params: CreateFairlaunchParams = {
     projectToken: wizardData.params?.token_address as Address,
-    paymentToken: getPaymentTokenAddress(
-      wizardData.params?.payment_token || 'NATIVE',
-      network
-    ),
+    paymentToken: getPaymentTokenAddress(wizardData.params?.payment_token || 'NATIVE', network),
     softcap: parseEther(wizardData.params?.softcap || '1'),
     tokensForSale: parseEther(wizardData.params?.tokens_for_sale || '1000000'),
     minContribution: parseEther(wizardData.params?.min_contribution || '0.01'),
@@ -170,13 +170,13 @@ export function parseWizardDataToContractParams(wizardData: any, walletAddress: 
   // Parse TeamVestingParams struct
   const vestingSchedule = wizardData.vesting?.schedule || [];
   const teamAllocation = wizardData.vesting?.team_allocation || '0';
-  
+
   const vestingParams: TeamVestingParams = {
     beneficiary: walletAddress,
     startTime: params.endTime, // Start vesting after fairlaunch ends
     durations: vestingSchedule.map((s: any) => BigInt(s.month * 30 * 24 * 3600)),
-    amounts: vestingSchedule.map((s: any) => 
-      (parseEther(teamAllocation) * BigInt(s.percentage)) / 100n
+    amounts: vestingSchedule.map(
+      (s: any) => (parseEther(teamAllocation) * BigInt(s.percentage)) / 100n
     ),
   };
 
@@ -185,11 +185,11 @@ export function parseWizardDataToContractParams(wizardData: any, walletAddress: 
     lockMonths: BigInt(wizardData.liquidity?.lp_lock_months || 12),
     // Convert percentage (70) to basis points (7000) if needed
     liquidityPercent: BigInt(
-      wizardData.liquidity?.liquidity_percent 
-        ? (wizardData.liquidity.liquidity_percent < 1000 
-            ? wizardData.liquidity.liquidity_percent * 100  // It's a percentage, convert to bps
-            : wizardData.liquidity.liquidity_percent)        // Already in bps
-        : 7000  // Default: 70% = 7000 bps
+      wizardData.liquidity?.liquidity_percent
+        ? wizardData.liquidity.liquidity_percent < 1000
+          ? wizardData.liquidity.liquidity_percent * 100 // It's a percentage, convert to bps
+          : wizardData.liquidity.liquidity_percent // Already in bps
+        : 7000 // Default: 70% = 7000 bps
     ),
     dexId: getDexId(wizardData.liquidity?.listing_platform || 'pancakeswap'),
   };
@@ -248,7 +248,8 @@ export const FAIRLAUNCH_STATUS_COLORS: Record<FairlaunchStatus, string> = {
   [FairlaunchStatus.UPCOMING]: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
   [FairlaunchStatus.LIVE]: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
   [FairlaunchStatus.ENDED]: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-  [FairlaunchStatus.SUCCESS]: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
+  [FairlaunchStatus.SUCCESS]:
+    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
   [FairlaunchStatus.FAILED]: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   [FairlaunchStatus.CANCELLED]: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
 };

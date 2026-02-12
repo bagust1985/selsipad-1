@@ -16,8 +16,14 @@ const FactoryABI = ['function adminExecutor() view returns (address)'];
 const FACTORY_ADDRESSES: Record<string, string> = {
   '97':
     process.env.NEXT_PUBLIC_FAIRLAUNCH_FACTORY_BSC_TESTNET ||
-    '0x837532947c93536CD7A13AC2aB66A5136C0c68C0',
+    '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175', // Pair Pre-Create Fix (Feb 12)
   '56': process.env.NEXT_PUBLIC_FAIRLAUNCH_FACTORY_BSC_MAINNET || '',
+  '11155111':
+    process.env.NEXT_PUBLIC_FAIRLAUNCH_FACTORY_SEPOLIA ||
+    '0x53850a56397379Da8572A6a47003bca88bB52A24', // V2 Router Fix (Feb 12)
+  '84532':
+    process.env.NEXT_PUBLIC_FAIRLAUNCH_FACTORY_BASE_SEPOLIA ||
+    '0xeEf8C1da1b94111237c419AB7C6cC30761f31572', // Full Infra Deploy (Feb 12)
 };
 
 const ADMIN_ROLE = ethers.id('ADMIN_ROLE');

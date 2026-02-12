@@ -8,8 +8,7 @@ const hre = require('hardhat');
 //
 // Defaults to the new BSC testnet factory deployed in this session.
 
-const INGEST =
-  'http://localhost:7242/ingest/e157f851-f607-48b5-9469-ddb77df06b07';
+const INGEST = 'http://localhost:7242/ingest/e157f851-f607-48b5-9469-ddb77df06b07';
 
 function postLog(payload) {
   // #region agent log (debug-session)
@@ -35,7 +34,7 @@ function postLog(payload) {
 
 async function main() {
   const factoryAddress =
-    process.env.FAIRLAUNCH_FACTORY_ADDRESS || '0x12c426d52B936c799ea3b1c28d0979d4CDbCB05E';
+    process.env.FAIRLAUNCH_FACTORY_ADDRESS || '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175';
 
   const artifact = await hre.artifacts.readArtifact('FairlaunchFactory');
   const iface = new hre.ethers.Interface(artifact.abi);
@@ -119,4 +118,3 @@ main().catch((e) => {
   });
   process.exitCode = 1;
 });
-

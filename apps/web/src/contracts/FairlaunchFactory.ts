@@ -7,9 +7,9 @@ import { Address } from 'viem';
  * FairlaunchFactory addresses per network
  */
 export const FAIRLAUNCH_FACTORY_ADDRESS: Record<number, Address> = {
-  97: '0x5Fa2528164baF18cA6Cd859701d7a5a6ad197DEa', // BSC Testnet - FeeSplitter V2 (Feb 7)
-  11155111: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Sepolia
-  84532: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Base Sepolia
+  97: '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175', // BSC Testnet - Pair Pre-Create Fix (Feb 12)
+  11155111: '0x53850a56397379Da8572A6a47003bca88bB52A24', // Sepolia - V2 Router Fix (Feb 12)
+  84532: '0xeEf8C1da1b94111237c419AB7C6cC30761f31572', // Base Sepolia - Full Infra Deploy (Feb 12)
 } as const;
 
 /**
@@ -17,8 +17,8 @@ export const FAIRLAUNCH_FACTORY_ADDRESS: Record<number, Address> = {
  */
 export const SIMPLE_TOKEN_FACTORY_ADDRESS: Record<number, Address> = {
   97: '0x28DBa6468e7e5AD805374244B5D528375fC4610A', // BSC Testnet
-  11155111: '0x2aDF8E4a91dC34d992e12FA51d78a4F7E06a5D6b', // Sepolia
-  84532: '0x2aDF8E4a91dC34d992e12FA51d78a4F7E06a5D6b', // Base Sepolia
+  11155111: '0x54Ce7D20d072BBbF0F8B58bf9210af763C72bD2b', // Sepolia (Feb 12 V2 Router Fix)
+  84532: '0x99E428b66aEA77833C8c84375758fCEa73c998C7', // Base Sepolia (Feb 12)
 } as const;
 
 /**
@@ -26,9 +26,8 @@ export const SIMPLE_TOKEN_FACTORY_ADDRESS: Record<number, Address> = {
  */
 export const FEE_SPLITTER_ADDRESS: Record<number, Address> = {
   97: '0x3301b82B4559F1607DA83FA460DC9820CbE1344e', // BSC Testnet
-
-  11155111: '0x99470899b8C0e229d79ad0c96619210CbDD07755', // Sepolia
-  84532: '0x99470899b8C0e229d79ad0c96619210CbDD07755', // Base Sepolia
+  11155111: '0x5f3cf3D4fD540EFb2eEDA43921292fD08608518D', // Sepolia (Feb 12 V2 Router Fix)
+  84532: '0x069b5487A3CAbD868B498c34DA2d7cCfc2D3Dc4C', // Base Sepolia (Feb 12)
 } as const;
 
 /**

@@ -1,0 +1,21 @@
+{
+  "network": "sepolia",
+  "chainId": "11155111",
+  "timestamp": "2026-02-12T08:10:49.000Z",
+  "deployer": "0x95D94D86CfC550897d2b80672a3c94c12429a90D",
+  "contracts": {
+    "feeSplitter": "0x5f3cf3D4fD540EFb2eEDA43921292fD08608518D",
+    "lpLocker": "0x151f010682D2991183E6235CA396c1c99cEF5A30",
+    "escrowVault": "0xe80A83108DCf74FcAbe0F5566FBe0d585B670577",
+    "tokenFactory": "0x54Ce7D20d072BBbF0F8B58bf9210af763C72bD2b",
+    "fairlaunchFactory": "0x53850a56397379Da8572A6a47003bca88bB52A24",
+    "presaleFactory": "0xfA9105D94BD7A7410b1e163e1526CE831c61e984"
+  },
+  "config": {
+    "treasury": "0x95D94D86CfC550897d2b80672a3c94c12429a90D",
+    "adminExecutor": "0x95D94D86CfC550897d2b80672a3c94c12429a90D",
+    "deploymentFee": "0.01",
+    "tokenCreationFee": "0.01"
+  },
+  "gasCost": "0.069971865041270025"
+}

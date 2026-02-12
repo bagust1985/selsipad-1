@@ -4,8 +4,7 @@ async function main() {
   console.log('🧪 E2E Fairlaunch Test (Router Fix Verification)\n');
   console.log('='.repeat(60));
 
-  const AGENT_LOG_ENDPOINT =
-    'http://localhost:7243/ingest/653da906-68d5-4a8f-a095-0a4e33372f15';
+  const AGENT_LOG_ENDPOINT = 'http://localhost:7243/ingest/653da906-68d5-4a8f-a095-0a4e33372f15';
   const AGENT_RUN_ID = process.env.AGENT_RUN_ID || 'run1';
 
   // Get signers from configured accounts
@@ -20,7 +19,7 @@ async function main() {
 
   // Config (allow override via env)
   const FACTORY_ADDRESS =
-    process.env.FAIRLAUNCH_FACTORY_ADDRESS || '0x12c426d52B936c799ea3b1c28d0979d4CDbCB05E';
+    process.env.FAIRLAUNCH_FACTORY_ADDRESS || '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175';
   const LP_LOCKER_ADDRESS =
     process.env.LP_LOCKER_ADDRESS || '0xD492CbD76150C805bF6b6f6D674827e27981eD63';
 
@@ -326,7 +325,8 @@ async function main() {
   const expectedFee = (totalRaised * 500n) / 10000n; // 5%
   const feeCollectedTotalBn = feeCollectedTotal ? BigInt(feeCollectedTotal) : null;
   const feeSplitSum = feeSplitEvents.reduce((acc, e) => acc + BigInt(e.amount || '0'), 0n);
-  const feeMatchByEvents = feeCollectedTotalBn !== null ? feeCollectedTotalBn === expectedFee : null;
+  const feeMatchByEvents =
+    feeCollectedTotalBn !== null ? feeCollectedTotalBn === expectedFee : null;
 
   console.log('\n✅ Fee Distribution Check:');
   console.log('   Total raised:', hre.ethers.formatEther(totalRaised), 'BNB');
@@ -448,7 +448,9 @@ async function main() {
   console.log('  ✅ Contribution successful');
   console.log('  ✅ Finalize completed');
   console.log(
-    `  ${feeMatchByEvents === true ? '✅' : feeMatchByEvents === false ? '❌' : '❓'} Fee distributed (verified by events)`
+    `  ${
+      feeMatchByEvents === true ? '✅' : feeMatchByEvents === false ? '❌' : '❓'
+    } Fee distributed (verified by events)`
   );
   console.log('  ✅ Correct DEX router used');
   console.log('  ✅ LP tokens locked');

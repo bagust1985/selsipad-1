@@ -21,8 +21,14 @@ const supabase = createClient(
 const FACTORY_ADDRESSES = {
   bsc_testnet:
     process.env.NEXT_PUBLIC_FAIRLAUNCH_FACTORY_BSC_TESTNET ||
-    '0x5Fa2528164baF18cA6Cd859701d7a5a6ad197DEa', // FeeSplitter V2 (Feb 7)
+    '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175', // Pair Pre-Create Fix (Feb 12)
   bnb: process.env.NEXT_PUBLIC_FAIRLAUNCH_FACTORY_BSC_MAINNET,
+  sepolia:
+    process.env.NEXT_PUBLIC_FAIRLAUNCH_FACTORY_SEPOLIA ||
+    '0x53850a56397379Da8572A6a47003bca88bB52A24', // V2 Router Fix (Feb 12)
+  base_sepolia:
+    process.env.NEXT_PUBLIC_FAIRLAUNCH_FACTORY_BASE_SEPOLIA ||
+    '0xeEf8C1da1b94111237c419AB7C6cC30761f31572', // Full Infra Deploy (Feb 12)
 };
 
 const ESCROW_VAULT_ADDRESS =
@@ -227,9 +233,16 @@ export async function POST(request: NextRequest) {
       signer
     );
 
-    const factoryAddress = (
-      chainId === 97 ? FACTORY_ADDRESSES.bsc_testnet : FACTORY_ADDRESSES.bnb
-    ) as string;
+    const factoryAddressMap: Record<number, string | undefined> = {
+      97: FACTORY_ADDRESSES.bsc_testnet,
+      56: FACTORY_ADDRESSES.bnb,
+      11155111: FACTORY_ADDRESSES.sepolia,
+      84532: FACTORY_ADDRESSES.base_sepolia,
+    };
+    const factoryAddress = factoryAddressMap[chainId] as string;
+    if (!factoryAddress) {
+      throw new Error(`No factory address configured for chain ${chainId}`);
+    }
 
     const adminBalance = await (tokenContract as any).balanceOf(signer.address);
     console.log('[Admin Deploy] Admin token balance:', ethers.formatUnits(adminBalance, 18));

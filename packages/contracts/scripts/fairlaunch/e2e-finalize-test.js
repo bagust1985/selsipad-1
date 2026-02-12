@@ -9,7 +9,7 @@
 const hre = require('hardhat');
 
 // ─── addresses (BSC Testnet, just deployed) ───
-const FACTORY = '0x5Fa2528164baF18cA6Cd859701d7a5a6ad197DEa';
+const FACTORY = '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175';
 const FEE_SPLITTER = '0x3301b82B4559F1607DA83FA460DC9820CbE1344e';
 const LP_LOCKER = '0x905A81F09c8ED76e71e82933f9b4978E41ac1b9F';
 const DEX_ROUTER = '0xD99D1c33F9fC3444f8101754aBC46c52416550D1'; // PancakeSwap V2 Testnet

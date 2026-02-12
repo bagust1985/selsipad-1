@@ -34,6 +34,7 @@ interface IUniswapV2Router02 {
 
 interface IUniswapV2Factory {
     function getPair(address tokenA, address tokenB) external view returns (address pair);
+    function createPair(address tokenA, address tokenB) external returns (address pair);
 }
 
 interface IFeeSplitter {
@@ -182,8 +183,10 @@ contract Fairlaunch is AccessControl, ReentrancyGuard {
             ? IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E) // BSC Mainnet
             : (block.chainid == 97)
             ? IUniswapV2Router02(0xD99D1c33F9fC3444f8101754aBC46c52416550D1) // BSC Testnet (V2)
-            : (block.chainid == 1 || block.chainid == 11155111)
-            ? IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D) // Ethereum / Sepolia
+            : (block.chainid == 1)
+            ? IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D) // Ethereum Mainnet
+            : (block.chainid == 11155111)
+            ? IUniswapV2Router02(0xeE567Fe1712Faf6149d80dA1E6934E354124CfE3) // Sepolia (V2Router02)
             : (block.chainid == 8453 || block.chainid == 84532)
             ? IUniswapV2Router02(0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24) // Base / Base Sepolia
             : IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D); // Default to Uniswap
@@ -427,8 +430,17 @@ contract Fairlaunch is AccessControl, ReentrancyGuard {
         // Approve router
         IERC20(projectToken).approve(address(dexRouter), tokenAmount);
 
+        IUniswapV2Factory dexFactory = IUniswapV2Factory(dexRouter.factory());
+
         if (paymentToken == address(0)) {
             // Native pair (ETH/BNB)
+            address weth = dexRouter.WETH();
+
+            // Pre-create pair if it doesn't exist (some routers don't auto-create from contract calls)
+            if (dexFactory.getPair(projectToken, weth) == address(0)) {
+                dexFactory.createPair(projectToken, weth);
+            }
+
             dexRouter.addLiquidityETH{value: fundAmount}(
                 projectToken,
                 tokenAmount,
@@ -438,13 +450,15 @@ contract Fairlaunch is AccessControl, ReentrancyGuard {
                 block.timestamp + 300
             );
 
-            lpToken = IUniswapV2Factory(dexRouter.factory()).getPair(
-                projectToken,
-                dexRouter.WETH()
-            );
+            lpToken = dexFactory.getPair(projectToken, weth);
         } else {
             // ERC20 pair
             IERC20(paymentToken).approve(address(dexRouter), fundAmount);
+
+            // Pre-create pair if it doesn't exist
+            if (dexFactory.getPair(projectToken, paymentToken) == address(0)) {
+                dexFactory.createPair(projectToken, paymentToken);
+            }
             
             dexRouter.addLiquidity(
                 projectToken,
@@ -457,10 +471,7 @@ contract Fairlaunch is AccessControl, ReentrancyGuard {
                 block.timestamp + 300
             );
 
-            lpToken = IUniswapV2Factory(dexRouter.factory()).getPair(
-                projectToken,
-                paymentToken
-            );
+            lpToken = dexFactory.getPair(projectToken, paymentToken);
         }
     }
 

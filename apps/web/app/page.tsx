@@ -6,6 +6,7 @@ import {
   Coins,
   Trophy,
   MessageCircle,
+  Mic,
   User,
   PlusCircle,
 } from 'lucide-react';
@@ -145,6 +146,13 @@ export default function HomePage() {
                   description="Community Updates"
                   color="#39AEC4"
                   href="/feed"
+                />
+                <FeatureListItem
+                  icon={<Mic className="w-6 h-6 sm:w-7 sm:h-7" />}
+                  title="AMA"
+                  description="Ask Me Anything"
+                  color="#39AEC4"
+                  href="/ama"
                 />
               </div>
             </div>

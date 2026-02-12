@@ -43,11 +43,11 @@ interface PrepareFairlaunchResult {
 // Factory addresses per network (from deployment artifacts)
 const FAIRLAUNCH_FACTORY_ADDRESSES: Record<string, string> = {
   ethereum: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
-  sepolia: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Deployed
+  sepolia: '0x53850a56397379Da8572A6a47003bca88bB52A24', // V2 Router Fix (Feb 12)
   bnb: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
-  bsc_testnet: '0x5Fa2528164baF18cA6Cd859701d7a5a6ad197DEa', // FeeSplitter V2 (Feb 7)
+  bsc_testnet: '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175', // Pair Pre-Create Fix (Feb 12)
   base: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
-  base_sepolia: '0x6eA1044Caf6CEdf36A9F7D978384a634a3f04FbE', // Deployed
+  base_sepolia: '0xeEf8C1da1b94111237c419AB7C6cC30761f31572', // Full Infra Deploy (Feb 12)
 };
 
 // Chain IDs

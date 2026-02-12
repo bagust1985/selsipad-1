@@ -13,7 +13,7 @@
 
 const hre = require('hardhat');
 
-const FACTORY = '0x5Fa2528164baF18cA6Cd859701d7a5a6ad197DEa';
+const FACTORY = '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175';
 const LP_LOCKER = '0x905A81F09c8ED76e71e82933f9b4978E41ac1b9F';
 
 function sleep(ms) {

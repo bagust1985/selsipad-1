@@ -1,6 +1,6 @@
 /**
  * Deployer Wallet Configuration
- * 
+ *
  * Manages the hot wallet used for deploying Fairlaunch contracts.
  * This wallet:
  * - Has minimal funds (for gas only)
@@ -72,7 +72,7 @@ export class DeployerWallet {
    */
   async validateBalance(estimatedGas: bigint): Promise<boolean> {
     const balance = await this.getBalance();
-    const required = estimatedGas * BigInt(120) / BigInt(100); // 20% buffer
+    const required = (estimatedGas * BigInt(120)) / BigInt(100); // 20% buffer
     return balance >= required;
   }
 
@@ -107,13 +107,16 @@ export class DeployerWallet {
    * Get network configuration for chain
    */
   static getNetworkConfig(chainId: number) {
-    const configs: Record<number, {
-      name: string;
-      currency: string;
-      feeSplitter: string;
-      platformAdmin: string;
-      explorerUrl: string;
-    }> = {
+    const configs: Record<
+      number,
+      {
+        name: string;
+        currency: string;
+        feeSplitter: string;
+        platformAdmin: string;
+        explorerUrl: string;
+      }
+    > = {
       97: {
         name: 'BSC Testnet',
         currency: 'tBNB',
@@ -131,14 +134,14 @@ export class DeployerWallet {
       11155111: {
         name: 'Sepolia',
         currency: 'SepoliaETH',
-        feeSplitter: '0x99470899b8C0e229d79ad0c96619210CbDD07755',
+        feeSplitter: '0x5f3cf3D4fD540EFb2eEDA43921292fD08608518D',
         platformAdmin: '0x95D94D86CfC550897d2b80672a3c94c12429a90D',
         explorerUrl: 'https://sepolia.etherscan.io',
       },
       84532: {
         name: 'Base Sepolia',
         currency: 'ETH',
-        feeSplitter: '0x99470899b8C0e229d79ad0c96619210CbDD07755',
+        feeSplitter: '0x069b5487A3CAbD868B498c34DA2d7cCfc2D3Dc4C',
         platformAdmin: '0x95D94D86CfC550897d2b80672a3c94c12429a90D',
         explorerUrl: 'https://sepolia.basescan.org',
       },

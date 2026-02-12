@@ -998,8 +998,8 @@
       ]
     },
     "/home/selsipad/final-project/selsipad/packages/contracts/contracts/fairlaunch/Fairlaunch.sol": {
-      "lastModificationDate": 1770521454785,
-      "contentHash": "3d57d3ffe3d9a211d5fc4fba99efdbd0",
+      "lastModificationDate": 1770883692891,
+      "contentHash": "d087f7d5a730a53950e30af93b371983",
       "sourceName": "contracts/fairlaunch/Fairlaunch.sol",
       "solcConfig": {
         "version": "0.8.20",

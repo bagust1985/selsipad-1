@@ -231,6 +231,9 @@ importers:
       agora-rtc-sdk-ng:
         specifier: ^4.24.2
         version: 4.24.2
+      agora-token:
+        specifier: ^2.0.5
+        version: 2.0.5
       axios:
         specifier: ^1.13.4
         version: 1.13.4
@@ -4587,6 +4590,9 @@ packages:
 
   agora-rte-extension@1.2.4:
     resolution: {integrity: sha512-0ovZz1lbe30QraG1cU+ji7EnQ8aUu+Hf3F+a8xPml3wPOyUQEK6CTdxV9kMecr9t+fIDrGeW7wgJTsM1DQE7Nw==}
+
+  agora-token@2.0.5:
+    resolution: {integrity: sha512-0NcbzC3iuutlksv3b4bCMKHrW3pko6gdiGEMRo6APDice24kfXAuWyAlG9hRBrrPBVDShwm9/GUz2Scd3zuZQw==}
 
   ajv@6.12.6:
     resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
@@ -15605,6 +15611,12 @@ snapshots:
       - debug
 
   agora-rte-extension@1.2.4: {}
+
+  agora-token@2.0.5:
+    dependencies:
+      crc-32: 1.2.2
+      cuint: 0.2.2
+      md5: 2.3.0
 
   ajv@6.12.6:
     dependencies:

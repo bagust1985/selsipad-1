@@ -69,46 +69,51 @@ export function FileUpload({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-semibold text-gray-900">
-        {label} {required && <span className="text-red-500">*</span>}
+      <label className="block text-sm font-bold text-white">
+        {label} {required && <span className="text-red-400">*</span>}
       </label>
 
       {!file ? (
-        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
+        <label className="flex flex-col items-center justify-center w-full h-32 border border-dashed border-white/20 rounded-xl cursor-pointer hover:border-cyan-500/50 hover:bg-white/[0.03] transition-all group">
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <Upload className="w-8 h-8 mb-2 text-gray-400" />
-            <p className="text-sm text-gray-600">
-              <span className="font-semibold">Click to upload</span> or drag and drop
+            <Upload className="w-7 h-7 mb-2 text-gray-600 group-hover:text-cyan-400 transition-colors" />
+            <p className="text-sm text-gray-500">
+              <span className="font-semibold text-gray-400 group-hover:text-cyan-400 transition-colors">
+                Click to upload
+              </span>{' '}
+              or drag and drop
             </p>
-            <p className="text-xs text-gray-500 mt-1">JPG, PNG or PDF (max {maxSize}MB)</p>
+            <p className="text-xs text-gray-600 mt-1">JPG, PNG or PDF (max {maxSize}MB)</p>
           </div>
           <input type="file" className="hidden" accept={accept} onChange={handleFileChange} />
         </label>
       ) : (
-        <div className="relative border-2 border-green-500 rounded-lg p-4 bg-green-50">
+        <div className="relative border border-green-500/30 rounded-xl p-4 bg-green-500/5">
           <button
             type="button"
             onClick={handleRemove}
-            className="absolute top-2 right-2 p-1 bg-white rounded-full hover:bg-gray-100 transition-colors"
+            className="absolute top-2 right-2 p-1.5 bg-white/10 rounded-full hover:bg-red-500/20 transition-colors group"
           >
-            <X className="w-4 h-4 text-gray-600" />
+            <X className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-400" />
           </button>
 
           {preview ? (
-            <img src={preview} alt="Preview" className="w-full h-32 object-contain rounded" />
+            <img src={preview} alt="Preview" className="w-full h-32 object-contain rounded-lg" />
           ) : (
             <div className="flex items-center gap-3">
-              <Check className="w-8 h-8 text-green-600" />
+              <div className="w-10 h-10 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                <Check className="w-5 h-5 text-green-400" />
+              </div>
               <div>
-                <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                <p className="text-xs text-gray-600">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p className="text-sm font-medium text-white">{file.name}</p>
+                <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
     </div>
   );
 }

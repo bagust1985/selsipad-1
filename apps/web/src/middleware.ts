@@ -21,15 +21,14 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Use service role to check admin status
+    // Single query: join wallets → profiles to check admin in one round-trip
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user_id from wallets
     const { data: wallet } = await supabase
       .from('wallets')
-      .select('user_id')
+      .select('user_id, profiles:user_id (is_admin)')
       .eq('address', adminWallet)
       .single();
 
@@ -39,12 +38,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Check is_admin from profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('user_id', wallet.user_id)
-      .single();
+    const profile = Array.isArray(wallet.profiles) ? wallet.profiles[0] : wallet.profiles;
 
     // Redirect if not admin
     if (!profile?.is_admin) {

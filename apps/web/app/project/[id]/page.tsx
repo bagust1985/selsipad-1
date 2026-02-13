@@ -267,6 +267,92 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                           ))}
                         </div>
 
+                        {/* Contract Addresses - Transparency Section */}
+                        {(project.token_address ||
+                          project.contract_address ||
+                          project.vesting_address) && (
+                          <div className="rounded-3xl p-6 bg-[#0A0A0C]/40 border border-white/5">
+                            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                              <div className="w-1 h-6 bg-green-500 rounded-full"></div>
+                              Smart Contracts
+                              <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20 ml-2">
+                                Transparent
+                              </span>
+                            </h3>
+                            <div className="space-y-3">
+                              {[
+                                {
+                                  label: 'Token Address',
+                                  address: project.token_address,
+                                  icon: '🪙',
+                                },
+                                {
+                                  label: 'Sale Contract',
+                                  address: project.contract_address,
+                                  icon: '📄',
+                                },
+                                {
+                                  label: 'Vesting Contract',
+                                  address: project.vesting_address,
+                                  icon: '🔒',
+                                },
+                              ]
+                                .filter((item) => item.address)
+                                .map((item, i) => {
+                                  const explorerUrl =
+                                    project.chain === '97'
+                                      ? `https://testnet.bscscan.com/address/${item.address}`
+                                      : project.chain === '56'
+                                        ? `https://bscscan.com/address/${item.address}`
+                                        : project.chain === '1'
+                                          ? `https://etherscan.io/address/${item.address}`
+                                          : `https://testnet.bscscan.com/address/${item.address}`;
+
+                                  return (
+                                    <div
+                                      key={i}
+                                      className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-white/10 transition-colors group"
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-lg">{item.icon}</span>
+                                        <div>
+                                          <p className="text-xs text-gray-500 uppercase tracking-wide">
+                                            {item.label}
+                                          </p>
+                                          <p className="text-sm font-mono text-gray-300">
+                                            {item.address!.slice(0, 6)}...{item.address!.slice(-4)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <a
+                                        href={explorerUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors opacity-60 group-hover:opacity-100"
+                                      >
+                                        View
+                                        <svg
+                                          width="12"
+                                          height="12"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        >
+                                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                          <polyline points="15 3 21 3 21 9" />
+                                          <line x1="10" y1="14" x2="21" y2="3" />
+                                        </svg>
+                                      </a>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        )}
+
                         <div className="rounded-3xl p-6 bg-[#0A0A0C]/40 border border-white/5">
                           <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                             <div className="w-1 h-6 bg-[#39AEC4] rounded-full"></div>

@@ -22,6 +22,8 @@ export interface Project {
   audit_status: 'pass' | 'pending' | null;
   lp_lock: boolean;
   contract_address?: string; // Fairlaunch/Presale contract address
+  token_address?: string; // Token contract address
+  vesting_address?: string; // Vesting contract address
   startDate?: string; // ISO timestamp for countdown
   endDate?: string; // ISO timestamp for countdown
   metadata?: any; // Generic metadata object
@@ -341,6 +343,8 @@ export async function getProjectById(id: string): Promise<Project | null> {
             : null,
         lp_lock: !!(params.lp_lock || params.lp_lock_months),
         contract_address: activeRound.round_address || activeRound.contract_address,
+        token_address: activeRound.token_address || data.token_address,
+        vesting_address: activeRound.vesting_address || params.vesting_address,
         startDate: activeRound.start_at,
         endDate: activeRound.end_at,
         tokenomics: extractTokenomics(params),
@@ -655,18 +659,23 @@ function calculateRealTimeStatus(round: any): 'live' | 'upcoming' | 'ended' {
 }
 
 function extractTokenomics(params: any) {
-  const presale = Number(params.tokens_for_sale || 0);
+  // Handle both fairlaunch (tokens_for_sale) and presale (token_for_sale) field names
+  const presale = Number(params.tokens_for_sale || params.token_for_sale || 0);
   const liquidity = Number(params.liquidity_tokens || 0);
-  const team = Number(params.team_vesting_tokens || 0);
+  // Team allocation: fairlaunch uses team_vesting_tokens, presale uses team_vesting.team_allocation
+  const team = Number(params.team_vesting_tokens || params.team_vesting?.team_allocation || 0);
   // If explicitly provided in params, use it. Otherwise sum components.
   const total = params.total_supply ? Number(params.total_supply) : presale + liquidity + team;
+
+  // Liquidity percent: fairlaunch uses liquidity_percent, presale uses lp_lock.percentage
+  const liquidityPercent = Number(params.liquidity_percent || params.lp_lock?.percentage || 0);
 
   return {
     total_supply: total,
     tokens_for_presale: presale,
     tokens_for_liquidity: liquidity,
     team_allocation: team,
-    liquidity_percent: Number(params.liquidity_percent || 0),
+    liquidity_percent: liquidityPercent,
   };
 }
 

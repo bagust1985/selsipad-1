@@ -61,14 +61,7 @@ export async function getServerSession(): Promise<Session | null> {
   const cookieStore = cookies();
   const sessionToken = cookieStore.get('session_token')?.value;
 
-  console.log('[getServerSession] Cookie check:', {
-    hasSessionToken: !!sessionToken,
-    sessionToken: sessionToken?.substring(0, 10) + '...',
-    allCookies: cookieStore.getAll().map((c) => c.name),
-  });
-
   if (!sessionToken) {
-    console.log('[getServerSession] No session token found');
     return null;
   }
 
@@ -81,35 +74,14 @@ export async function getServerSession(): Promise<Session | null> {
     .eq('session_token', sessionToken)
     .single();
 
-  console.log('[getServerSession] Session query result:', {
-    found: !!session,
-    error: error?.message,
-    sessionId: session?.id,
-    walletId: session?.wallet_id,
-  });
-
   if (error || !session) {
-    console.error('[getServerSession] Session not found or error:', error);
     return null;
   }
 
   // Check if session is expired
   if (new Date(session.expires_at) < new Date()) {
-    console.log('[getServerSession] Session expired');
     return null;
   }
-
-  // Check if session is expired
-  if (new Date(session.expires_at) < new Date()) {
-    console.log('[getServerSession] Session expired');
-    return null;
-  }
-
-  console.log('[getServerSession] Valid session found!', {
-    userId: session.wallets.user_id,
-    address: session.wallet_address,
-    walletId: session.wallet_id,
-  });
 
   return {
     userId: session.wallets.user_id,

@@ -40,10 +40,10 @@ interface UseAMAChatReturn {
   deleteMessageById: (messageId: string) => Promise<void>;
 }
 
-export function useAMAChat(amaId: string): UseAMAChatReturn {
-  const [messages, setMessages] = useState<AMAMessage[]>([]);
+export function useAMAChat(amaId: string, initialMessages?: AMAMessage[]): UseAMAChatReturn {
+  const [messages, setMessages] = useState<AMAMessage[]>(initialMessages || []);
   const [isConnected, setIsConnected] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialMessages?.length);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewerCount, setViewerCount] = useState(0);
@@ -93,7 +93,11 @@ export function useAMAChat(amaId: string): UseAMAChatReturn {
         (payload) => {
           console.log('[AMAChat] New message:', payload.new);
           const newMessage = payload.new as AMAMessage;
-          setMessages((prev) => [...prev, newMessage]);
+          // De-duplicate: only add if not already in state (from optimistic add)
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMessage.id)) return prev;
+            return [...prev, newMessage];
+          });
         }
       )
       .on(
@@ -150,6 +154,12 @@ export function useAMAChat(amaId: string): UseAMAChatReturn {
         const result = await sendAMAMessage(amaId, content.trim());
         if (!result.success) {
           setError(result.error || 'Failed to send message');
+        } else if (result.data) {
+          // Optimistic: add to local state immediately so message appears right away
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === result.data.id)) return prev;
+            return [...prev, result.data as AMAMessage];
+          });
         }
       } catch (err) {
         console.error('[AMAChat] Send error:', err);

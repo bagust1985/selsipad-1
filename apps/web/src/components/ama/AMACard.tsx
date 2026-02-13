@@ -52,48 +52,8 @@ export function AMACard({
 
   return (
     <div
-      className={`group relative rounded-[20px] bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border ${borderColor} overflow-hidden transition-all duration-300 shadow-xl ${glowShadow}`}
+      className={`group relative rounded-[20px] bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border ${borderColor} overflow-hidden transition-all duration-300 shadow-xl ${glowShadow} w-full`}
     >
-      {/* Badges Row */}
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-        {/* Type Badge */}
-        <div
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full backdrop-blur-sm text-[10px] font-bold ${
-            type === 'VIDEO'
-              ? 'bg-purple-500/20 border border-purple-500/30 text-purple-300'
-              : type === 'VOICE'
-                ? 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-300'
-                : 'bg-gray-500/20 border border-gray-500/30 text-gray-300'
-          }`}
-        >
-          {type === 'VIDEO' ? (
-            <Video className="w-3 h-3" />
-          ) : type === 'VOICE' ? (
-            <Mic className="w-3 h-3" />
-          ) : (
-            <MessageSquare className="w-3 h-3" />
-          )}
-          {type}
-        </div>
-
-        {/* Status Badge */}
-        {status === 'LIVE' ? (
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-red-500/20 border border-red-500/30 rounded-full backdrop-blur-sm">
-            <Radio className="w-3 h-3 text-red-400 animate-pulse" />
-            <span className="text-red-400 text-xs font-bold tracking-wide">LIVE</span>
-          </div>
-        ) : status === 'ENDED' ? (
-          <div className="px-3 py-1 bg-white/10 border border-white/20 rounded-full backdrop-blur-sm">
-            <span className="text-gray-400 text-xs font-medium">ENDED</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-[#39AEC4]/20 border border-[#39AEC4]/30 rounded-full backdrop-blur-sm">
-            <Clock className="w-3 h-3 text-[#39AEC4]" />
-            <span className="text-[#39AEC4] text-xs font-bold tracking-wide">UPCOMING</span>
-          </div>
-        )}
-      </div>
-
       {/* Live Glow Effect */}
       {status === 'LIVE' && (
         <div className="absolute inset-0 bg-gradient-to-t from-red-500/5 to-transparent pointer-events-none" />
@@ -101,7 +61,47 @@ export function AMACard({
 
       {/* Content */}
       <div className="p-5 sm:p-6">
-        {/* Header */}
+        {/* Top Row: Badges */}
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          {/* Type Badge */}
+          <div
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-sm text-[11px] font-bold ${
+              type === 'VIDEO'
+                ? 'bg-purple-500/20 border border-purple-500/30 text-purple-300'
+                : type === 'VOICE'
+                  ? 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-300'
+                  : 'bg-gray-500/20 border border-gray-500/30 text-gray-300'
+            }`}
+          >
+            {type === 'VIDEO' ? (
+              <Video className="w-3.5 h-3.5" />
+            ) : type === 'VOICE' ? (
+              <Mic className="w-3.5 h-3.5" />
+            ) : (
+              <MessageSquare className="w-3.5 h-3.5" />
+            )}
+            {type}
+          </div>
+
+          {/* Status Badge */}
+          {status === 'LIVE' ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 border border-red-500/30 rounded-full backdrop-blur-sm">
+              <Radio className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+              <span className="text-red-400 text-[11px] font-bold tracking-wide">LIVE</span>
+            </div>
+          ) : status === 'ENDED' ? (
+            <div className="px-3 py-1.5 bg-white/10 border border-white/20 rounded-full backdrop-blur-sm">
+              <span className="text-gray-400 text-[11px] font-medium">ENDED</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#39AEC4]/20 border border-[#39AEC4]/30 rounded-full backdrop-blur-sm">
+              <Clock className="w-3.5 h-3.5 text-[#39AEC4]" />
+              <span className="text-[#39AEC4] text-[11px] font-bold tracking-wide">UPCOMING</span>
+            </div>
+          )}
+        </div>
+
+        {/* Header: Avatar + Info */}
         <div className="flex items-start gap-3 mb-4">
           {/* Developer Avatar */}
           <div className="w-11 h-11 sm:w-12 sm:h-12 bg-gradient-to-br from-[#39AEC4] to-[#756BBA] rounded-full flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#756BBA]/20">
@@ -119,12 +119,12 @@ export function AMACard({
           </div>
 
           <div className="flex-1 min-w-0 pt-0.5">
-            <h3 className="text-lg sm:text-xl font-bold text-white truncate group-hover:text-[#39AEC4] transition-colors">
+            <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-[#39AEC4] transition-colors leading-tight">
               {projectName} AMA
             </h3>
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-2 mt-1">
               <span className="text-gray-400 text-sm">@{developerName}</span>
-              <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[10px] font-bold rounded border border-green-500/30">
+              <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[10px] font-bold rounded border border-green-500/30 whitespace-nowrap">
                 ✓ Verified
               </span>
             </div>
@@ -137,7 +137,7 @@ export function AMACard({
 
         {/* Schedule */}
         <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-[14px] mb-4">
-          <div className="p-2 rounded-full bg-[#39AEC4]/20">
+          <div className="p-2 rounded-full bg-[#39AEC4]/20 flex-shrink-0">
             <Calendar className="w-4 h-4 text-[#39AEC4]" />
           </div>
           <div>
@@ -178,7 +178,7 @@ export function AMACard({
               </button>
               <Link
                 href={`/ama/${id}`}
-                className="px-4 py-3 bg-[#39AEC4]/10 border border-[#39AEC4]/30 text-[#39AEC4] font-semibold rounded-full hover:bg-[#39AEC4]/20 transition-all flex items-center gap-2"
+                className="px-5 py-3 bg-[#39AEC4]/10 border border-[#39AEC4]/30 text-[#39AEC4] font-semibold rounded-full hover:bg-[#39AEC4]/20 transition-all flex items-center gap-2"
               >
                 <Eye className="w-4 h-4" />
                 View

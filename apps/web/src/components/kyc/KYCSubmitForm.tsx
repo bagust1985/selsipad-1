@@ -2,11 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  submitKYC,
-  uploadKYCDocuments,
-  type KYCSubmissionType,
-} from '../../../app/profile/kyc/actions';
+import { submitKYC, uploadKYCDocuments } from '../../../app/profile/kyc/actions';
 import { FileUpload } from '@/components/kyc/FileUpload';
 
 interface KYCSubmitFormProps {
@@ -16,7 +12,6 @@ interface KYCSubmitFormProps {
 export function KYCSubmitForm({ userProjects }: KYCSubmitFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
-  const [submissionType, setSubmissionType] = useState<KYCSubmissionType>('INDIVIDUAL');
   const [projectId, setProjectId] = useState<string>('');
 
   const [idFront, setIdFront] = useState<File | null>(null);
@@ -52,7 +47,7 @@ export function KYCSubmitForm({ userProjects }: KYCSubmitFormProps) {
 
       // 3. Submit KYC
       await submitKYC({
-        submission_type: submissionType,
+        submission_type: 'INDIVIDUAL',
         documents_url: documentsUrl,
         project_id: projectId || undefined,
       });
@@ -69,48 +64,22 @@ export function KYCSubmitForm({ userProjects }: KYCSubmitFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Submission Type */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-3">
-          Verification Type *
-        </label>
-        <div className="grid grid-cols-2 gap-4">
-          {(['INDIVIDUAL', 'BUSINESS'] as KYCSubmissionType[]).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setSubmissionType(type)}
-              className={`px-4 py-3 border-2 rounded-lg font-medium transition-all ${
-                submissionType === type
-                  ? 'border-blue-600 bg-blue-50 text-blue-700'
-                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-        <p className="text-xs text-gray-600 mt-2">
-          {submissionType === 'INDIVIDUAL'
-            ? 'For personal verification using government ID'
-            : 'For business verification (coming soon)'}
-        </p>
-      </div>
-
       {/* Project Association (Optional) */}
       {userProjects.length > 0 && (
         <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-2">
-            Link to Project (Optional)
+          <label className="block text-sm font-bold text-white mb-2">
+            Link to Project <span className="text-gray-500 font-normal">(Optional)</span>
           </label>
           <select
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-colors appearance-none"
           >
-            <option value="">None - Personal verification only</option>
+            <option value="" className="bg-black">
+              None - Personal verification only
+            </option>
             {userProjects.map((project) => (
-              <option key={project.id} value={project.id}>
+              <option key={project.id} value={project.id} className="bg-black">
                 {project.name}
               </option>
             ))}
@@ -119,8 +88,13 @@ export function KYCSubmitForm({ userProjects }: KYCSubmitFormProps) {
       )}
 
       {/* Document Uploads */}
-      <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-        <h3 className="font-semibold text-gray-900">Upload Documents</h3>
+      <div className="space-y-4">
+        <h3 className="font-bold text-white text-sm flex items-center gap-2">
+          <span className="w-6 h-6 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-[10px] text-cyan-400 font-bold">
+            1
+          </span>
+          Upload Documents
+        </h3>
 
         <FileUpload
           label="ID Front Side"
@@ -145,36 +119,66 @@ export function KYCSubmitForm({ userProjects }: KYCSubmitFormProps) {
           required
         />
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p className="text-sm text-blue-800">
-            <strong>Tips for good photos:</strong>
-            <br />• Use good lighting, avoid glare
-            <br />• Ensure all text is readable
-            <br />• Hold ID next to your face for selfie
-            <br />• All corners of ID must be visible
-          </p>
+        {/* Tips */}
+        <div className="p-4 bg-cyan-500/5 border border-cyan-500/20 rounded-xl">
+          <p className="text-sm font-bold text-cyan-400 mb-2">💡 Tips for good photos</p>
+          <div className="space-y-1.5">
+            {[
+              'Use good lighting, avoid glare',
+              'Ensure all text is readable',
+              'Hold ID next to your face for selfie',
+              'All corners of ID must be visible',
+            ].map((tip, i) => (
+              <p key={i} className="text-xs text-gray-400 flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-cyan-500/50 flex-shrink-0" />
+                {tip}
+              </p>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Submit */}
-      <div className="flex gap-4 pt-4">
+      <div className="flex gap-3 pt-2">
         <button
           type="submit"
           disabled={!canSubmit}
-          className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex-1 px-6 py-3.5 bg-gradient-to-r from-[#39AEC4] to-[#756BBA] text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity text-sm"
         >
-          {submitting ? 'Submitting...' : 'Submit for Review'}
+          {submitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+              Submitting...
+            </span>
+          ) : (
+            'Submit for Review'
+          )}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
-          className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+          className="px-6 py-3.5 bg-white/5 border border-white/10 text-gray-400 font-bold rounded-xl hover:bg-white/10 hover:text-white transition-colors text-sm"
         >
           Cancel
         </button>
       </div>
 
-      <p className="text-xs text-gray-600 text-center">
+      <p className="text-[11px] text-gray-600 text-center">
         🔒 Your documents are encrypted and securely stored. Review typically takes 2-5 business
         days.
       </p>

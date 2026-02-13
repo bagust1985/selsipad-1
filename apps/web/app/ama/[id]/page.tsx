@@ -45,6 +45,23 @@ export default async function AMADetailPage({ params }: { params: { id: string }
 
   const messages = await getAMAMessages(params.id);
 
+  // Get developer's wallet address for voice role determination
+  let developerWallet = '';
+  if (ama.developer_id) {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data: wallet } = await supabase
+      .from('wallets')
+      .select('address')
+      .eq('user_id', ama.developer_id)
+      .eq('is_primary', true)
+      .single();
+    developerWallet = wallet?.address || '';
+    console.log('[AMA Detail] Developer wallet:', developerWallet);
+  }
+
   const isLive = ama.status === 'LIVE';
   const isEnded = ama.status === 'ENDED';
   const isPinned = ama.status === 'PINNED';
@@ -173,7 +190,9 @@ export default async function AMADetailPage({ params }: { params: { id: string }
               amaId={ama.id}
               projectName={ama.project_name}
               developerId={ama.developer_id}
+              developerWallet={developerWallet}
               initialMessages={messages}
+              amaType={ama.type || 'TEXT'}
             />
           )}
 

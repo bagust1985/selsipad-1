@@ -53,7 +53,11 @@ export interface AMAMessage {
  * Get AMA Messages
  */
 export async function getAMAMessages(amaId: string): Promise<AMAMessage[]> {
-  const supabase = createClient();
+  // Use service role to bypass RLS (messages are inserted via service role too)
+  const supabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   const { data: messages, error } = await supabase
     .from('ama_messages')

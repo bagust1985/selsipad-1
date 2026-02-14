@@ -67,22 +67,50 @@ export default async function HomePage() {
                 <TrendingChart data={trendingStats.chartData} />
               </div>
 
-              {/* Top Project */}
+              {/* Trending Projects */}
               <div className="mt-6 sm:mt-auto p-4 sm:p-5 rounded-[20px] bg-gradient-to-br from-[#39AEC4]/20 to-[#39AEC4]/5 border border-[#39AEC4]/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs sm:text-sm text-gray-400 mb-1">Most Active 24h</p>
-                    <p className="text-lg sm:text-xl font-bold">
-                      {trendingStats.topProject ? `$${trendingStats.topProject.symbol}` : 'No data'}
-                    </p>
+                {trendingStats.trendingProjects.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-xs sm:text-sm text-gray-400 mb-2">🔥 Trending Projects</p>
+                    {trendingStats.trendingProjects.map((project, i) => (
+                      <Link
+                        key={project.projectId}
+                        href={`/presales/${project.projectId}`}
+                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors group"
+                      >
+                        <span className="text-sm font-bold text-gray-500 w-5">{i + 1}</span>
+                        <img
+                          src={project.logoUrl}
+                          alt={project.name}
+                          className="w-8 h-8 rounded-full object-cover border border-white/10"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate group-hover:text-[#39AEC4] transition-colors">
+                            {project.name}
+                          </p>
+                          <p className="text-xs text-[#39AEC4]">{project.hashtag}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-[#39AEC4]">{project.uniqueUsers}</p>
+                          <p className="text-[10px] text-gray-500">users</p>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl sm:text-3xl font-bold text-[#39AEC4]">
-                      {trendingStats.totalPosts24h > 0 ? `${trendingStats.totalPosts24h}` : '0'}
-                    </p>
-                    <p className="text-xs text-gray-400">posts today</p>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs sm:text-sm text-gray-400 mb-1">Activity 24h</p>
+                      <p className="text-sm text-gray-500">No trending projects yet</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl sm:text-3xl font-bold text-[#39AEC4]">
+                        {trendingStats.totalPosts24h > 0 ? `${trendingStats.totalPosts24h}` : '0'}
+                      </p>
+                      <p className="text-xs text-gray-400">posts today</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* View Feed Button */}

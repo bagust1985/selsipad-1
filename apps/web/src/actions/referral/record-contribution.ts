@@ -97,6 +97,38 @@ export async function recordContribution(params: {
       }
     }
 
+    // 4. Create referral ledger entry for the referrer (if referee has a referrer)
+    if (relationship) {
+      const { error: ledgerError } = await supabase.from('referral_ledger').insert({
+        referrer_id: relationship.referrer_id,
+        referee_id: params.userId, // ← Fix: populate referee_id
+        source_type: params.sourceType,
+        source_id: params.sourceId,
+        amount: referralPoolAmount.toString(),
+        asset: params.asset,
+        chain: params.chain,
+        status: 'CLAIMABLE',
+      });
+
+      if (ledgerError) {
+        if (!ledgerError.message.includes('duplicate')) {
+          console.error('Referral ledger error:', ledgerError);
+        }
+      }
+
+      // Mark fee_split as processed since ledger is created
+      if (!feeSplitError) {
+        await supabase
+          .from('fee_splits')
+          .update({
+            processed: true,
+            processed_at: new Date().toISOString(),
+          })
+          .eq('source_id', params.sourceId)
+          .eq('source_type', params.sourceType);
+      }
+    }
+
     return { success: true };
   } catch (error: any) {
     console.error('recordContribution error:', error);

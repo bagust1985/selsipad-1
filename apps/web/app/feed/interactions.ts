@@ -266,11 +266,7 @@ export async function sharePost(
     });
 
     // Update share count
-    await supabase.rpc('increment', {
-      table_name: 'posts',
-      row_id: postId,
-      column_name: 'share_count',
-    });
+    await supabase.rpc('increment_post_share_count', { post_id: postId });
   } catch (error: any) {
     console.error('Error sharing post:', error);
     throw error;
@@ -311,7 +307,7 @@ export async function getComments(postId: string, parentCommentId?: string): Pro
     const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
 
     return comments.map((comment: any) => {
-      const author = profileMap.get(comment.author_id) || {};
+      const author: any = profileMap.get(comment.author_id) || {};
       return {
         ...comment,
         author: {

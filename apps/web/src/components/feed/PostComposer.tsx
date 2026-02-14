@@ -238,16 +238,26 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
     setShowEmojiPicker(false);
   };
 
+  const MAX_IMAGES = 2;
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+
+    // Enforce max images limit
+    const remainingSlots = MAX_IMAGES - images.length;
+    if (remainingSlots <= 0) {
+      alert(`Maximum ${MAX_IMAGES} images per post`);
+      return;
+    }
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
 
     setUploading(true);
     const supabase = createClient();
     const uploadedUrls: string[] = [];
 
     try {
-      for (const file of Array.from(files)) {
+      for (const file of filesToUpload) {
         // Upload to Supabase Storage
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -318,17 +328,17 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
     }
   };
 
-  const maxLength = 500;
+  const maxLength = 280;
   const charCount = content.length;
   const isOverLimit = charCount > maxLength;
   // Removed hashtag requirement - trending is based on aggregation across posts, not per-post
   const canPost = (content.trim() || images.length > 0) && !isOverLimit && isEligible;
 
   return (
-    <div className="bg-white/5 rounded-2xl border border-white/10 p-5 shadow-xl backdrop-blur-sm relative overflow-hidden group/composer transition-all hover:bg-white/[0.07] hover:border-cyan-500/30 hover:shadow-cyan-500/10">
+    <div className="rounded-[20px] bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-[#39AEC4]/20 p-4 sm:p-6 shadow-xl shadow-[#756BBA]/10 relative overflow-hidden group/composer transition-all hover:border-[#39AEC4]/40">
       {/* Background Glow Effect */}
-      <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl group-hover/composer:bg-purple-500/30 transition-all pointer-events-none" />
-      <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-cyan-500/20 rounded-full blur-3xl group-hover/composer:bg-cyan-500/30 transition-all pointer-events-none" />
+      <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#756BBA]/15 rounded-full blur-3xl group-hover/composer:bg-[#756BBA]/25 transition-all pointer-events-none" />
+      <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-[#39AEC4]/15 rounded-full blur-3xl group-hover/composer:bg-[#39AEC4]/25 transition-all pointer-events-none" />
 
       <div className="flex gap-4 relative z-10">
         {/* Avatar */}
@@ -337,10 +347,10 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
             <img
               src={userProfile.avatar_url}
               alt={userProfile.username}
-              className="w-12 h-12 rounded-full object-cover border-2 border-white/10 ring-2 ring-transparent group-hover/composer:ring-cyan-500/30 transition-all"
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-[#39AEC4]/40 bg-gradient-to-br from-[#39AEC4]/30 to-[#756BBA]/30 p-[1px] ring-2 ring-transparent group-hover/composer:ring-[#39AEC4]/20 transition-all"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 flex items-center justify-center text-gray-400 font-semibold group-hover/composer:text-white transition-colors">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#39AEC4]/30 to-[#756BBA]/30 border border-[#39AEC4]/40 flex items-center justify-center text-white font-semibold transition-colors">
               <User className="w-6 h-6" />
             </div>
           )}
@@ -381,7 +391,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
           )}
 
           {/* Toolbar */}
-          <div className="flex items-center justify-between pt-3 border-t border-white/5">
+          <div className="flex items-center justify-between pt-3 border-t border-[#39AEC4]/10">
             {/* Media Icons */}
             <div className="flex items-center gap-1">
               <input
@@ -396,7 +406,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={!isEligible || uploading}
-                className="p-2 text-cyan-400 hover:bg-cyan-400/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed group/icon"
+                className="p-2 text-[#39AEC4] hover:bg-[#39AEC4]/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed group/icon"
                 title="Add image"
               >
                 <Image className="w-5 h-5 group-hover/icon:scale-110 transition-transform" />
@@ -406,7 +416,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
                   type="button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   disabled={!isEligible}
-                  className="p-2 text-cyan-400 hover:bg-cyan-400/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed group/icon"
+                  className="p-2 text-[#39AEC4] hover:bg-[#39AEC4]/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed group/icon"
                   title="Add emoji"
                 >
                   <Smile className="w-5 h-5 group-hover/icon:scale-110 transition-transform" />
@@ -414,7 +424,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
 
                 {/* Emoji Picker Dropdown */}
                 {showEmojiPicker && (
-                  <div className="absolute top-full left-0 mt-2 bg-[#1A1A1A] border border-white/10 rounded-2xl shadow-2xl p-3 w-72 max-h-64 overflow-y-auto z-50 backdrop-blur-xl">
+                  <div className="absolute top-full left-0 mt-2 bg-black/90 border border-[#39AEC4]/20 rounded-2xl shadow-2xl p-3 w-72 max-h-64 overflow-y-auto z-50 backdrop-blur-xl">
                     <div className="grid grid-cols-8 gap-1">
                       {emojis.map((emoji, index) => (
                         <button
@@ -437,7 +447,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
               {/* Hashtag Counter - Info Only */}
               {hashtagCount > 0 && (
                 <div className="flex items-center gap-1 text-xs text-gray-500 bg-white/5 px-2 py-1 rounded-full border border-white/5">
-                  <span className="text-cyan-400">#</span>
+                  <span className="text-[#39AEC4]">#</span>
                   <span>{hashtagCount}</span>
                 </div>
               )}
@@ -453,7 +463,7 @@ export function PostComposer({ userProfile, isEligible, onSubmit }: PostComposer
               <button
                 onClick={handleSubmit}
                 disabled={!canPost || submitting}
-                className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-bold rounded-full hover:shadow-[0_0_20px_-5px_var(--color-cyan-500)] hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none transition-all duration-200 flex items-center gap-2"
+                className="px-4 sm:px-6 py-2 rounded-full bg-gradient-to-r from-[#39AEC4] to-[#756BBA] hover:from-[#4EABC8] hover:to-[#756BBA] text-white text-sm font-semibold shadow-lg shadow-[#756BBA]/30 hover:shadow-[#756BBA]/50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none transition-all duration-200 flex items-center gap-2"
               >
                 {submitting ? (
                   <>

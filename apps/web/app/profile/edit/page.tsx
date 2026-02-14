@@ -21,7 +21,7 @@ export default async function EditProfilePage() {
   const supabase = createClient();
   const { data: profile } = await supabase
     .from('profiles')
-    .select('nickname, avatar_url')
+    .select('nickname, avatar_url, bio, banner_url')
     .eq('user_id', session.userId)
     .single();
 
@@ -40,6 +40,8 @@ export default async function EditProfilePage() {
         <ProfileEditForm
           initialNickname={profile?.nickname}
           initialAvatarUrl={profile?.avatar_url}
+          initialBio={profile?.bio}
+          initialBannerUrl={profile?.banner_url}
         />
       </div>
     </div>

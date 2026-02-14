@@ -1,7 +1,5 @@
 // Data layer for Rewards and Referrals - REAL API INTEGRATION
-// Replaces stub data with Supabase queries
-
-import { createClient } from '@/lib/supabase/client';
+// Connects to /api/v1/referral/* endpoints which use server-side auth
 
 export interface Reward {
   id: string;
@@ -11,6 +9,9 @@ export interface Reward {
   description: string;
   claimed: boolean;
   created_at: string;
+  chain: string;
+  asset: string;
+  source_type: string;
 }
 
 export interface ReferralStats {
@@ -19,64 +20,47 @@ export interface ReferralStats {
   total_earnings: number;
   pending_rewards: number;
   referral_code: string;
+  earnings_by_source: {
+    FAIRLAUNCH: number;
+    PRESALE: number;
+    BONDING: number;
+    BLUECHECK: number;
+  };
 }
 
 /**
  * Get Rewards
  *
- * Fetches rewards for authenticated user
+ * Fetches rewards from referral_ledger via API
  * Optionally filter by claimed status
- *
- * Note: Rewards system schema is not yet in migrations
- * This is a temporary implementation
  */
 export async function getRewards(claimedFilter?: boolean): Promise<Reward[]> {
-  const supabase = createClient();
-
   try {
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.warn('User not authenticated');
+    const status =
+      claimedFilter === true ? 'CLAIMED' : claimedFilter === false ? 'CLAIMABLE' : undefined;
+    const url = status ? `/api/v1/referral/rewards?status=${status}` : `/api/v1/referral/rewards`;
+
+    const response = await fetch(url, { credentials: 'include' });
+    if (!response.ok) {
+      console.error('Failed to fetch rewards:', response.status);
       return [];
     }
 
-    // TODO: Implement when rewards table is added to schema
-    // For now, return empty array
-    console.log('Rewards system not yet implemented in database');
-    return [];
+    const data = await response.json();
+    const rewards = data.rewards || [];
 
-    /* Future implementation:
-    let query = supabase
-      .from('rewards')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    
-    if (claimedFilter !== undefined) {
-      query = query.eq('claimed', claimedFilter);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error fetching rewards:', error);
-      return [];
-    }
-    
-    return (data || []).map(reward => ({
-      id: reward.id,
-      type: reward.type,
-      amount: reward.amount,
-      currency: reward.currency || 'SOL',
-      description: reward.description,
-      claimed: reward.claimed,
-      created_at: reward.created_at,
+    return rewards.map((entry: any) => ({
+      id: entry.id,
+      type: 'referral' as const,
+      amount: parseFloat(entry.amount || '0') / 1e18, // Convert from wei to ether
+      currency: getCurrencyLabel(entry.chain, entry.asset),
+      description: `Referral reward from ${entry.source_type}`,
+      claimed: entry.status === 'CLAIMED',
+      created_at: entry.created_at,
+      chain: entry.chain,
+      asset: entry.asset,
+      source_type: entry.source_type,
     }));
-    */
   } catch (err) {
     console.error('Unexpected error in getRewards:', err);
     return [];
@@ -86,7 +70,7 @@ export async function getRewards(claimedFilter?: boolean): Promise<Reward[]> {
 /**
  * Get Claimable Rewards
  *
- * Fetches unclaimed rewards for authenticated user
+ * Fetches unclaimed rewards from referral_ledger
  */
 export async function getClaimableRewards(): Promise<Reward[]> {
   return getRewards(false);
@@ -95,59 +79,35 @@ export async function getClaimableRewards(): Promise<Reward[]> {
 /**
  * Get Referral Stats
  *
- * Fetches referral statistics for authenticated user
- *
- * Note: Referral system schema is not yet in migrations
- * This is a temporary implementation
+ * Fetches real referral statistics via server action API
  */
 export async function getReferralStats(): Promise<ReferralStats> {
-  const supabase = createClient();
-
   try {
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.warn('User not authenticated');
+    const response = await fetch('/api/v1/referral/stats', { credentials: 'include' });
+    if (!response.ok) {
+      console.warn('Failed to fetch referral stats:', response.status);
       return getDefaultReferralStats();
     }
 
-    // TODO: Implement when referral tables are added to schema
-    // For now, return default stats
-    console.log('Referral system not yet implemented in database');
-    return getDefaultReferralStats();
-
-    /* Future implementation:
-    const { data, error } = await supabase
-      .from('referral_stats')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (error) {
-      console.error('Error fetching referral stats:', error);
+    const data = await response.json();
+    if (!data.success || !data.stats) {
       return getDefaultReferralStats();
     }
-    
-    const { data: pendingRewards } = await supabase
-      .from('rewards')
-      .select('amount')
-      .eq('user_id', user.id)
-      .eq('type', 'referral')
-      .eq('claimed', false);
-    
-    const pending = (pendingRewards || []).reduce((sum, r) => sum + r.amount, 0);
-    
+
+    const stats = data.stats;
     return {
-      total_referrals: data.total_referrals || 0,
-      active_referrals: data.active_referrals || 0,
-      total_earnings: data.total_earnings || 0,
-      pending_rewards: pending,
-      referral_code: data.referral_code || '',
+      total_referrals: stats.totalReferrals || 0,
+      active_referrals: stats.activeReferrals || 0,
+      total_earnings: parseFloat(stats.totalEarnings || '0') / 1e18,
+      pending_rewards: parseFloat(stats.pendingEarnings || '0') / 1e18,
+      referral_code: stats.referralCode || '',
+      earnings_by_source: {
+        FAIRLAUNCH: parseFloat(stats.earningsBySource?.FAIRLAUNCH || '0') / 1e18,
+        PRESALE: parseFloat(stats.earningsBySource?.PRESALE || '0') / 1e18,
+        BONDING: parseFloat(stats.earningsBySource?.BONDING || '0') / 1e18,
+        BLUECHECK: parseFloat(stats.earningsBySource?.BLUECHECK || '0') / 1e18,
+      },
     };
-    */
   } catch (err) {
     console.error('Unexpected error in getReferralStats:', err);
     return getDefaultReferralStats();
@@ -157,42 +117,35 @@ export async function getReferralStats(): Promise<ReferralStats> {
 /**
  * Claim Reward
  *
- * Claims a specific reward for the user
- * Initiates blockchain transaction to send reward
+ * Claims a specific reward via the claim API endpoint
  */
 export async function claimReward(rewardId: string): Promise<void> {
-  const supabase = createClient();
-
   try {
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      throw new Error('User not authenticated');
+    // First get the reward details to know chain/asset
+    const rewards = await getClaimableRewards();
+    const reward = rewards.find((r) => r.id === rewardId);
+
+    if (!reward) {
+      throw new Error('Reward not found');
     }
 
-    // TODO: Implement when rewards table is added
-    console.log('Claim reward:', rewardId);
-    throw new Error('Rewards system not yet implemented');
+    const response = await fetch('/api/v1/referral/claim', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': `claim-${rewardId}-${Date.now()}`,
+      },
+      body: JSON.stringify({
+        chain: reward.chain,
+        asset: reward.asset,
+      }),
+    });
 
-    /* Future implementation:
-    // Mark reward as claimed
-    const { error } = await supabase
-      .from('rewards')
-      .update({ claimed: true, claimed_at: new Date().toISOString() })
-      .eq('id', rewardId)
-      .eq('user_id', user.id) // Ensure user owns this reward
-      .eq('claimed', false); // Prevent double-claim
-    
-    if (error) {
-      console.error('Error claiming reward:', error);
-      throw error;
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to claim reward');
     }
-    
-    // TODO: Initiate blockchain transaction to send reward
-    */
   } catch (err) {
     console.error('Unexpected error in claimReward:', err);
     throw err;
@@ -202,51 +155,51 @@ export async function claimReward(rewardId: string): Promise<void> {
 /**
  * Claim All Rewards
  *
- * Claims all unclaimed rewards for the user
+ * Claims all unclaimed rewards grouped by chain/asset
  */
 export async function claimAllRewards(): Promise<void> {
-  const supabase = createClient();
-
   try {
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
-      throw new Error('User not authenticated');
+    const rewards = await getClaimableRewards();
+    if (rewards.length === 0) return;
+
+    // Group rewards by chain+asset for batch claiming
+    const groups = new Map<string, { chain: string; asset: string }>();
+    rewards.forEach((r) => {
+      const key = `${r.chain}-${r.asset}`;
+      if (!groups.has(key)) {
+        groups.set(key, { chain: r.chain, asset: r.asset });
+      }
+    });
+
+    // Claim each group
+    const errors: string[] = [];
+    for (const [, group] of groups) {
+      try {
+        const response = await fetch('/api/v1/referral/claim', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': `claim-all-${group.chain}-${group.asset}-${Date.now()}`,
+          },
+          body: JSON.stringify({
+            chain: group.chain,
+            asset: group.asset,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          errors.push(errorData.error || `Failed for ${group.chain}/${group.asset}`);
+        }
+      } catch (e: any) {
+        errors.push(e.message);
+      }
     }
 
-    // TODO: Implement when rewards table is added
-    console.log('Claim all rewards');
-    throw new Error('Rewards system not yet implemented');
-
-    /* Future implementation:
-    // Get all unclaimed rewards
-    const { data: rewards, error: fetchError } = await supabase
-      .from('rewards')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('claimed', false);
-    
-    if (fetchError) {
-      throw fetchError;
+    if (errors.length > 0) {
+      throw new Error(`Some claims failed: ${errors.join(', ')}`);
     }
-    
-    // Mark all as claimed
-    const { error } = await supabase
-      .from('rewards')
-      .update({ claimed: true, claimed_at: new Date().toISOString() })
-      .eq('user_id', user.id)
-      .eq('claimed', false);
-    
-    if (error) {
-      console.error('Error claiming all rewards:', error);
-      throw error;
-    }
-    
-    // TODO: Initiate blockchain transactions to send all rewards
-    */
   } catch (err) {
     console.error('Unexpected error in claimAllRewards:', err);
     throw err;
@@ -261,8 +214,40 @@ function getDefaultReferralStats(): ReferralStats {
     active_referrals: 0,
     total_earnings: 0,
     pending_rewards: 0,
-    referral_code: '', // TODO: Generate unique code
+    referral_code: '',
+    earnings_by_source: {
+      FAIRLAUNCH: 0,
+      PRESALE: 0,
+      BONDING: 0,
+      BLUECHECK: 0,
+    },
   };
+}
+
+/**
+ * Get human-readable currency label from chain ID and asset
+ */
+function getCurrencyLabel(chain: string, asset: string): string {
+  if (asset && asset !== 'NATIVE' && asset !== '0x0000000000000000000000000000000000000000') {
+    return asset; // Return token symbol/address
+  }
+
+  // Native currency by chain ID
+  switch (chain) {
+    case '56':
+    case '97':
+      return 'BNB';
+    case '1':
+    case '11155111':
+      return 'ETH';
+    case '8453':
+    case '84532':
+      return 'ETH';
+    case '137':
+      return 'MATIC';
+    default:
+      return 'BNB'; // Default for BSC
+  }
 }
 
 export interface ClaimRequirements {
@@ -288,7 +273,9 @@ export interface ClaimRequirements {
  */
 export async function getClaimRequirements(): Promise<ClaimRequirements | null> {
   try {
-    const response = await fetch('/api/v1/referral/claim-requirements');
+    const response = await fetch('/api/v1/referral/claim-requirements', {
+      credentials: 'include',
+    });
     if (!response.ok) {
       console.error('Failed to fetch claim requirements');
       return null;

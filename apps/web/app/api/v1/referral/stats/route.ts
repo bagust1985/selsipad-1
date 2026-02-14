@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     // Get profile data
     const { data: profile } = await supabase
       .from('profiles')
-      .select('active_referral_count, bluecheck_status')
+      .select('active_referral_count, bluecheck_status, referral_code')
       .eq('user_id', userId)
       .single();
 
@@ -79,7 +79,11 @@ export async function GET(request: NextRequest) {
     );
 
     return NextResponse.json({
-      ...stats,
+      success: true,
+      stats: {
+        ...stats,
+        referralCode: profile?.referral_code || '',
+      },
       claimable_by_chain: claimableByChain,
       can_claim: eligibility.can_claim,
       claim_requirements: eligibility.checks,

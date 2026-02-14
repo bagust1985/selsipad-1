@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface Comment {
@@ -87,15 +88,21 @@ export function CommentModal({ postId, isOpen, onClose }: CommentModalProps) {
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center">
-      <div className="bg-white w-full sm:max-w-2xl sm:rounded-xl max-h-[90vh] flex flex-col">
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center font-twitter"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#0a0a0f]/95 backdrop-blur-2xl w-full sm:max-w-2xl sm:rounded-2xl max-h-[90vh] flex flex-col border border-[#39AEC4]/20 shadow-2xl shadow-[#756BBA]/10"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-900">Comments</h2>
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <h2 className="text-lg font-bold text-white">Comments</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-red-50 rounded-full transition-colors text-gray-700 hover:text-red-600"
+            className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white"
             aria-label="Close comments"
           >
             <X className="w-5 h-5" />
@@ -103,24 +110,24 @@ export function CommentModal({ postId, isOpen, onClose }: CommentModalProps) {
         </div>
 
         {/* Comment Input */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-white/10">
           <div className="flex gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex-shrink-0" />
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex-shrink-0" />
             <div className="flex-1">
               <textarea
                 placeholder="Write a comment..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="w-full resize-none border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                className="w-full resize-none bg-white/5 border border-white/10 rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-500/50 text-white placeholder:text-gray-500 text-sm font-twitter"
                 rows={2}
                 maxLength={100}
               />
               <div className="flex justify-between items-center mt-2">
-                <span className="text-sm text-gray-500">{newComment.length}/100</span>
+                <span className="text-xs text-gray-500">{newComment.length}/100</span>
                 <button
                   onClick={handleSubmit}
                   disabled={!newComment.trim() || submitting}
-                  className="px-4 py-1.5 bg-blue-500 text-white text-sm font-semibold rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-1.5 bg-cyan-600 text-white text-sm font-bold rounded-full hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {submitting ? 'Posting...' : 'Comment'}
                 </button>
@@ -132,9 +139,11 @@ export function CommentModal({ postId, isOpen, onClose }: CommentModalProps) {
         {/* Comments List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {loading ? (
-            <div className="text-center text-gray-500 py-8">Loading comments...</div>
+            <div className="text-center text-gray-500 py-8 text-sm">Loading comments...</div>
           ) : comments.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">No comments yet. Be the first!</div>
+            <div className="text-center text-gray-500 py-8 text-sm">
+              No comments yet. Be the first!
+            </div>
           ) : (
             comments.map((comment) => (
               <div key={comment.id} className="flex gap-3">
@@ -144,10 +153,10 @@ export function CommentModal({ postId, isOpen, onClose }: CommentModalProps) {
                     <img
                       src={comment.author.avatar_url}
                       alt={comment.author.username}
-                      className="w-10 h-10 rounded-full object-cover"
+                      className="w-9 h-9 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold text-sm">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold text-xs">
                       {comment.author.username[0]?.toUpperCase()}
                     </div>
                   )}
@@ -156,22 +165,21 @@ export function CommentModal({ postId, isOpen, onClose }: CommentModalProps) {
                 {/* Comment Content */}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm text-gray-900">
-                      {comment.author.username}
-                    </span>
-                    {comment.author.bluecheck && <span className="text-blue-500 text-xs">✓</span>}
-                    <span className="text-gray-500 text-sm">·</span>
-                    <span className="text-gray-500 text-sm">
+                    <span className="font-bold text-sm text-white">{comment.author.username}</span>
+                    {comment.author.bluecheck && <span className="text-cyan-400 text-xs">✓</span>}
+                    <span className="text-gray-600 text-xs">·</span>
+                    <span className="text-gray-500 text-xs">
                       {formatTimeAgo(comment.created_at)}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-900 mt-1">{comment.content}</p>
+                  <p className="text-sm text-gray-300 mt-1">{comment.content}</p>
                 </div>
               </div>
             ))
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

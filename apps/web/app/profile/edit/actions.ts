@@ -106,12 +106,46 @@ export async function updateProfile(
       updates.username = nicknameValue; // Also update username column
     }
 
+    // Handle bio update
+    const bio = formData.get('bio') as string;
+    if (bio !== undefined && bio !== null) {
+      updates.bio = bio || null;
+    }
+
     // Handle avatar upload
     const avatarFile = formData.get('avatar') as File | null;
     if (avatarFile && avatarFile.size > 0) {
       try {
         const avatarUrl = await uploadAvatar(session.userId, avatarFile);
         updates.avatar_url = avatarUrl;
+      } catch (error: any) {
+        return { success: false, error: error.message };
+      }
+    }
+
+    // Handle banner upload
+    const bannerFile = formData.get('banner') as File | null;
+    if (bannerFile && bannerFile.size > 0) {
+      try {
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(bannerFile.type)) {
+          return { success: false, error: 'Invalid banner file type' };
+        }
+        if (bannerFile.size > 3 * 1024 * 1024) {
+          return { success: false, error: 'Banner file must be less than 3MB' };
+        }
+        const supabaseAdmin = createClient();
+        const timestamp = Date.now();
+        const ext = bannerFile.name.split('.').pop();
+        const filename = `${session.userId}/banner-${timestamp}.${ext}`;
+        const { error: uploadError } = await supabaseAdmin.storage
+          .from('avatars')
+          .upload(filename, bannerFile, { contentType: bannerFile.type, upsert: false });
+        if (uploadError) throw new Error('Failed to upload banner');
+        const {
+          data: { publicUrl },
+        } = supabaseAdmin.storage.from('avatars').getPublicUrl(filename);
+        updates.banner_url = publicUrl;
       } catch (error: any) {
         return { success: false, error: error.message };
       }

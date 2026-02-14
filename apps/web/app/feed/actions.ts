@@ -48,10 +48,42 @@ export async function createPost(
       );
     }
 
+    // === RATE LIMITS ===
+    const MAX_POSTS_PER_DAY = 3;
+    const MAX_CHARS = 280;
+    const MAX_IMAGES = 2;
+
+    // Character limit
+    if (content.length > MAX_CHARS) {
+      throw new Error(`Post exceeds ${MAX_CHARS} character limit`);
+    }
+
+    // Image limit
+    if (imageUrls && imageUrls.length > MAX_IMAGES) {
+      throw new Error(`Maximum ${MAX_IMAGES} images per post`);
+    }
+
+    // Daily post limit — count today's posts
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const { count: todayCount } = await supabase
+      .from('posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('author_id', session.userId)
+      .gte('created_at', todayStart.toISOString())
+      .is('deleted_at', null);
+
+    if ((todayCount || 0) >= MAX_POSTS_PER_DAY) {
+      throw new Error(
+        `Daily post limit reached (${MAX_POSTS_PER_DAY} posts per day). Try again tomorrow!`
+      );
+    }
+
     // Extract hashtags from content (case-insensitive)
     const extractHashtags = (text: string): string[] => {
       const matches = text.match(/#\w+/g);
-      return matches ? [...new Set(matches.map(tag => tag.toLowerCase()))] : [];
+      return matches ? [...new Set(matches.map((tag) => tag.toLowerCase()))] : [];
     };
 
     const hashtags = extractHashtags(content);

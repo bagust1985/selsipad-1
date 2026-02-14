@@ -89,7 +89,7 @@ export default function FeedClientContent({
         </div>
 
         {/* Feed Container */}
-        <div className="w-full max-w-4xl mx-auto min-h-screen md:border-x border-white/5 bg-black/40 backdrop-blur-sm">
+        <div className="w-full max-w-4xl mx-auto min-h-screen">
           {/* Info Banner for non-eligible users */}
           {!userEligible && (
             <div className="border-b border-white/10 p-4 bg-white/5">
@@ -117,7 +117,7 @@ export default function FeedClientContent({
           )}
 
           {/* Posts List */}
-          <div className="p-4 md:p-6 flex flex-col gap-4 md:gap-6 pb-20">
+          <div className="p-4 md:p-6 flex flex-col gap-0 pb-20">
             {posts.length === 0 ? (
               <div className="py-12 flex flex-col items-center justify-center text-center">
                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">

@@ -62,10 +62,12 @@ export async function approveKYC(submissionId: string): Promise<ActionResult> {
       return { success: false, error: updateError.message };
     }
 
-    // Update profile to mark KYC verified
+    // Update profile kyc_status to verified
     const { error: profileError } = await supabase
       .from('profiles')
-      .update({ kyc_verified: true })
+      .update({
+        kyc_status: 'verified',
+      })
       .eq('user_id', submission.user_id);
 
     if (profileError) {
@@ -110,13 +112,20 @@ export async function rejectKYC(submissionId: string, reason: string): Promise<A
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Get submission user_id before updating
+    const { data: submission } = await supabase
+      .from('kyc_submissions')
+      .select('user_id')
+      .eq('id', submissionId)
+      .single();
+
     // Update submission
     const { error: updateError } = await supabase
       .from('kyc_submissions')
       .update({
         status: 'REJECTED',
         rejection_reason: reason.trim(),
-        reviewed_by: session.userId, // Use userId instead of address
+        reviewed_by: session.userId,
         reviewed_at: new Date().toISOString(),
       })
       .eq('id', submissionId)
@@ -126,8 +135,13 @@ export async function rejectKYC(submissionId: string, reason: string): Promise<A
       return { success: false, error: updateError.message };
     }
 
-    // TODO: Log admin action to audit log
-    // await logAdminAction('KYC_REJECT', session.userId, { submissionId, reason });
+    // Update profile kyc_status to rejected
+    if (submission?.user_id) {
+      await supabase
+        .from('profiles')
+        .update({ kyc_status: 'rejected' })
+        .eq('user_id', submission.user_id);
+    }
 
     revalidatePath('/admin/kyc');
     return { success: true };

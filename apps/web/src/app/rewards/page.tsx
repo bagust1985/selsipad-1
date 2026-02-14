@@ -16,8 +16,10 @@ import {
   getReferralStats,
   claimReward,
   claimAllRewards,
+  getClaimRequirements,
   type Reward,
   type ReferralStats,
+  type ClaimRequirements,
 } from '@/lib/data/rewards';
 import { formatDistance } from 'date-fns';
 
@@ -27,15 +29,19 @@ export default function RewardsPage() {
   const [loading, setLoading] = useState(true);
   const [claimingAll, setClaimingAll] = useState(false);
   const [referralSheetOpen, setReferralSheetOpen] = useState(false);
+  const [claimReqs, setClaimReqs] = useState<ClaimRequirements | null>(null);
   const { showToast } = useToast();
 
   // Load data
   useState(() => {
-    Promise.all([getClaimableRewards(), getReferralStats()]).then(([rewardsData, statsData]) => {
-      setRewards(rewardsData);
-      setStats(statsData);
-      setLoading(false);
-    });
+    Promise.all([getClaimableRewards(), getReferralStats(), getClaimRequirements()]).then(
+      ([rewardsData, statsData, reqsData]) => {
+        setRewards(rewardsData);
+        setStats(statsData);
+        setClaimReqs(reqsData);
+        setLoading(false);
+      }
+    );
   });
 
   const totalClaimable = rewards.reduce((sum, r) => sum + r.amount, 0);
@@ -57,7 +63,7 @@ export default function RewardsPage() {
     try {
       await claimAllRewards();
       setRewards([]);
-      showToast('success', `Claimed ${totalClaimable} SOL successfully`);
+      showToast('success', `Claimed all rewards successfully`);
     } catch (error) {
       showToast('error', 'Failed to claim rewards');
     } finally {
@@ -105,7 +111,7 @@ export default function RewardsPage() {
               <div>
                 <p className="text-caption text-text-secondary">Total Claimable</p>
                 <p className="text-display-md font-bold text-text-primary tabular-nums">
-                  {totalClaimable.toFixed(2)} SOL
+                  {totalClaimable.toFixed(6)} {rewards[0]?.currency || 'BNB'}
                 </p>
               </div>
               {rewards.length > 0 && (
@@ -142,11 +148,11 @@ export default function RewardsPage() {
                 </div>
                 <div>
                   <p className="text-caption text-text-secondary">Total Earned</p>
-                  <p className="text-heading-md">{stats.total_earnings} SOL</p>
+                  <p className="text-heading-md">{stats.total_earnings.toFixed(6)} BNB</p>
                 </div>
                 <div>
                   <p className="text-caption text-text-secondary">Pending</p>
-                  <p className="text-heading-md">{stats.pending_rewards} SOL</p>
+                  <p className="text-heading-md">{stats.pending_rewards.toFixed(6)} BNB</p>
                 </div>
               </div>
             </CardContent>
@@ -242,11 +248,12 @@ export default function RewardsPage() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-caption text-text-secondary">Benefits per referral:</p>
+              <p className="text-caption text-text-secondary">Referral Rewards (Modul 15):</p>
               <ul className="text-body-sm text-text-secondary space-y-1">
-                <li>• 0.1 SOL when they verify KYC</li>
-                <li>• 5% of their first contribution</li>
-                <li>• Both you and your friend get rewards!</li>
+                <li>• Fairlaunch/Presale: 2% of contribution (40% of 5% fee)</li>
+                <li>• Bonding Curve: 0.75% of swap (50% of 1.5% fee)</li>
+                <li>• Blue Check: 30% of $10 fee ($3 per activation)</li>
+                <li>• Requires Blue Check ACTIVE + 1 active referral to claim</li>
               </ul>
             </div>
 

@@ -1,7 +1,7 @@
 import {
   TrendingUp,
   Rocket,
-  Timer,
+  Mic2,
   Shield,
   Coins,
   Trophy,
@@ -18,8 +18,11 @@ import {
 } from '@/components/home/FigmaComponents';
 import { SplineBackground } from '@/components/home/SplineBackground';
 import { MultiChainConnectWallet } from '@/components/wallet/MultiChainConnectWallet';
+import { getTrendingStats } from '@/actions/feed/get-trending-stats';
+import Link from 'next/link';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const trendingStats = await getTrendingStats();
   return (
     <div className="min-h-screen bg-black text-white dark relative overflow-hidden font-sans">
       {/* Animated Background Layer */}
@@ -62,26 +65,62 @@ export default function HomePage() {
 
               {/* Chart */}
               <div className="flex-1 min-h-[200px]">
-                <TrendingChart />
+                <TrendingChart data={trendingStats.chartData} />
               </div>
 
-              {/* Top Gainer */}
+              {/* Trending Projects */}
               <div className="mt-6 sm:mt-auto p-4 sm:p-5 rounded-[20px] bg-gradient-to-br from-[#39AEC4]/20 to-[#39AEC4]/5 border border-[#39AEC4]/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs sm:text-sm text-gray-400 mb-1">Top Gainer 24h</p>
-                    <p className="text-lg sm:text-xl font-bold">$SELSI</p>
+                {trendingStats.trendingProjects.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-xs sm:text-sm text-gray-400 mb-2">🔥 Trending Projects</p>
+                    {trendingStats.trendingProjects.map((project, i) => (
+                      <Link
+                        key={project.projectId}
+                        href={`/presales/${project.projectId}`}
+                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors group"
+                      >
+                        <span className="text-sm font-bold text-gray-500 w-5">{i + 1}</span>
+                        <img
+                          src={project.logoUrl}
+                          alt={project.name}
+                          className="w-8 h-8 rounded-full object-cover border border-white/10"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate group-hover:text-[#39AEC4] transition-colors">
+                            {project.name}
+                          </p>
+                          <p className="text-xs text-[#39AEC4]">{project.hashtag}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-[#39AEC4]">{project.uniqueUsers}</p>
+                          <p className="text-[10px] text-gray-500">users</p>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl sm:text-3xl font-bold text-[#39AEC4]">+15.4%</p>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs sm:text-sm text-gray-400 mb-1">Activity 24h</p>
+                      <p className="text-sm text-gray-500">No trending projects yet</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl sm:text-3xl font-bold text-[#39AEC4]">
+                        {trendingStats.totalPosts24h > 0 ? `${trendingStats.totalPosts24h}` : '0'}
+                      </p>
+                      <p className="text-xs text-gray-400">posts today</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
-              {/* View Analytics Button */}
-              <button className="mt-4 sm:mt-6 w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-[20px] bg-gradient-to-r from-[#39AEC4] to-[#756BBA] hover:from-[#4EABC8] hover:to-[#756BBA] transition-all shadow-lg shadow-[#756BBA]/50 font-semibold text-sm sm:text-base">
-                View Analytics
-              </button>
+              {/* View Feed Button */}
+              <Link
+                href="/feed"
+                className="mt-4 sm:mt-6 w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-[20px] bg-gradient-to-r from-[#39AEC4] to-[#756BBA] hover:from-[#4EABC8] hover:to-[#756BBA] transition-all shadow-lg shadow-[#756BBA]/50 font-semibold text-sm sm:text-base text-center block"
+              >
+                View Feed
+              </Link>
             </div>
 
             {/* Right Column Features */}
@@ -113,11 +152,11 @@ export default function HomePage() {
                   href="/explore"
                 />
                 <FeatureListItem
-                  icon={<Timer className="w-6 h-6 sm:w-7 sm:h-7" />}
-                  title="Vesting"
-                  description="Token Release Schedule"
+                  icon={<Mic2 className="w-6 h-6 sm:w-7 sm:h-7" />}
+                  title="AMA"
+                  description="Developer Q&A"
                   color="#39AEC4"
-                  href="/portfolio"
+                  href="/ama"
                 />
                 <FeatureListItem
                   icon={<Shield className="w-6 h-6 sm:w-7 sm:h-7" />}

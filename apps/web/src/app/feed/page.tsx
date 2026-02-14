@@ -2,29 +2,22 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import {
-  Card,
-  CardContent,
-  Avatar,
-  EmptyState,
-  EmptyIcon,
-  SkeletonCard,
-  Banner,
-} from '@/components/ui';
-import { PageHeader, PageContainer, BottomSheet } from '@/components/layout';
+import { Image as ImageIcon, Smile, Send } from 'lucide-react';
+import { EmptyState, EmptyIcon, SkeletonCard, Banner } from '@/components/ui';
+import { PageHeader, PageContainer } from '@/components/layout';
 import { getFeedPosts, getFollowingFeed, createPost, type Post } from '@/lib/data/feed';
 import { getUserProfile } from '@/lib/data/profile';
-import { formatDistance } from 'date-fns';
 import { useToast } from '@/components/ui';
+import { FeedPost } from '@/components/feed/FeedPost';
+import { PostComposer } from '@/components/feed/PostComposer';
 
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [newPostContent, setNewPostContent] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [userEligible, setUserEligible] = useState(false);
   const [feedFilter, setFeedFilter] = useState<'all' | 'following'>('all');
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>();
   const { showToast } = useToast();
 
   // Load data
@@ -41,6 +34,8 @@ export default function FeedPage() {
       ]);
       setPosts(postsData);
       setUserEligible(profile?.bluecheck_status === 'active');
+      setUserProfile(profile);
+      setCurrentUserId(profile?.id);
     } catch (error) {
       console.error('Error loading feed:', error);
     } finally {
@@ -53,71 +48,68 @@ export default function FeedPage() {
     loadFeed(filter);
   };
 
-  const handleFabClick = () => {
-    if (!userEligible) {
-      showToast('error', 'Blue Check required to post');
-      // TODO: Show gating notice modal
-      return;
-    }
-    setComposerOpen(true);
-  };
-
-  const handleSubmitPost = async () => {
-    if (!newPostContent.trim()) {
-      showToast('error', 'Post content is required');
-      return;
-    }
-
-    setSubmitting(true);
+  const handleSubmitPost = async (content: string, imageUrls?: string[]) => {
     try {
-      const newPost = await createPost(newPostContent);
+      const newPost = await createPost(content);
       setPosts([newPost, ...posts]);
-      setNewPostContent('');
-      setComposerOpen(false);
       showToast('success', 'Post published successfully');
     } catch (error) {
       showToast('error', 'Failed to publish post');
-    } finally {
-      setSubmitting(false);
     }
+  };
+
+  const handleDeletePost = (postId: string) => {
+    setPosts(posts.filter((p) => p.id !== postId));
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-bg-page pb-20">
-        <PageHeader title="Feed" />
-        <PageContainer className="py-4 space-y-4">
+        <PageHeader title="Selsi Feed" />
+        <div className="max-w-[680px] mx-auto px-4 py-4 space-y-4">
           {[1, 2, 3].map((i) => (
-            <SkeletonCard key={i} />
+            <div
+              key={i}
+              className="rounded-[20px] bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-[#39AEC4]/10 p-5 animate-pulse"
+            >
+              <div className="flex gap-3">
+                <div className="w-12 h-12 rounded-full bg-white/10" />
+                <div className="flex-1 space-y-3">
+                  <div className="h-4 bg-white/10 rounded w-1/3" />
+                  <div className="h-3 bg-white/5 rounded w-full" />
+                  <div className="h-3 bg-white/5 rounded w-2/3" />
+                </div>
+              </div>
+            </div>
           ))}
-        </PageContainer>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-bg-page pb-20">
-      <PageHeader title="Feed" />
+      <PageHeader title="Selsi Feed" />
 
-      {/* Feed Filter Tabs */}
-      <div className="sticky top-14 z-20 bg-bg-page border-b border-border-subtle">
-        <div className="flex gap-4 px-4 py-2">
+      {/* Feed Filter Tabs — Gradient pill style */}
+      <div className="sticky top-14 z-20 backdrop-blur-xl bg-black/60 border-b border-[#39AEC4]/10">
+        <div className="max-w-[680px] mx-auto flex gap-2 px-4 py-3">
           <button
             onClick={() => handleFeedFilterChange('all')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            className={`px-5 py-2 text-sm font-semibold rounded-full transition-all ${
               feedFilter === 'all'
-                ? 'bg-primary-main text-primary-text'
-                : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                ? 'bg-gradient-to-r from-[#39AEC4] to-[#756BBA] text-white shadow-lg shadow-[#756BBA]/20'
+                : 'text-gray-400 hover:text-white hover:bg-white/5 border border-white/10'
             }`}
           >
             For You
           </button>
           <button
             onClick={() => handleFeedFilterChange('following')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            className={`px-5 py-2 text-sm font-semibold rounded-full transition-all ${
               feedFilter === 'following'
-                ? 'bg-primary-main text-primary-text'
-                : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+                ? 'bg-gradient-to-r from-[#39AEC4] to-[#756BBA] text-white shadow-lg shadow-[#756BBA]/20'
+                : 'text-gray-400 hover:text-white hover:bg-white/5 border border-white/10'
             }`}
           >
             Following
@@ -125,151 +117,76 @@ export default function FeedPage() {
         </div>
       </div>
 
-      <PageContainer className="py-4 space-y-4">
-        {feedFilter === 'following' ? (
+      <div className="max-w-[680px] mx-auto px-4 py-6 flex flex-col gap-10">
+        {/* Following Banner */}
+        {feedFilter === 'following' && (
           <Banner
             type="info"
             message="Following Feed"
             submessage="Showing posts only from users you follow"
           />
-        ) : null}
+        )}
+
         {/* Info Banner for non-eligible users */}
         {!userEligible && (
-          <Banner
-            type="info"
-            message="Want to post on the feed?"
-            submessage="Get Blue Check verification to start posting"
-            action={{
-              label: 'Get Blue Check',
-              onClick: () => (window.location.href = '/profile/blue-check'),
-            }}
+          <div className="rounded-[20px] bg-gradient-to-br from-[#39AEC4]/5 to-[#756BBA]/5 backdrop-blur-xl border border-[#39AEC4]/20 p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#39AEC4]/30 to-[#756BBA]/30 border border-[#39AEC4]/40 flex items-center justify-center text-lg flex-shrink-0">
+                ✨
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-white">Want to post on the feed?</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Get Blue Check verification to start posting
+                </p>
+              </div>
+              <Link
+                href="/profile/blue-check"
+                className="px-4 py-2 text-xs font-semibold rounded-full bg-gradient-to-r from-[#39AEC4] to-[#756BBA] text-white hover:shadow-lg hover:shadow-[#756BBA]/20 transition-all flex-shrink-0"
+              >
+                Get Blue Check
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Inline Post Composer */}
+        {userEligible && (
+          <PostComposer
+            userProfile={userProfile}
+            isEligible={userEligible}
+            onSubmit={handleSubmitPost}
           />
         )}
 
         {/* Feed Posts */}
         {posts.length === 0 ? (
-          <Card>
-            <CardContent>
-              <EmptyState
-                icon={<EmptyIcon />}
-                title="Feed is empty"
-                description="Feed will be filled with project updates and trending posts"
-                action={{
-                  label: 'Explore Projects',
-                  onClick: () => (window.location.href = '/explore'),
-                }}
-              />
-            </CardContent>
-          </Card>
+          <div className="rounded-[20px] bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-[#39AEC4]/10 p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#39AEC4]/20 to-[#756BBA]/20 border border-[#39AEC4]/30 flex items-center justify-center text-3xl">
+              📝
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">Feed is empty</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              Feed will be filled with project updates and trending posts
+            </p>
+            <Link
+              href="/explore"
+              className="inline-flex px-6 py-2.5 rounded-full bg-gradient-to-r from-[#39AEC4] to-[#756BBA] text-white text-sm font-semibold hover:shadow-lg hover:shadow-[#756BBA]/20 transition-all"
+            >
+              Explore Projects
+            </Link>
+          </div>
         ) : (
           posts.map((post) => (
-            <Card key={post.id} hover>
-              <CardContent className="space-y-3">
-                {/* Author Row */}
-                <div className="flex items-center gap-3">
-                  <Avatar
-                    src={post.author.avatar_url}
-                    alt={post.author.username}
-                    size="md"
-                    fallback={post.author.username.slice(0, 2).toUpperCase()}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-heading-sm truncate">@{post.author.username}</h4>
-                      {post.author.bluecheck && <span className="text-primary-main">✓</span>}
-                    </div>
-                    <p className="text-caption text-text-tertiary">
-                      {formatDistance(new Date(post.created_at), new Date(), { addSuffix: true })}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <p className="text-body-sm text-text-primary whitespace-pre-wrap line-clamp-5">
-                  {post.content}
-                </p>
-
-                {/* Project Tag */}
-                {post.project_id && (
-                  <Link href={`/project/${post.project_id}`}>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-bg-elevated border border-border-subtle rounded-full hover:border-primary-main transition-colors">
-                      <span className="text-caption font-medium text-text-secondary">
-                        🏷️ {post.project_name}
-                      </span>
-                    </div>
-                  </Link>
-                )}
-
-                {/* Engagement Stats */}
-                <div className="flex items-center gap-4 pt-2 border-t border-border-subtle">
-                  <button className="flex items-center gap-1.5 text-caption text-text-secondary hover:text-primary-main transition-colors">
-                    <svg
-                      className="w-4 h-4"
-                      fill={post.is_liked ? 'currentColor' : 'none'}
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
-                    <span>{post.likes}</span>
-                  </button>
-                  <button className="flex items-center gap-1.5 text-caption text-text-secondary hover:text-primary-main transition-colors">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                      />
-                    </svg>
-                    <span>{post.replies}</span>
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
+            <FeedPost
+              key={post.id}
+              post={post}
+              currentUserId={currentUserId}
+              onDelete={() => handleDeletePost(post.id)}
+            />
           ))
         )}
-      </PageContainer>
-
-      {/* FAB (Floating Action Button) */}
-      <button
-        onClick={handleFabClick}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-primary-main text-primary-text rounded-full shadow-xl hover:bg-primary-hover active:scale-95 transition-all flex items-center justify-center z-30"
-        aria-label="Create new post"
-      >
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
-
-      {/* Composer Bottom Sheet */}
-      <BottomSheet isOpen={composerOpen} onClose={() => setComposerOpen(false)} title="Create Post">
-        <div className="space-y-4">
-          <textarea
-            placeholder="What's happening?"
-            value={newPostContent}
-            onChange={(e) => setNewPostContent(e.target.value)}
-            className="w-full min-h-32 bg-bg-input border border-border-subtle rounded-md px-4 py-3 text-text-primary placeholder:text-text-tertiary focus:border-primary-main focus:ring-2 focus:ring-primary-main/20 transition-all resize-none"
-            maxLength={500}
-          />
-
-          <div className="flex items-center justify-between">
-            <span className="text-caption text-text-tertiary">{newPostContent.length}/500</span>
-            <button
-              onClick={handleSubmitPost}
-              disabled={!newPostContent.trim() || submitting}
-              className="px-6 py-2 bg-primary-main text-primary-text rounded-md text-body-sm font-medium hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {submitting ? 'Posting...' : 'Post'}
-            </button>
-          </div>
-        </div>
-      </BottomSheet>
+      </div>
     </div>
   );
 }

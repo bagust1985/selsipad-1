@@ -2,7 +2,7 @@
 // Replaces stub data with Supabase queries
 
 import { createClient } from '@/lib/supabase/server';
-import { getServerSession } from '@/lib/auth/session';
+import { getServerSession, type Session } from '@/lib/auth/session';
 
 export interface Wallet {
   id: string;
@@ -35,12 +35,13 @@ export interface UserProfile {
  * Fetches authenticated user's profile with wallets and stats
  * WALLET ISOLATION: Only returns data for the current connected wallet
  */
-export async function getUserProfile(): Promise<UserProfile | null> {
+export async function getUserProfile(
+  existingSession?: Session | null
+): Promise<UserProfile | null> {
   try {
-    const session = await getServerSession();
+    const session = existingSession !== undefined ? existingSession : await getServerSession();
 
     if (!session) {
-      console.warn('User not authenticated');
       return null;
     }
 
@@ -100,12 +101,13 @@ export async function getUserProfile(): Promise<UserProfile | null> {
   }
 }
 
-// Helper function for KYC status mapping
+// Helper function for KYC status mapping (case-insensitive)
 function mapKYCStatus(
   dbStatus: string | null
 ): 'verified' | 'pending' | 'rejected' | 'not_started' {
-  switch (dbStatus) {
+  switch (dbStatus?.toLowerCase()) {
     case 'verified':
+    case 'approved':
       return 'verified';
     case 'pending':
       return 'pending';

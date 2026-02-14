@@ -45,39 +45,62 @@ export default function AdminFairlaunchPage() {
 
   const fetchProjects = async () => {
     try {
-      // Fetch ended fairlaunches directly from database
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
-
       const now = new Date().toISOString();
 
-      // Query SUBMITTED fairlaunches (waiting for review/approval)
-      const { data: reviewRounds, error: reviewError } = await supabase
-        .from('launch_rounds')
-        .select(
-          `
-          *,
-          projects (
-            id,
-            name,
-            symbol,
-            logo_url,
-            description,
-            creator_wallet,
-            token_address
-          )
-        `
+      const selectFields = `
+        *,
+        projects (
+          id,
+          name,
+          symbol,
+          logo_url,
+          description,
+          creator_wallet,
+          token_address
         )
-        .eq('type', 'FAIRLAUNCH')
-        .eq('status', 'SUBMITTED')
-        .order('created_at', { ascending: false });
+      `;
 
-      if (reviewError) {
-        console.error('[Admin] Error fetching review projects:', reviewError);
-      }
+      // Fetch all 3 categories in parallel
+      const [reviewResult, liveResult, endedResult] = await Promise.all([
+        // SUBMITTED fairlaunches (waiting for review/approval)
+        supabase
+          .from('launch_rounds')
+          .select(selectFields)
+          .eq('type', 'FAIRLAUNCH')
+          .eq('status', 'SUBMITTED')
+          .order('created_at', { ascending: false }),
+
+        // Live fairlaunches (DEPLOYED or ACTIVE, between start and end)
+        supabase
+          .from('launch_rounds')
+          .select(selectFields)
+          .eq('type', 'FAIRLAUNCH')
+          .in('status', ['DEPLOYED', 'ACTIVE'])
+          .lte('start_at', now)
+          .gte('end_at', now)
+          .order('start_at', { ascending: false }),
+
+        // Ended fairlaunches (DEPLOYED, past end_at)
+        supabase
+          .from('launch_rounds')
+          .select(selectFields)
+          .eq('type', 'FAIRLAUNCH')
+          .eq('status', 'DEPLOYED')
+          .lt('end_at', now)
+          .order('end_at', { ascending: false }),
+      ]);
+
+      if (reviewResult.error)
+        console.error('[Admin] Error fetching review projects:', reviewResult.error);
+      if (liveResult.error)
+        console.error('[Admin] Error fetching live projects:', liveResult.error);
+      if (endedResult.error)
+        console.error('[Admin] Error fetching ended projects:', endedResult.error);
 
       // Transform review fairlaunches
-      const reviewFairlaunches = (reviewRounds || []).map((round: any) => {
+      const reviewFairlaunches = (reviewResult.data || []).map((round: any) => {
         const project = round.projects;
         return {
           id: project?.id || round.id,
@@ -105,37 +128,9 @@ export default function AdminFairlaunchPage() {
       });
 
       setReviewProjects(reviewFairlaunches);
-      console.log('[Admin] Fetched review fairlaunches:', reviewFairlaunches.length);
 
-      // Query live fairlaunches (DEPLOYED or ACTIVE status + between start_at and end_at)
-      const { data: liveRounds, error: liveError } = await supabase
-        .from('launch_rounds')
-        .select(
-          `
-          *,
-          projects (
-            id,
-            name,
-            symbol,
-            logo_url,
-            description,
-            creator_wallet,
-            token_address
-          )
-        `
-        )
-        .eq('type', 'FAIRLAUNCH')
-        .in('status', ['DEPLOYED', 'ACTIVE']) // Include ACTIVE status
-        .lte('start_at', now)
-        .gte('end_at', now)
-        .order('start_at', { ascending: false });
-
-      if (liveError) {
-        console.error('[Admin] Error fetching live projects:', liveError);
-      }
-
-      // Transform live fairlaunches to match PendingProject interface
-      const liveFairlaunches = (liveRounds || []).map((round: any) => {
+      // Transform live fairlaunches
+      const liveFairlaunches = (liveResult.data || []).map((round: any) => {
         const project = round.projects;
         return {
           id: project?.id || round.id,
@@ -169,34 +164,9 @@ export default function AdminFairlaunchPage() {
       });
 
       setLiveProjects(liveFairlaunches);
-      console.log('[Admin] Fetched live fairlaunches:', liveFairlaunches.length, liveFairlaunches);
 
-      // Query launch_rounds that have ended
-      const { data: rounds, error } = await supabase
-        .from('launch_rounds')
-        .select(
-          `
-          *,
-          projects (
-            id,
-            name,
-            symbol,
-            logo_url,
-            description
-          )
-        `
-        )
-        .eq('type', 'FAIRLAUNCH')
-        .eq('status', 'DEPLOYED')
-        .lt('end_at', now)
-        .order('end_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      // Transform to match expected format
-      const endedFairlaunches = (rounds || []).map((round: any) => {
+      // Transform ended fairlaunches
+      const endedFairlaunches = (endedResult.data || []).map((round: any) => {
         const project = round.projects;
         return {
           id: round.id,
@@ -215,11 +185,6 @@ export default function AdminFairlaunchPage() {
       });
 
       setEndedProjects(endedFairlaunches);
-      console.log(
-        '[Admin] Fetched ended fairlaunches:',
-        endedFairlaunches.length,
-        endedFairlaunches
-      );
     } catch (err: any) {
       console.error('Error fetching projects:', err);
       setError(err.message);

@@ -15,6 +15,7 @@ import {
   History,
   Edit,
   Rocket,
+  IdCard,
 } from 'lucide-react';
 import type { UserProfile } from '@/lib/data/profile';
 import type { UserStatsMultiChain } from '@/types/multi-chain';
@@ -23,11 +24,13 @@ import { formatDistance } from 'date-fns';
 interface ProfileClientContentProps {
   initialProfile: UserProfile;
   multiChainStats: UserStatsMultiChain | null;
+  userBadges: any[];
 }
 
 export function ProfileClientContent({
   initialProfile,
   multiChainStats,
+  userBadges,
 }: ProfileClientContentProps) {
   const [profile] = useState<UserProfile>(initialProfile);
   const primaryWallet = profile.wallets.find((w) => w.is_primary);
@@ -133,31 +136,6 @@ export function ProfileClientContent({
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Total Contributed */}
-          <div className="bg-black border border-white/10 rounded-xl p-5 relative overflow-hidden group hover:border-white/20 transition-colors">
-            <p className="text-xs text-gray-400 font-medium mb-1">Total Contributed</p>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-white font-mono group-hover:text-cyan-400 transition-colors">
-                {multiChainStats?.totalContributedUSD
-                  ? `$${multiChainStats.totalContributedUSD.toFixed(2)}`
-                  : '0'}
-              </span>
-            </div>
-          </div>
-
-          {/* Tokens Claimed */}
-          <div className="bg-black border border-white/10 rounded-xl p-5 relative overflow-hidden group hover:border-white/20 transition-colors">
-            <p className="text-xs text-gray-400 font-medium mb-1">Tokens Claimed</p>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-white font-mono group-hover:text-purple-400 transition-colors">
-                {profile.total_claimed || 0}
-              </span>
-            </div>
-          </div>
-        </div>
-
         {/* Badge Collection */}
         <div className="space-y-4">
           <div>
@@ -165,8 +143,93 @@ export function ProfileClientContent({
             <p className="text-sm text-gray-500">Your earned badges and achievements</p>
           </div>
 
-          <div className="space-y-3">
-            {/* Blue Check Badge */}
+          {/* Dynamic Badges from DB */}
+          {userBadges.length > 0 ? (
+            <div className="space-y-3">
+              {userBadges.map((instance: any) => {
+                const badge = Array.isArray(instance.badge) ? instance.badge[0] : instance.badge;
+                if (!badge) return null;
+
+                // Color scheme based on badge_type
+                const colors =
+                  badge.badge_type === 'SPECIAL'
+                    ? {
+                        bg: 'bg-cyan-500/10',
+                        border: 'border-cyan-500/20',
+                        text: 'text-cyan-400',
+                        hoverText: 'group-hover:text-cyan-400',
+                        pill: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400',
+                      }
+                    : badge.badge_type === 'MILESTONE'
+                      ? {
+                          bg: 'bg-purple-500/10',
+                          border: 'border-purple-500/20',
+                          text: 'text-purple-400',
+                          hoverText: 'group-hover:text-purple-400',
+                          pill: 'bg-purple-500/10 border-purple-500/30 text-purple-400',
+                        }
+                      : {
+                          bg: 'bg-yellow-500/10',
+                          border: 'border-yellow-500/20',
+                          text: 'text-yellow-400',
+                          hoverText: 'group-hover:text-yellow-400',
+                          pill: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400',
+                        };
+
+                return (
+                  <div
+                    key={instance.id}
+                    className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:bg-white/[0.07] transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`w-10 h-10 rounded-full ${colors.bg} flex items-center justify-center border ${colors.border} group-hover:border-opacity-80 transition-colors`}
+                      >
+                        {badge.name?.toLowerCase().includes('kyc verified') ? (
+                          <IdCard className={`w-5 h-5 ${colors.text}`} />
+                        ) : badge.icon_url ? (
+                          <Image
+                            src={badge.icon_url}
+                            alt={badge.name}
+                            width={20}
+                            height={20}
+                            className="w-5 h-5"
+                          />
+                        ) : (
+                          <Shield className={`w-5 h-5 ${colors.text}`} />
+                        )}
+                      </div>
+                      <div>
+                        <h4
+                          className={`font-bold text-white text-sm ${colors.hoverText} transition-colors`}
+                        >
+                          {badge.name}
+                        </h4>
+                        <p className="text-xs text-gray-500">{badge.description}</p>
+                      </div>
+                    </div>
+                    <div
+                      className={`px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide ${colors.pill}`}
+                    >
+                      Earned
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
+              <Shield className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">No badges earned yet</p>
+              <p className="text-xs text-gray-600 mt-1">
+                Participate in the platform to earn badges!
+              </p>
+            </div>
+          )}
+
+          {/* Quick Access Links */}
+          <div className="space-y-3 mt-2">
+            {/* Blue Check */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:bg-white/[0.07] transition-colors relative overflow-hidden">
               <div className="flex items-center gap-4 relative z-10">
                 <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:border-blue-500/50 transition-colors">
@@ -186,14 +249,12 @@ export function ProfileClientContent({
                     : 'bg-white/5 border-white/10 text-gray-500'
                 }`}
               >
-                {profile.bluecheck_status === 'active' ? 'Unlocked' : 'Locked'}
+                {profile.bluecheck_status === 'active' ? 'Active' : 'Get Blue Check'}
               </div>
-
-              {/* Link Wrapper */}
               <Link href="/profile/blue-check" className="absolute inset-0 z-20" />
             </div>
 
-            {/* Developer KYC Badge */}
+            {/* Developer KYC */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:bg-white/[0.07] transition-colors relative overflow-hidden">
               <div className="flex items-center gap-4 relative z-10">
                 <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 group-hover:border-yellow-500/50 transition-colors">
@@ -213,14 +274,12 @@ export function ProfileClientContent({
                     : 'bg-white/5 border-white/10 text-gray-500'
                 }`}
               >
-                {profile.kyc_status === 'verified' ? 'Unlocked' : 'Locked'}
+                {profile.kyc_status === 'verified' ? 'Verified' : 'Get Verified'}
               </div>
-
-              {/* Link Wrapper */}
               <Link href="/profile/kyc" className="absolute inset-0 z-20" />
             </div>
 
-            {/* My Projects Badge (Placeholder logic for now) */}
+            {/* My Projects */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:bg-white/[0.07] transition-colors relative overflow-hidden">
               <div className="flex items-center gap-4 relative z-10">
                 <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20 group-hover:border-purple-500/50 transition-colors">
@@ -236,8 +295,6 @@ export function ProfileClientContent({
               <div className="px-3 py-1 rounded-full border bg-cyan-500/10 border-cyan-500/30 text-cyan-400 text-[10px] font-bold uppercase tracking-wide">
                 Unlocked
               </div>
-
-              {/* Link Wrapper */}
               <Link href="/profile/projects" className="absolute inset-0 z-20" />
             </div>
           </div>
@@ -309,13 +366,16 @@ export function ProfileClientContent({
           </div>
         </div>
 
-        {/* Transaction History Button */}
+        {/* Portfolio Button */}
         <div className="pt-4">
-          <button className="w-full py-4 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 border border-white/10 hover:border-white/20 transition-all text-center group">
+          <Link
+            href="/portfolio"
+            className="block w-full py-4 rounded-xl bg-gradient-to-r from-gray-900 to-gray-800 border border-white/10 hover:border-white/20 transition-all text-center group"
+          >
             <span className="text-sm font-bold text-white group-hover:text-cyan-400 transition-colors flex items-center justify-center gap-2">
-              Transaction History
+              Portfolio
             </span>
-          </button>
+          </Link>
         </div>
       </PageContainer>
     </div>

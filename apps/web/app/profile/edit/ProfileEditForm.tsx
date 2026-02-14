@@ -9,15 +9,26 @@ import { Card, CardContent } from '@/components/ui';
 interface ProfileEditFormProps {
   initialNickname?: string;
   initialAvatarUrl?: string;
+  initialBio?: string;
+  initialBannerUrl?: string;
 }
 
-export function ProfileEditForm({ initialNickname, initialAvatarUrl }: ProfileEditFormProps) {
+export function ProfileEditForm({
+  initialNickname,
+  initialAvatarUrl,
+  initialBio,
+  initialBannerUrl,
+}: ProfileEditFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const [nickname, setNickname] = useState(initialNickname || '');
+  const [bio, setBio] = useState(initialBio || '');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,8 +91,12 @@ export function ProfileEditForm({ initialNickname, initialAvatarUrl }: ProfileEd
 
     const formData = new FormData();
     formData.append('nickname', nickname);
+    formData.append('bio', bio);
     if (avatarFile) {
       formData.append('avatar', avatarFile);
+    }
+    if (bannerFile) {
+      formData.append('banner', bannerFile);
     }
 
     const result = await updateProfile(formData);
@@ -178,6 +193,57 @@ export function ProfileEditForm({ initialNickname, initialAvatarUrl }: ProfileEd
         </div>
       </div>
 
+      {/* Banner Section */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+        <h3 className="text-xl font-bold text-white mb-4">Banner Image</h3>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-full h-32 rounded-xl overflow-hidden bg-gradient-to-r from-cyan-900/30 via-purple-900/20 to-blue-900/30 border border-white/10">
+            {bannerPreviewUrl || initialBannerUrl ? (
+              <img
+                src={bannerPreviewUrl || initialBannerUrl || ''}
+                alt="Banner"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">
+                No banner set
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 3 * 1024 * 1024) {
+                  setError('Banner file size must be less than 3MB');
+                  return;
+                }
+                setError(null);
+                setBannerFile(file);
+                const reader = new FileReader();
+                reader.onloadend = () => setBannerPreviewUrl(reader.result as string);
+                reader.readAsDataURL(file);
+              }}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => bannerInputRef.current?.click()}
+              className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 transition-colors text-sm font-bold"
+            >
+              {bannerPreviewUrl || initialBannerUrl ? 'Change Banner' : 'Upload Banner'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 text-center">
+            JPG, PNG or WebP. Max 3MB. Recommended: 1500×500
+          </p>
+        </div>
+      </div>
+
       {/* Nickname Section */}
       <div className="bg-white/5 border border-white/10 rounded-xl p-6">
         <form onSubmit={handleSubmit}>
@@ -200,6 +266,23 @@ export function ProfileEditForm({ initialNickname, initialAvatarUrl }: ProfileEd
             </p>
           </div>
 
+          {/* Bio Field */}
+          <div className="mb-4">
+            <label htmlFor="bio" className="block text-sm font-bold text-gray-300 mb-2">
+              Bio
+            </label>
+            <textarea
+              id="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, 160))}
+              placeholder="Tell everyone about yourself..."
+              maxLength={160}
+              rows={3}
+              className="w-full px-4 py-2 bg-black border border-white/10 rounded-lg text-white placeholder:text-gray-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 transition-all resize-none"
+            />
+            <p className="mt-1 text-xs text-gray-500">{bio.length}/160 characters</p>
+          </div>
+
           {/* Error Message */}
           {error && (
             <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-lg mb-4">
@@ -211,7 +294,7 @@ export function ProfileEditForm({ initialNickname, initialAvatarUrl }: ProfileEd
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => router.back()}
+              onClick={() => router.push('/profile')}
               className="flex-1 px-4 py-3 bg-white/5 border border-white/10 text-gray-300 rounded-lg hover:bg-white/10 transition-colors font-bold"
             >
               Cancel

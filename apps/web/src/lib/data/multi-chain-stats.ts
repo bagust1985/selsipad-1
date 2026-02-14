@@ -25,12 +25,6 @@ export async function getUserStatsMultiChain(userId: string): Promise<UserStatsM
       console.error('[Multi-Chain Stats] Error fetching contributions:', contributionsError);
     }
 
-    console.log('[Multi-Chain Stats] Fetched contributions:', {
-      userId,
-      count: contributionsData?.length || 0,
-      data: contributionsData,
-    });
-
     // Aggregate contributions by chain
     const contributionsByChain = (contributionsData || []).reduce((acc, contrib) => {
       const chain = contrib.chain || 'BSC'; // Default to BSC for backward compat

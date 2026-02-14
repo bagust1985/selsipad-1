@@ -449,3 +449,188 @@ export async function getFollowingFeed(limit = 20): Promise<Post[]> {
     return [];
   }
 }
+
+/**
+ * Get Post By ID
+ *
+ * Fetches a single post by its ID with author profile and like data
+ */
+export async function getPostById(postId: string): Promise<Post | null> {
+  const supabase = createClient();
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { data: post, error } = await supabase
+      .from('posts')
+      .select('id, author_id, content, project_id, type, created_at, image_urls, hashtags')
+      .eq('id', postId)
+      .is('deleted_at', null)
+      .single();
+
+    if (error || !post) {
+      console.error('Error fetching post:', error);
+      return null;
+    }
+
+    // Fetch author profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_id, username, avatar_url, bluecheck_status')
+      .eq('user_id', post.author_id)
+      .single();
+
+    // Get like data
+    const likesData = await getPostLikeCounts([post.id], user?.id);
+    const likes = likesData[post.id] || { count: 0, userLiked: false };
+
+    return {
+      id: post.id,
+      author: {
+        id: post.author_id,
+        username: profile?.username || 'Anonymous',
+        avatar_url: profile?.avatar_url,
+        bluecheck:
+          profile?.bluecheck_status === 'ACTIVE' || profile?.bluecheck_status === 'VERIFIED',
+      },
+      content: post.content,
+      project_id: post.project_id,
+      project_name: undefined,
+      type: mapPostType(post.type),
+      created_at: post.created_at,
+      likes: likes.count,
+      replies: 0,
+      is_liked: likes.userLiked,
+      image_urls: post.image_urls || [],
+      hashtags: post.hashtags || [],
+    };
+  } catch (err) {
+    console.error('Unexpected error in getPostById:', err);
+    return null;
+  }
+}
+
+export interface PostComment {
+  id: string;
+  content: string;
+  created_at: string;
+  author: {
+    id: string;
+    username: string;
+    avatar_url?: string;
+    bluecheck: boolean;
+  };
+}
+
+/**
+ * Get Post Comments
+ *
+ * Fetches all comments for a post with author profiles
+ */
+export async function getPostComments(postId: string): Promise<PostComment[]> {
+  const supabase = createClient();
+
+  try {
+    const { data, error } = await supabase
+      .from('post_comments')
+      .select('id, content, created_at, author_id')
+      .eq('post_id', postId)
+      .is('deleted_at', null)
+      .is('parent_comment_id', null)
+      .order('created_at', { ascending: true });
+
+    if (error || !data) {
+      console.error('Error fetching comments:', error);
+      return [];
+    }
+
+    if (data.length === 0) return [];
+
+    // Fetch author profiles
+    const authorIds = [...new Set(data.map((c: any) => c.author_id))];
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, username, avatar_url, bluecheck_status')
+      .in('user_id', authorIds);
+
+    const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
+
+    return data.map((comment: any) => {
+      const author = profileMap.get(comment.author_id) || {};
+      return {
+        id: comment.id,
+        content: comment.content,
+        created_at: comment.created_at,
+        author: {
+          id: comment.author_id,
+          username: (author as any).username || 'Anonymous',
+          avatar_url: (author as any).avatar_url,
+          bluecheck:
+            (author as any).bluecheck_status === 'ACTIVE' ||
+            (author as any).bluecheck_status === 'VERIFIED',
+        },
+      };
+    });
+  } catch (err) {
+    console.error('Unexpected error in getPostComments:', err);
+    return [];
+  }
+}
+
+/**
+ * Create Comment
+ *
+ * Adds a comment to a post
+ */
+export async function createComment(postId: string, content: string): Promise<PostComment | null> {
+  const supabase = createClient();
+
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username, avatar_url, bluecheck_status')
+      .eq('user_id', user.id)
+      .single();
+
+    const { data: comment, error } = await supabase
+      .from('post_comments')
+      .insert({
+        post_id: postId,
+        user_id: user.id,
+        content,
+      })
+      .select()
+      .single();
+
+    if (error || !comment) {
+      console.error('Error creating comment:', error);
+      return null;
+    }
+
+    return {
+      id: comment.id,
+      content: comment.content,
+      created_at: comment.created_at,
+      author: {
+        id: user.id,
+        username: profile?.username || 'Anonymous',
+        avatar_url: profile?.avatar_url,
+        bluecheck:
+          profile?.bluecheck_status === 'ACTIVE' || profile?.bluecheck_status === 'VERIFIED',
+      },
+    };
+  } catch (err) {
+    console.error('Unexpected error in createComment:', err);
+    return null;
+  }
+}

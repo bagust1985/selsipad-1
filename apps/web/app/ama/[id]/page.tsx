@@ -45,6 +45,23 @@ export default async function AMADetailPage({ params }: { params: { id: string }
 
   const messages = await getAMAMessages(params.id);
 
+  // Get developer's wallet address for voice role determination
+  let developerWallet = '';
+  if (ama.developer_id) {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data: wallet } = await supabase
+      .from('wallets')
+      .select('address')
+      .eq('user_id', ama.developer_id)
+      .eq('is_primary', true)
+      .single();
+    developerWallet = wallet?.address || '';
+    console.log('[AMA Detail] Developer wallet:', developerWallet);
+  }
+
   const isLive = ama.status === 'LIVE';
   const isEnded = ama.status === 'ENDED';
   const isPinned = ama.status === 'PINNED';
@@ -98,6 +115,25 @@ export default async function AMADetailPage({ params }: { params: { id: string }
                   {ama.profiles?.kyc_status === 'APPROVED' ? '✓ Dev Verified' : 'Developer'}
                 </p>
               </div>
+            </div>
+
+            {/* Host Info */}
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <span className="text-xs text-gray-500">Hosted by</span>
+              <span className="px-2 py-0.5 bg-[#39AEC4]/20 text-[#39AEC4] text-xs font-bold rounded border border-[#39AEC4]/30">
+                🛡️ SELSIPAD Team
+              </span>
+              {ama.type && ama.type !== 'TEXT' && (
+                <span
+                  className={`px-2 py-0.5 text-xs font-bold rounded border ${
+                    ama.type === 'VIDEO'
+                      ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                      : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                  }`}
+                >
+                  {ama.type === 'VIDEO' ? '📹' : '🎙️'} {ama.type}
+                </span>
+              )}
             </div>
 
             {/* Metadata */}
@@ -154,7 +190,9 @@ export default async function AMADetailPage({ params }: { params: { id: string }
               amaId={ama.id}
               projectName={ama.project_name}
               developerId={ama.developer_id}
+              developerWallet={developerWallet}
               initialMessages={messages}
+              amaType={ama.type || 'TEXT'}
             />
           )}
 
@@ -205,11 +243,22 @@ export default async function AMADetailPage({ params }: { params: { id: string }
                           <div key={msg.id} className="p-3 bg-white/5 rounded-lg">
                             <div className="flex items-center gap-2 mb-1">
                               <span
-                                className={`font-medium ${msg.is_developer ? 'text-indigo-400' : 'text-white'}`}
+                                className={`font-medium ${
+                                  msg.is_host
+                                    ? 'text-[#39AEC4]'
+                                    : msg.is_developer
+                                      ? 'text-indigo-400'
+                                      : 'text-white'
+                                }`}
                               >
                                 {msg.username}
                               </span>
-                              {msg.is_developer && (
+                              {msg.is_host && (
+                                <span className="text-xs bg-[#39AEC4]/30 text-[#39AEC4] px-1 rounded">
+                                  HOST
+                                </span>
+                              )}
+                              {msg.is_developer && !msg.is_host && (
                                 <span className="text-xs bg-indigo-500/30 text-indigo-300 px-1 rounded">
                                   DEV
                                 </span>

@@ -20,32 +20,24 @@ async function getKYCSubmissions() {
     return [];
   }
 
-  // Get unique user_ids
+  // Get unique user_ids and fetch wallets in parallel
   const userIds = [...new Set(submissions.map((s) => s.user_id))];
 
-  // Fetch wallets for all user_ids
   const { data: wallets } = await supabase
     .from('wallets')
     .select('user_id, address, chain, is_primary')
     .in('user_id', userIds);
 
-  // Create map of user_id to primary wallet
+  // Create map of user_id to primary wallet (prefer primary, fallback to any)
   const walletMap = new Map();
   (wallets || []).forEach((wallet) => {
-    if (wallet.is_primary && !walletMap.has(wallet.user_id)) {
-      walletMap.set(wallet.user_id, wallet);
-    }
-  });
-
-  // If no primary wallet found, use any wallet
-  (wallets || []).forEach((wallet) => {
-    if (!walletMap.has(wallet.user_id)) {
+    if (wallet.is_primary || !walletMap.has(wallet.user_id)) {
       walletMap.set(wallet.user_id, wallet);
     }
   });
 
   // Transform submissions to include wallet_address
-  const transformed = submissions.map((sub) => {
+  return submissions.map((sub) => {
     const wallet = walletMap.get(sub.user_id);
     return {
       ...sub,
@@ -53,8 +45,6 @@ async function getKYCSubmissions() {
       chain: wallet?.chain || 'N/A',
     };
   });
-
-  return transformed;
 }
 
 function getStatusBadge(status: string) {

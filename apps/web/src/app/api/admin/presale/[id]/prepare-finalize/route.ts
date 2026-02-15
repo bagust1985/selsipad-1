@@ -27,22 +27,22 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // 1. Verify admin auth via wallet session (service-role bypasses RLS)
+    // 1. Verify admin auth via admin_session cookie (set by /api/auth/admin-login)
     const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session_token')?.value;
+    const adminSessionRaw = cookieStore.get('admin_session')?.value;
 
-    if (!sessionToken) {
+    if (!adminSessionRaw) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: session } = await supabaseAdmin
-      .from('auth_sessions')
-      .select('wallets!inner(user_id)')
-      .eq('session_token', sessionToken)
-      .gt('expires_at', new Date().toISOString())
-      .single();
+    let adminSession: { wallet: string; userId: string; roles: string[]; chain: string };
+    try {
+      adminSession = JSON.parse(adminSessionRaw);
+    } catch {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    }
 
-    const userId = (session?.wallets as any)?.user_id;
+    const userId = adminSession.userId;
     if (!userId) {
       return NextResponse.json({ error: 'Session expired' }, { status: 401 });
     }

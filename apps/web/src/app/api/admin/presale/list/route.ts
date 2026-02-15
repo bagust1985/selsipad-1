@@ -9,35 +9,23 @@ const supabase = createClient(
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin session
+    // Verify admin session via admin_session cookie (set by /api/auth/admin-login)
     const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session_token')?.value;
-    console.log(
-      '[Admin Presale] session_token present:',
-      !!sessionToken,
-      sessionToken?.slice(0, 12)
-    );
+    const adminSessionRaw = cookieStore.get('admin_session')?.value;
+    console.log('[Admin Presale] admin_session present:', !!adminSessionRaw);
 
-    if (!sessionToken) {
+    if (!adminSessionRaw) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    // Look up session → wallet → profile
-    const { data: session, error: sessionError } = await supabase
-      .from('auth_sessions')
-      .select('wallets!inner(user_id)')
-      .eq('session_token', sessionToken)
-      .gt('expires_at', new Date().toISOString())
-      .single();
+    let adminSession: { wallet: string; userId: string; roles: string[]; chain: string };
+    try {
+      adminSession = JSON.parse(adminSessionRaw);
+    } catch {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    }
 
-    console.log(
-      '[Admin Presale] session lookup:',
-      JSON.stringify(session),
-      'error:',
-      sessionError?.message
-    );
-
-    const userId = (session?.wallets as any)?.user_id;
+    const userId = adminSession.userId;
     if (!userId) {
       return NextResponse.json({ error: 'Session expired' }, { status: 401 });
     }

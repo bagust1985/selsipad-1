@@ -20,6 +20,14 @@ export default function AdminLoginClient() {
     setMounted(true);
   }, []);
 
+  // Auto sign-in when wallet connects
+  useEffect(() => {
+    if (mounted && isConnected && address && !isChecking) {
+      checkAdminAccess();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, isConnected, address]);
+
   const checkAdminAccess = async () => {
     if (!address) {
       setError('Please connect your EVM wallet first');
@@ -120,9 +128,7 @@ export default function AdminLoginClient() {
                 <Wallet className="w-5 h-5 text-green-400 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-green-400 font-medium text-sm mb-1">EVM Wallet Connected</p>
-                  <p className="text-gray-300 text-xs font-mono break-all">
-                    {address}
-                  </p>
+                  <p className="text-gray-300 text-xs font-mono break-all">{address}</p>
                 </div>
               </div>
             </div>

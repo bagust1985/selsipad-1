@@ -76,7 +76,7 @@ describe('FASE 10: Critical E2E Scenarios', () => {
       },
     };
 
-    const submittedRound = { ...draftRound, status: 'SUBMITTED_FOR_REVIEW' };
+    const submittedRound = { ...draftRound, status: 'SUBMITTED' };
 
     const selectChain = jest.fn().mockReturnThis();
     const eqChain = jest.fn().mockReturnThis();
@@ -107,7 +107,7 @@ describe('FASE 10: Critical E2E Scenarios', () => {
 
     const submitRoute = await import(
       // Path from src/__tests__/e2e to apps/web/app
-      '../../../app/api/rounds/[id]/submit/route'
+      '../../app/api/rounds/[id]/submit/route'
     );
     const submitRound = submitRoute.POST;
     const req = new Request('http://localhost/api/rounds/1/submit', {
@@ -119,7 +119,7 @@ describe('FASE 10: Critical E2E Scenarios', () => {
 
     expect(res.status).toBe(200);
     expect(body.round).toBeDefined();
-    expect(body.round.status).toBe('SUBMITTED_FOR_REVIEW');
+    expect(body.round.status).toBe('SUBMITTED');
     expect(updateChain).toHaveBeenCalled();
     expect(mockSupabase.from).toHaveBeenCalledWith('launch_rounds');
     expect(mockSupabase.from).toHaveBeenCalledWith('audit_logs');
@@ -152,7 +152,7 @@ describe('FASE 10: Critical E2E Scenarios', () => {
     update.mockReturnValue({ eq });
 
     // 1. Stake
-    const { POST: stake } = require('../../../app/api/v1/sbt/stake/route');
+    const { POST: stake } = require('../../app/api/v1/sbt/stake/route');
     // Mock Rule fetch
     single.mockResolvedValueOnce({ data: { id: ruleId, is_active: true }, error: null });
     // Mock Idempotency (null = not staked yet)
@@ -167,7 +167,7 @@ describe('FASE 10: Critical E2E Scenarios', () => {
     expect(stakeRes.status).toBe(200);
 
     // 2. Claim Intent
-    const { POST: claimIntent } = require('../../../app/api/v1/sbt/claim/intent/route');
+    const { POST: claimIntent } = require('../../app/api/v1/sbt/claim/intent/route');
     // Mock Ledger Balance
     single.mockResolvedValueOnce({ data: { total_accrued: '500', total_claimed: '0' } });
 

@@ -3,8 +3,8 @@
  */
 import { NextRequest } from 'next/server';
 import { createMocks } from 'node-mocks-http';
-import { POST as deployIntentHandler } from '../../../app/api/v1/bonding/[pool_id]/deploy/intent/route';
-import { POST as swapIntentHandler } from '../../../app/api/v1/bonding/[pool_id]/swap/intent/route';
+import { POST as deployIntentHandler } from '../../app/api/v1/bonding/[pool_id]/deploy/intent/route';
+import { POST as swapIntentHandler } from '../../app/api/v1/bonding/[pool_id]/swap/intent/route';
 
 // Mock the module with inline factory to avoid hoisting issues
 jest.mock('@/lib/supabase/server', () => {

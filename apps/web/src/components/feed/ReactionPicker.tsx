@@ -30,7 +30,7 @@ export function ReactionPicker({ postId, currentReaction, onReactionChange }: Re
     setLoading(true);
 
     try {
-      const { reactToPost } = await import('../../../app/feed/interactions');
+      const { reactToPost } = await import('../../app/feed/interactions');
       await reactToPost(postId, reactionType as any);
       onReactionChange?.(reactionType);
     } catch (error) {

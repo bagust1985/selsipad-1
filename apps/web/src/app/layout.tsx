@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { Orbitron, Audiowide } from 'next/font/google';
 import './globals.css';
-import { BottomNav } from '@/components/layout';
+import { ConditionalBottomNav } from '@/components/layout/ConditionalBottomNav';
 import { ToastProvider } from '@/components/ui';
+import { MultiChainWalletProvider } from '@/lib/wallet/MultiChainWalletProvider';
+import { GlobalBackButton } from '@/components/ui/GlobalBackButton';
 
 const orbitron = Orbitron({ subsets: ['latin'], variable: '--font-orbitron' });
 const audiowide = Audiowide({ weight: '400', subsets: ['latin'], variable: '--font-audiowide' });
@@ -20,18 +22,13 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body className={`${orbitron.variable} ${audiowide.variable} font-sans`}>
-        <div
-          className="fixed inset-0 -z-10"
-          style={{
-            background: 'radial-gradient(circle at 50% 0%, #1e1b4b 0%, #020617 60%)',
-          }}
-        />
-        {/* Load Spline Viewer Script */}
-
-        <ToastProvider>
-          {children}
-          {/* <BottomNav /> */}
-        </ToastProvider>
+        <MultiChainWalletProvider>
+          <ToastProvider>
+            <GlobalBackButton />
+            {children}
+            <ConditionalBottomNav />
+          </ToastProvider>
+        </MultiChainWalletProvider>
       </body>
     </html>
   );

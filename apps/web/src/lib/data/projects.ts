@@ -28,6 +28,8 @@ export interface Project {
   endDate?: string; // ISO timestamp for countdown
   metadata?: any; // Generic metadata object
   factory_address?: string; // Factory address for SAFU check
+  min_contribution?: number;
+  max_contribution?: number;
   tokenomics?: {
     total_supply: number;
     tokens_for_presale: number;
@@ -280,6 +282,8 @@ export async function getProjectById(id: string): Promise<Project | null> {
           // ✅ Add metadata and factory_address for SAFU badges
           metadata: project.metadata || {},
           factory_address: project.factory_address || null,
+          min_contribution: params.min_contribution ?? undefined,
+          max_contribution: params.max_contribution ?? undefined,
           tokenomics: extractTokenomics(params),
         };
       }
@@ -357,6 +361,8 @@ export async function getProjectById(id: string): Promise<Project | null> {
         vesting_address: activeRound.vesting_vault_address || params.vesting_address || null,
         startDate: activeRound.start_at,
         endDate: activeRound.end_at,
+        min_contribution: params.min_contribution ?? undefined,
+        max_contribution: params.max_contribution ?? undefined,
         tokenomics: extractTokenomics(params),
       };
     }
@@ -441,9 +447,8 @@ export async function getAllProjects(filters?: {
         .filter((round: any) => {
           const status = round.status?.toUpperCase();
           console.log('[Explore Debug] Round status:', status, 'for project:', project.name);
-          // Show if: APPROVED_TO_DEPLOY (approved by admin), DEPLOYED, LIVE, ACTIVE, ENDED, or FAILED (refunds available)
+          // Show if: APPROVED (approved by admin), DEPLOYED, LIVE, ACTIVE, ENDED, or FAILED (refunds available)
           return (
-            status === 'APPROVED_TO_DEPLOY' ||
             status === 'APPROVED' ||
             status === 'DEPLOYED' ||
             status === 'LIVE' ||
@@ -648,6 +653,14 @@ function calculateRealTimeStatus(round: any): 'live' | 'upcoming' | 'ended' {
   const now = new Date();
   const startAt = round.start_at ? new Date(round.start_at) : null;
   const endAt = round.end_at ? new Date(round.end_at) : null;
+  const params = (round.params as any) || {};
+
+  // Hardcap check: if totalRaised >= hardcap, presale is filled → ended
+  const totalRaised = Number(round.total_raised) || 0;
+  const hardcap = Number(params.hardcap) || 0;
+  if (hardcap > 0 && totalRaised >= hardcap) {
+    return 'ended';
+  }
 
   // If timestamps are missing, fall back to database status
   if (!startAt || !endAt) {

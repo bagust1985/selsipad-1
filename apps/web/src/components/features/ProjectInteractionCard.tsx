@@ -6,6 +6,7 @@ import FairlaunchClaimer from '@/components/fairlaunch/FairlaunchClaimer';
 import VestingClaimer from '@/components/presale/VestingClaimer';
 import { StatusPill } from '@/components/presale/StatusPill'; // Or generic badge
 import { type Project } from '@/lib/data/projects';
+import { CountdownTimer } from '@/components/ui/CountdownTimer';
 
 interface ProjectInteractionCardProps {
   project: Project;
@@ -76,25 +77,55 @@ export function ProjectInteractionCard({ project }: ProjectInteractionCardProps)
   if (isUpcoming) {
     return (
       <div className="p-6 bg-[#0A0A0C] border border-white/10 rounded-2xl shadow-xl">
-        <h3 className="text-xl font-bold text-white mb-2">Upcoming</h3>
-        <p className="text-gray-400 text-sm">
-          Starts on {new Date(project.startDate || '').toLocaleString()}
+        <h3 className="text-xl font-bold text-white mb-4">Upcoming</h3>
+        {project.startDate && (
+          <CountdownTimer targetDate={project.startDate} label="Starts in" size="md" />
+        )}
+        <p className="text-gray-500 text-xs text-center mt-3">
+          {new Date(project.startDate || '').toLocaleString()}
         </p>
       </div>
     );
   }
 
   if (isLive) {
+    // Check if hardcap reached (presale is filled even though time hasn't expired)
+    const isHardcapReached = project.target > 0 && project.raised >= project.target;
+
+    if (isHardcapReached) {
+      return (
+        <div className="p-6 bg-[#0A0A0C] border border-white/10 rounded-2xl shadow-xl space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🎉</span>
+            <h3 className="text-xl font-bold text-white">Hardcap Reached!</h3>
+          </div>
+          <p className="text-gray-400 text-sm">
+            This presale has been fully funded. No more contributions accepted.
+          </p>
+          <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Total Raised</span>
+              <span className="text-green-400 font-bold">
+                {project.raised} / {project.target} {project.currency}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <ParticipationForm
         projectId={project.id}
         projectName={project.name}
         projectSymbol={project.symbol}
-        network={project.network}
+        network={project.currency || project.network}
         contractAddress={project.contract_address}
-        minContribution={0.1} // Default?
-        maxContribution={10} // Default?
+        minContribution={project.min_contribution ?? 0.01}
+        maxContribution={project.max_contribution ?? project.target}
         projectType={project.type}
+        raised={project.raised}
+        target={project.target}
       />
     );
   }

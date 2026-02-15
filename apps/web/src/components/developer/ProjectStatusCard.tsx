@@ -41,10 +41,7 @@ export function ProjectStatusCard({ project }: ProjectStatusCardProps) {
   // Calculate dynamic status based on deployment and time
   const calculateDynamicStatus = () => {
     // For projects that have been approved or deployed, calculate based on time
-    const isDeployedOrApproved =
-      project.status === 'DEPLOYED' ||
-      project.status === 'APPROVED_TO_DEPLOY' ||
-      project.status === 'APPROVED';
+    const isDeployedOrApproved = project.status === 'DEPLOYED' || project.status === 'APPROVED';
 
     if (!isDeployedOrApproved || !round?.start_time || !round?.end_time) {
       return project.status;
@@ -94,11 +91,7 @@ export function ProjectStatusCard({ project }: ProjectStatusCardProps) {
         color: 'bg-green-500/20 text-green-400 border-green-500',
         icon: CheckCircle,
       },
-      APPROVED_TO_DEPLOY: {
-        label: 'Approved',
-        color: 'bg-green-500/20 text-green-400 border-green-500',
-        icon: CheckCircle,
-      },
+
       DEPLOYED: {
         label: 'Deployed',
         color: 'bg-blue-500/20 text-blue-400 border-blue-500',

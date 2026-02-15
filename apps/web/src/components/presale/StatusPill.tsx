@@ -13,13 +13,11 @@ export function StatusPill({ status }: StatusPillProps) {
           color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
         };
       case 'SUBMITTED':
-      case 'SUBMITTED_FOR_REVIEW':
         return {
           label: 'Under Review',
           color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
         };
       case 'APPROVED':
-      case 'APPROVED_TO_DEPLOY':
         return {
           label: 'Approved',
           color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',

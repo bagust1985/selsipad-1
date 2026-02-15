@@ -1,10 +1,28 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Project } from '@/lib/data/projects';
 import { ProgressBar } from '@/components/ui';
 import { Clock, Users, Zap, ShieldCheck } from 'lucide-react';
+
+/**
+ * Format a time difference in ms into a human-readable countdown string.
+ * Returns e.g. "2d 5h 30m" or "1h 23m 45s" or "5m 12s"
+ */
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return '0s';
+  const totalSeconds = Math.floor(ms / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  return `${minutes}m ${seconds}s`;
+}
 
 interface ExploreProjectCardProps {
   project: Project;
@@ -16,6 +34,30 @@ export function ExploreProjectCard({ project, index }: ExploreProjectCardProps) 
   const isLive = project.status === 'live';
   const isUpcoming = project.status === 'upcoming';
   const isEnded = project.status === 'ended';
+
+  // Live countdown timer
+  const [countdown, setCountdown] = useState<string>('');
+
+  useEffect(() => {
+    const targetDate = isUpcoming ? project.startDate : project.endDate;
+    if (!targetDate || isEnded) {
+      setCountdown(isEnded ? 'Ended' : '');
+      return;
+    }
+
+    const update = () => {
+      const diff = new Date(targetDate).getTime() - Date.now();
+      if (diff <= 0) {
+        setCountdown(isUpcoming ? 'Starting...' : 'Ending...');
+      } else {
+        setCountdown(formatCountdown(diff));
+      }
+    };
+
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [project.startDate, project.endDate, isUpcoming, isEnded]);
   const isSuccessful = isEnded && project.raised >= (project.target || 0);
 
   // Active or Successful projects get color
@@ -232,7 +274,13 @@ export function ExploreProjectCard({ project, index }: ExploreProjectCardProps) 
             </div>
             <div className="flex items-center gap-1.5">
               <Clock size={12} />
-              <span>{isEnded ? 'Ended' : isLive ? 'Ends in 2d 5h' : 'Starts in 3d'}</span>
+              <span>
+                {isEnded
+                  ? 'Ended'
+                  : isLive
+                    ? `Ends in ${countdown || '...'}`
+                    : `Starts in ${countdown || '...'}`}
+              </span>
             </div>
           </div>
         </div>

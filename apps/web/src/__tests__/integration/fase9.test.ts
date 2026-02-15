@@ -96,7 +96,7 @@ describe('FASE 9: Trending Engine', () => {
   });
 
   test('API Endpoint: Returns Cached Snapshot', async () => {
-    const { GET } = require('../../../../app/api/v1/trending/route');
+    const { GET } = require('../../../app/api/v1/trending/route');
 
     // Mock Snapshot fetch
     const select = jest.fn();

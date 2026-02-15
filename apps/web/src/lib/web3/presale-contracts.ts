@@ -275,7 +275,7 @@ export const CONTRACTS = {
     feeSplitter: '0x9CE09C9e370a3974f4D0c55D6a15C4d9F186d161' as `0x${string}`,
     timelockExecutor: '0x95D94D86CfC550897d2b80672a3c94c12429a90D' as `0x${string}`,
     dexRouter: '0xD99D1c33F9fC3444f8101754aBC46c52416550D1' as `0x${string}`,
-    lpLocker: '0x762ef3C6573473F7DeE7520B5c014825b64EB0DF' as `0x${string}`,
+    lpLocker: '0xc1B619737d5F11490868D9A96025f864d7441532' as `0x${string}`, // real LPLocker deployed 2026-02-15
     deployBlock: 89830908,
     // Previous v2.3: factory 0xb6AB0db764dF5Ae4BBE8464289A22F5AcE0DdcAB, feeSplitter 0xDCE874B2E99C6318Dc88157DA313Cc11D957d2aF
   },

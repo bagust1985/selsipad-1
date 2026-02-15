@@ -110,7 +110,7 @@ export async function finalizePresale(
     const { data: round, error: roundError } = await supabase
       .from('launch_rounds')
       .select(
-        'id, status, type, chain, contract_address, round_address, vesting_vault_address, total_raised, params, project_id, escrow_tx_hash, escrow_amount'
+        'id, status, type, chain, contract_address, round_address, vesting_vault_address, total_raised, params, project_id, escrow_tx_hash, escrow_amount, chain_id'
       )
       .eq('id', roundId)
       .single();
@@ -243,9 +243,11 @@ export async function finalizePresale(
 
       // Check if already finalized — V2.4: status 3 = FINALIZING (resumable), 4 = FINALIZED_SUCCESS (done)
       const currentStatus = await (roundContract as any).status();
+      let alreadyFinalized = false;
       if (currentStatus === 4n) {
-        // Already fully finalized
+        // Already fully finalized — still need to record LP lock if missed
         console.log('[finalizePresale] Already fully finalized on-chain');
+        alreadyFinalized = true;
       } else if (currentStatus === 3n) {
         // FINALIZING — resume from where we left off
         console.log('[finalizePresale] Status is FINALIZING — resuming phases...');
@@ -290,6 +292,7 @@ export async function finalizePresale(
           finalized_by: session.userId,
           finalized_at: new Date().toISOString(),
           total_raised: parseFloat(ethers.formatEther(totalRaised)),
+          vesting_status: 'CONFIRMED',
           updated_at: new Date().toISOString(),
         })
         .eq('id', roundId);
@@ -316,10 +319,23 @@ export async function finalizePresale(
       // Parse TokensLocked event from the finalize receipt
       if (txHashes.length > 0) {
         try {
-          const lastTxHash = txHashes[txHashes.length - 1];
+          const lastTxHash = txHashes[txHashes.length - 1]!;
           const lockReceipt = await provider.getTransactionReceipt(lastTxHash);
           if (lockReceipt) {
-            const lockResult = await recordLPLock(lockReceipt, roundId, round.chain || '');
+            // Read actual LPLocker address from contract (factory-deployed, may differ from hardcoded)
+            const onChainLocker = await provider
+              .call({
+                to: contractAddress,
+                data: ethers.id('lpLocker()').slice(0, 10),
+              })
+              .then((r) => '0x' + r.slice(26))
+              .catch(() => '');
+            const lockResult = await recordLPLock(
+              lockReceipt,
+              roundId,
+              round.chain || '',
+              onChainLocker || undefined
+            );
             if (lockResult.success) {
               console.log(`[finalizePresale] LP Lock recorded: lockId=${lockResult.lockId}`);
             } else {
@@ -329,6 +345,140 @@ export async function finalizePresale(
         } catch (lockErr) {
           console.warn('[finalizePresale] LP Lock recording error (non-fatal):', lockErr);
         }
+      } else if (alreadyFinalized) {
+        // Contract was already finalized — read LP state directly from on-chain
+        try {
+          const ONCHAIN_LP_ABI = [
+            'function lpCreated() view returns (bool)',
+            'function lpLockId() view returns (uint256)',
+            'function lpLocker() view returns (address)',
+            'function lpUsedBnb() view returns (uint256)',
+            'function liquidityBps() view returns (uint256)',
+          ];
+          const lpContract = new ethers.Contract(contractAddress, ONCHAIN_LP_ABI, provider);
+          const [lpCreated, lpLockId, lpLockerAddr, lpUsedBnb] = await Promise.all([
+            (lpContract as any).lpCreated().catch(() => false),
+            (lpContract as any).lpLockId().catch(() => 0n),
+            (lpContract as any).lpLocker().catch(() => ''),
+            (lpContract as any).lpUsedBnb().catch(() => 0n),
+          ]);
+
+          if (lpCreated && lpLockerAddr) {
+            console.log('[finalizePresale] Reading LP lock from on-chain state:', {
+              lpLockId: Number(lpLockId),
+              lpLocker: lpLockerAddr,
+              lpUsedBnb: ethers.formatEther(lpUsedBnb),
+            });
+
+            // Read lock details from LPLocker contract
+            const LP_LOCKER_ABI = [
+              'function getLock(uint256 lockId) view returns (tuple(address lpToken, address owner, address beneficiary, uint256 amount, uint256 lockTime, uint256 unlockTime, bool withdrawn))',
+            ];
+            const lockerContract = new ethers.Contract(lpLockerAddr, LP_LOCKER_ABI, provider);
+            const lock = await (lockerContract as any).getLock(lpLockId);
+
+            if (lock && lock.lpToken && lock.lpToken !== ethers.ZeroAddress) {
+              const unlockDate = new Date(Number(lock.unlockTime) * 1000);
+              const lockedAtDate = new Date(Number(lock.lockTime) * 1000);
+
+              const { createServiceRoleClient: createSR } =
+                await import('@/lib/supabase/service-role');
+              const supa = createSR();
+              const { error: lpDbErr } = await supa.from('liquidity_locks').upsert(
+                {
+                  round_id: roundId,
+                  lock_id: String(Number(lpLockId)),
+                  lp_token_address: lock.lpToken,
+                  locker_contract_address: lpLockerAddr,
+                  lock_amount: ethers.formatEther(lock.amount),
+                  locked_at: lockedAtDate.toISOString(),
+                  locked_until: unlockDate.toISOString(),
+                  lock_tx_hash: 'on-chain-recovery',
+                  chain: round.chain || '97',
+                  dex_type: 'PANCAKE',
+                  lock_duration_months: 13,
+                  status: 'LOCKED',
+                },
+                { onConflict: 'round_id' }
+              );
+
+              if (!lpDbErr) {
+                await supa
+                  .from('launch_rounds')
+                  .update({
+                    lock_status: 'LOCKED',
+                    pool_address: lock.lpToken,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', roundId);
+                console.log(
+                  `[finalizePresale] ✅ LP Lock recovered from on-chain: lockId=${Number(lpLockId)}`
+                );
+              } else {
+                console.warn('[finalizePresale] LP Lock DB save failed:', lpDbErr.message);
+              }
+            }
+          } else {
+            console.log('[finalizePresale] No LP created on-chain (lpCreated=false)');
+          }
+        } catch (onchainLpErr) {
+          console.warn('[finalizePresale] On-chain LP recovery error (non-fatal):', onchainLpErr);
+        }
+      }
+
+      // ─── Step 5: Write round_allocations ───
+      // Calculate and persist token allocations for each contributor
+      try {
+        const roundParams = round.params as any;
+        const pricePerToken = roundParams?.price ? parseFloat(String(roundParams.price)) : 0;
+        const tokenDecimals = 18; // Standard ERC20
+
+        if (pricePerToken > 0 && options.merkleRoot) {
+          // Get contributors from presale_merkle_proofs (already written by prepare-finalize)
+          const { data: proofs } = await supabase
+            .from('presale_merkle_proofs')
+            .select('wallet_address, allocation')
+            .eq('round_id', roundId);
+
+          if (proofs && proofs.length > 0) {
+            // Look up user_ids from wallets
+            const allocations = [];
+            for (const proof of proofs) {
+              const { data: walletRow } = await supabase
+                .from('wallets')
+                .select('user_id')
+                .ilike('address', proof.wallet_address)
+                .single();
+
+              const tokenAmount = Number(BigInt(proof.allocation)) / 10 ** tokenDecimals;
+              const contributedBnb = tokenAmount * pricePerToken;
+
+              allocations.push({
+                round_id: roundId,
+                user_id: walletRow?.user_id || null,
+                wallet_address: proof.wallet_address.toLowerCase(),
+                contributed_amount: contributedBnb,
+                allocation_tokens: tokenAmount,
+                claimable_tokens: 0,
+                refund_amount: 0,
+                claim_status: 'PENDING',
+                refund_status: 'NONE',
+              });
+            }
+
+            const { error: allocErr } = await supabase
+              .from('round_allocations')
+              .upsert(allocations, { onConflict: 'round_id,wallet_address' });
+
+            if (allocErr) {
+              console.warn('[finalizePresale] round_allocations upsert error:', allocErr.message);
+            } else {
+              console.log(`[finalizePresale] ✅ ${allocations.length} round_allocations written`);
+            }
+          }
+        }
+      } catch (allocErr) {
+        console.warn('[finalizePresale] round_allocations error (non-fatal):', allocErr);
       }
 
       revalidatePath('/admin');
@@ -488,9 +638,34 @@ async function processPresaleFeeSplits(
     // FIX 5+6: Referral from on-chain Contributed events with bounded block range and bigint math
     const roundAddress = round.round_address || round.contract_address;
     const deployBlock = round.deployment_block_number || 0;
-    const endBlock = 'latest'; // could store end_block in DB
-    const filter = (presaleContract as any).filters.Contributed();
-    const events = await presaleContract.queryFilter(filter, deployBlock, endBlock);
+
+    // BSC RPC limits eth_getLogs to 10,000 blocks. Use bounded range.
+    let events: any[] = [];
+    try {
+      const currentBlock = await provider.getBlockNumber();
+      const fromBlock = deployBlock > 0 ? deployBlock : Math.max(0, currentBlock - 9999);
+      const filter = (presaleContract as any).filters.Contributed();
+
+      // If range exceeds 9999, paginate in chunks
+      const MAX_RANGE = 9999;
+      for (let start = fromBlock; start <= currentBlock; start += MAX_RANGE) {
+        const end = Math.min(start + MAX_RANGE - 1, currentBlock);
+        const chunk = await presaleContract.queryFilter(filter, start, end);
+        events.push(...chunk);
+      }
+      console.log(
+        '[processPresaleFeeSplits] Queried',
+        events.length,
+        'events from block',
+        fromBlock,
+        'to',
+        currentBlock
+      );
+    } catch (logErr) {
+      console.error('[processPresaleFeeSplits] eth_getLogs error:', (logErr as Error).message);
+      // Non-fatal: fee split already saved, just skip referral distribution
+      return;
+    }
 
     const totalRaisedWei = totalRaised;
     let referralCount = 0;

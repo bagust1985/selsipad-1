@@ -67,7 +67,7 @@ describe('FASE 8: SBT Staking Integration', () => {
     mockSingle.mockResolvedValueOnce({ data: { id: 'stake-1' }, error: null });
 
     // Act
-    const { POST } = require('../../../app/api/v1/sbt/stake/route'); // Import dynamic route handler
+    const { POST } = require('../../app/api/v1/sbt/stake/route'); // Import dynamic route handler
     // Need to mock NextRequest
     const req = {
       json: async () => reqBody,
@@ -86,7 +86,7 @@ describe('FASE 8: SBT Staking Integration', () => {
 
   test('Claim Flow: Requires Fee', async () => {
     // Act
-    const { POST } = require('../../../app/api/v1/sbt/claim/intent/route');
+    const { POST } = require('../../app/api/v1/sbt/claim/intent/route');
     const req = {} as unknown as Request; // GET/POST no body needed for intent? Wait, POST.
 
     // Mock Balance check

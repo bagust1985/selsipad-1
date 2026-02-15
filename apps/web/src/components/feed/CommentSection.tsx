@@ -34,7 +34,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
   const loadComments = async () => {
     try {
-      const { getComments } = await import('../../../app/feed/interactions');
+      const { getComments } = await import('../../app/feed/interactions');
       const data = await getComments(postId);
       setComments(data);
     } catch (error) {
@@ -48,7 +48,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
     setLoading(true);
     try {
-      const { addComment } = await import('../../../app/feed/interactions');
+      const { addComment } = await import('../../app/feed/interactions');
       const comment = await addComment(postId, newComment);
       setComments([...comments, comment]);
       setNewComment('');

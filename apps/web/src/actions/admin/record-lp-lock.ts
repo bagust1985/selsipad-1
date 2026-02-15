@@ -16,7 +16,7 @@ const LP_LOCKER_EVENT_ABI = [
  * NOTE: NOT exported — 'use server' files can only export async functions
  */
 const LP_LOCKER_ADDRESSES: Record<string, string> = {
-  '97': '0xd15Fb6D4f57C9948A0FA7d079F8F658e0c486822', // BSC Testnet — deployed 2026-02-12
+  '97': '0xc1B619737d5F11490868D9A96025f864d7441532', // BSC Testnet — real LPLocker deployed 2026-02-15
   '56': '', // BSC Mainnet — fill after deployment
   '11155111': '0x151f010682D2991183E6235CA396c1c99cEF5A30', // Sepolia — deployed 2026-02-12
   '84532': '0xaAbC564820edFc8A3Ce4Dd0547e6f4455731DB7a', // Base Sepolia — deployed 2026-02-12

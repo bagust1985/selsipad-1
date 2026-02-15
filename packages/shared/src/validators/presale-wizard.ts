@@ -194,14 +194,41 @@ export const investorVestingSchema = z
 
 export type InvestorVesting = z.infer<typeof investorVestingSchema>;
 
-export const teamVestingSchema = z.object({
-  team_allocation: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
-    message: 'Team allocation must be a valid number',
-  }),
-  schedule: vestingScheduleSchema,
+export const teamWalletSchema = z.object({
+  address: z.string().regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid wallet address'),
+  share_percent: z
+    .number()
+    .min(1, 'Share must be at least 1%')
+    .max(100, 'Share cannot exceed 100%'),
 });
 
+export const teamVestingSchema = z
+  .object({
+    team_allocation: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
+      message: 'Team allocation must be a valid number',
+    }),
+    schedule: vestingScheduleSchema,
+    team_wallets: z.array(teamWalletSchema).optional(),
+  })
+  .refine(
+    (data) => {
+      if (!data.team_wallets || data.team_wallets.length === 0) return true;
+      const total = data.team_wallets.reduce((s, w) => s + w.share_percent, 0);
+      return Math.abs(total - 100) < 0.01;
+    },
+    { message: 'Team wallet shares must total 100%', path: ['team_wallets'] }
+  )
+  .refine(
+    (data) => {
+      if (!data.team_wallets || data.team_wallets.length === 0) return true;
+      const addrs = data.team_wallets.map((w) => w.address.toLowerCase());
+      return new Set(addrs).size === addrs.length;
+    },
+    { message: 'Duplicate wallet addresses are not allowed', path: ['team_wallets'] }
+  );
+
 export type TeamVesting = z.infer<typeof teamVestingSchema>;
+export type TeamWallet = z.infer<typeof teamWalletSchema>;
 
 /**
  * Step 6: LP Lock Configuration

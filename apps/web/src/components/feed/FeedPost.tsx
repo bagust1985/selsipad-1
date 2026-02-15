@@ -65,7 +65,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
   useEffect(() => {
     const trackView = async () => {
       try {
-        const { trackView: track } = await import('../../../app/feed/interactions');
+        const { trackView: track } = await import('../../app/feed/interactions');
         if (track) await track(post.id);
       } catch (error) {
         // Silently fail
@@ -104,7 +104,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
 
     setSaving(true);
     try {
-      const { editPost } = await import('../../../app/feed/interactions');
+      const { editPost } = await import('../../app/feed/interactions');
       await editPost(post.id, editContent);
       setIsEditing(false);
     } catch (error) {
@@ -175,7 +175,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
       await navigator.clipboard.writeText(postUrl);
       alert('Post link copied to clipboard!');
       setShowShareMenu(false);
-      import('../../../app/feed/interactions').then(({ sharePost }) => {
+      import('../../app/feed/interactions').then(({ sharePost }) => {
         sharePost(post.id, 'link').catch(() => {});
       });
     } catch (error) {
@@ -203,7 +203,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
 
     window.open(shareUrl, '_blank');
     setShowShareMenu(false);
-    import('../../../app/feed/interactions').then(({ sharePost }) => {
+    import('../../app/feed/interactions').then(({ sharePost }) => {
       sharePost(post.id, 'link').catch(() => {});
     });
   };

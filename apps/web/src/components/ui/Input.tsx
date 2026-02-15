@@ -65,16 +65,30 @@ export interface AmountInputProps extends InputProps {
 export const AmountInput = React.forwardRef<HTMLInputElement, AmountInputProps>(
   ({ currency = 'SOL', balance, helper, ...props }, ref) => {
     return (
-      <div className="bg-bg-card border border-border-subtle rounded-lg p-4">
-        <Input
-          ref={ref}
-          type="number"
-          step="any"
-          className="text-4xl font-semibold border-0 bg-transparent p-0 focus:ring-0 tabular-nums"
-          showMax={!!props.onMaxClick}
-          helper={balance !== undefined ? `Saldo: ${balance} ${currency}` : helper}
-          {...props}
-        />
+      <div className="bg-bg-card border border-border-subtle rounded-lg p-4 overflow-hidden">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <Input
+              ref={ref}
+              type="number"
+              step="any"
+              className="text-4xl font-semibold border-0 bg-transparent p-0 focus:ring-0 tabular-nums w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              showMax={!!props.onMaxClick}
+              {...props}
+            />
+          </div>
+          <span className="text-sm font-semibold text-text-secondary bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 whitespace-nowrap flex-shrink-0">
+            {currency}
+          </span>
+        </div>
+        {balance !== undefined && (
+          <p className="mt-2 text-xs text-text-tertiary truncate">
+            Saldo: {balance} {currency}
+          </p>
+        )}
+        {balance === undefined && helper && (
+          <p className="mt-2 text-xs text-text-tertiary truncate">{helper}</p>
+        )}
       </div>
     );
   }

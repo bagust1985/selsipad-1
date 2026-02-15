@@ -37,9 +37,43 @@ export function ContributionForm({
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const refParam = searchParams.get('ref') || '';
-  const [referrer, setReferrer] = useState<string>(isAddress(refParam) ? refParam : '');
+  const [referrer, setReferrer] = useState<string>('');
+  const [referrerLabel, setReferrerLabel] = useState<string>('');
   const [dbSaved, setDbSaved] = useState(false);
   const confirmedHashRef = useRef<string | null>(null);
+
+  // Resolve referrer: if refParam is a wallet address use directly,
+  // otherwise resolve referral code → wallet address via API
+  useEffect(() => {
+    if (!refParam) return;
+
+    if (isAddress(refParam)) {
+      setReferrer(refParam);
+      setReferrerLabel(refParam);
+      return;
+    }
+
+    // Resolve referral code → wallet address
+    const resolveReferralCode = async () => {
+      try {
+        const res = await fetch(`/api/v1/referral/resolve?code=${encodeURIComponent(refParam)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.wallet_address && isAddress(data.wallet_address)) {
+            setReferrer(data.wallet_address);
+            setReferrerLabel(
+              `${data.wallet_address.slice(0, 6)}…${data.wallet_address.slice(-4)} (${refParam})`
+            );
+            console.log('[Presale Referral] Resolved code', refParam, '→', data.wallet_address);
+          }
+        }
+      } catch (err) {
+        console.error('[Presale Referral] Failed to resolve code:', err);
+      }
+    };
+
+    resolveReferralCode();
+  }, [refParam]);
 
   // Contribution transaction
   const { contribute, hash, isPending, error: txError } = useContribute();
@@ -74,10 +108,14 @@ export function ContributionForm({
 
     try {
       // Validate referrer is a valid address before passing
+      // Fallback: if no referrer, use master referrer (platform wallet) so referral pool is always distributed
+      const MASTER_REFERRER = process.env.NEXT_PUBLIC_MASTER_REFERRER || '';
       const resolvedReferrer: Address =
         referrer && isAddress(referrer)
           ? (referrer as Address)
-          : '0x0000000000000000000000000000000000000000';
+          : isAddress(MASTER_REFERRER)
+            ? (MASTER_REFERRER as Address)
+            : '0x0000000000000000000000000000000000000000';
 
       await contribute({
         roundAddress,
@@ -227,10 +265,15 @@ export function ContributionForm({
           type="text"
           value={referrer}
           onChange={(e) => setReferrer(e.target.value)}
-          placeholder="0x..."
+          placeholder="0x... or referral code"
           className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           disabled={isPending || isConfirming}
         />
+        {referrerLabel && (
+          <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+            ✓ Referrer: {referrerLabel}
+          </p>
+        )}
       </div>
 
       {/* Error Message */}

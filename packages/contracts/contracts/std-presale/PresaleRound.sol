@@ -117,6 +117,7 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
     bool    public feePaid;
     bool    public lpCreated;
     bool    public ownerPaid;
+    bool    public surplusBurned;
     uint256 public lpLockId;
     uint256 public lpUsedBnb;
     
@@ -143,6 +144,8 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
     );
     event LiquidityAdded(address indexed pair, uint256 tokenAmount, uint256 bnbAmount, uint256 lpTokens);
     event LPLocked(uint256 indexed lockId, address indexed lpToken, uint256 amount, uint256 unlockTime);
+    event ExcessBurned(uint256 amount);
+    event ExcessSwept(address indexed token, address indexed to, uint256 amount);
     
     // Errors
     error InvalidStatus();
@@ -545,6 +548,9 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
 
         // ════════════════════════════════════════
         // PHASE 1 — Fund Vesting Vault
+        //   Must come BEFORE setMerkleRoot:
+        //   MerkleVesting.setMerkleRoot() checks
+        //   vault balance >= totalAllocated.
         // ════════════════════════════════════════
         if (!vestingFunded) {
             uint256 vaultBal = IERC20(projectToken).balanceOf(vestingVault);
@@ -557,6 +563,7 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
 
         // ════════════════════════════════════════
         // PHASE 2 — Set Merkle Root (idempotent)
+        //   Committed after vault is funded.
         // ════════════════════════════════════════
         bytes32 usedRoot = _merkleRoot;
         {
@@ -667,7 +674,24 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
         }
 
         // ════════════════════════════════════════
-        // PHASE 7 — Finalize Status (LAST)
+        // PHASE 7 — Burn ALL remaining project tokens
+        //   Ensures contract holds 0 project tokens
+        //   after finalization. Prevents stuck tokens.
+        // ════════════════════════════════════════
+        if (!surplusBurned) {
+            uint256 remaining = IERC20(projectToken).balanceOf(address(this));
+            if (remaining > 0) {
+                IERC20(projectToken).safeTransfer(
+                    address(0x000000000000000000000000000000000000dEaD),
+                    remaining
+                );
+                emit ExcessBurned(remaining);
+            }
+            surplusBurned = true;
+        }
+
+        // ════════════════════════════════════════
+        // PHASE 8 — Finalize Status (LAST)
         // ════════════════════════════════════════
         tgeTimestamp = block.timestamp;
         status = Status.FINALIZED_SUCCESS;
@@ -682,15 +706,28 @@ contract PresaleRound is ReentrancyGuard, Pausable, AccessControl {
     //  ADMIN UTILITIES
     // ────────────────────────────────────────────────────────
 
-    /// @notice Sweep excess native tokens not part of the raise (external deposits, etc)
+    /// @notice Sweep excess native tokens (BNB) not part of the raise
     /// @dev Only callable after FINALIZED_SUCCESS to avoid interfering with finalize phases
-    function sweepExcess(address to) external onlyRole(ADMIN_ROLE) nonReentrant {
+    function sweepExcessNative(address to) external onlyRole(ADMIN_ROLE) nonReentrant {
         if (status != Status.FINALIZED_SUCCESS) revert InvalidStatus();
         if (to == address(0)) revert InvalidAddress();
         uint256 excess = address(this).balance;
         if (excess > 0) {
             (bool ok, ) = to.call{value: excess}("");
             if (!ok) revert NativeTransferFailed();
+        }
+    }
+
+    /// @notice Burn any remaining project tokens stuck in this contract
+    /// @dev For legacy rounds deployed without Phase 7 auto-burn.
+    ///      Hardcoded burn address — cannot redirect to any EOA.
+    function sweepExcessTokens() external onlyRole(ADMIN_ROLE) nonReentrant {
+        if (status != Status.FINALIZED_SUCCESS) revert InvalidStatus();
+        address burnAddr = address(0x000000000000000000000000000000000000dEaD);
+        uint256 remaining = IERC20(projectToken).balanceOf(address(this));
+        if (remaining > 0) {
+            IERC20(projectToken).safeTransfer(burnAddr, remaining);
+            emit ExcessSwept(projectToken, burnAddr, remaining);
         }
     }
     

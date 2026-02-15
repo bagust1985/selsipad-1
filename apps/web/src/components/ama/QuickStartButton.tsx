@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { startAMA } from '../../../app/admin/ama/actions';
+import { startAMA } from '../../app/admin/ama/actions';
 
 interface QuickStartButtonProps {
   amaId: string;

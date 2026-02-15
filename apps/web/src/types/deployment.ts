@@ -4,29 +4,25 @@
  */
 
 export type DeploymentStatus =
-  | 'NOT_DEPLOYED'      // Initial state (using Factory)
-  | 'DEPLOYING'         // Deployment transaction pending
-  | 'DEPLOYED'          // Contract deployed successfully
+  | 'NOT_DEPLOYED' // Initial state (using Factory)
+  | 'DEPLOYING' // Deployment transaction pending
+  | 'DEPLOYED' // Contract deployed successfully
   | 'DEPLOYMENT_FAILED' // Deployment failed
-  | 'PENDING_FUNDING'   // Deployed, waiting for user to send tokens
-  | 'FUNDED'            // Tokens sent to contract
-  | 'READY';            // Ready for launch (deployed + funded + verified)
+  | 'PENDING_FUNDING' // Deployed, waiting for user to send tokens
+  | 'FUNDED' // Tokens sent to contract
+  | 'READY'; // Ready for launch (deployed + funded + verified)
 
 export type VerificationStatus =
-  | 'NOT_VERIFIED'        // Not yet verified
+  | 'NOT_VERIFIED' // Not yet verified
   | 'VERIFICATION_PENDING' // Submitted to block explorer
-  | 'VERIFICATION_QUEUED'  // In verification queue
-  | 'VERIFIED'            // Successfully verified on block explorer
+  | 'VERIFICATION_QUEUED' // In verification queue
+  | 'VERIFIED' // Successfully verified on block explorer
   | 'VERIFICATION_FAILED'; // Verification failed (non-blocking)
 
 export type LaunchRoundStatus =
   | 'DRAFT'
-  // Old + transitional statuses (kept for backwards compatibility)
   | 'SUBMITTED'
   | 'APPROVED'
-  // Current DB/UI statuses
-  | 'SUBMITTED_FOR_REVIEW'
-  | 'APPROVED_TO_DEPLOY'
   | 'DEPLOYING'
   | 'DEPLOYED'
   | 'UPCOMING'

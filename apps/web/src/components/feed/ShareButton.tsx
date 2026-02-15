@@ -22,7 +22,7 @@ export function ShareButton({ postId, postContent }: ShareButtonProps) {
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      const { sharePost } = await import('../../../app/feed/interactions');
+      const { sharePost } = await import('../../app/feed/interactions');
       await sharePost(postId, 'link');
 
       setCopied(true);
@@ -34,7 +34,7 @@ export function ShareButton({ postId, postContent }: ShareButtonProps) {
 
   const handleRepost = async () => {
     try {
-      const { sharePost } = await import('../../../app/feed/interactions');
+      const { sharePost } = await import('../../app/feed/interactions');
       await sharePost(postId, 'repost');
       // TODO: Navigate to create repost page
       alert('Repost functionality coming soon!');

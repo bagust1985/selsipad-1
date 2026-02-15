@@ -267,6 +267,20 @@ export async function deployPresale(roundId: string) {
       };
     }
 
+    // Read fee splitter address from deployed contract
+    let feeSplitterAddress: string | null = null;
+    try {
+      const roundContract = new ethers.Contract(
+        roundAddress,
+        ['function feeSplitter() view returns (address)'],
+        provider
+      );
+      feeSplitterAddress = await (roundContract as any).feeSplitter();
+      console.log('[deployPresale] feeSplitter:', feeSplitterAddress);
+    } catch {
+      console.warn('[deployPresale] Could not read feeSplitter from contract');
+    }
+
     // Update DB with deployed contract details
     const { error: updateError } = await supabase
       .from('launch_rounds')
@@ -282,6 +296,7 @@ export async function deployPresale(roundId: string) {
         deployer_address: adminWallet.address,
         deployed_at: new Date().toISOString(),
         chain_id: parseInt(chain),
+        fee_splitter_address: feeSplitterAddress,
         updated_at: new Date().toISOString(),
       })
       .eq('id', roundId);

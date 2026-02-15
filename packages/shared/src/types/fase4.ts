@@ -11,12 +11,8 @@ export type PoolType = 'PRESALE' | 'FAIRLAUNCH';
 
 export type PoolStatus =
   | 'DRAFT'
-  // Old + transitional statuses (kept for backwards compatibility)
   | 'SUBMITTED'
   | 'APPROVED'
-  // Current DB/UI statuses
-  | 'SUBMITTED_FOR_REVIEW'
-  | 'APPROVED_TO_DEPLOY'
   | 'DEPLOYING'
   | 'DEPLOYED'
   | 'UPCOMING'

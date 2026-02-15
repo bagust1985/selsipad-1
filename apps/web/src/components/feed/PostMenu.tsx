@@ -24,7 +24,7 @@ export function PostMenu({ postId, isAuthor, onEdit, onDelete }: PostMenuProps) 
 
     setLoading(true);
     try {
-      const { deletePost } = await import('../../../app/feed/interactions');
+      const { deletePost } = await import('../../app/feed/interactions');
       await deletePost(postId);
       onDelete?.();
     } catch (error) {

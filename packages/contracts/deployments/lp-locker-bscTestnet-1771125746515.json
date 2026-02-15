@@ -1,0 +1,20 @@
+{
+  "contract": "LPLocker (Unified)",
+  "version": "1.0",
+  "network": "bscTestnet",
+  "chainId": "97",
+  "timestamp": "2026-02-15T03:22:26.515Z",
+  "deployBlock": 90426547,
+  "deployer": "0x95D94D86CfC550897d2b80672a3c94c12429a90D",
+  "address": "0xc1B619737d5F11490868D9A96025f864d7441532",
+  "usage": [
+    "Shared LP locker for Presale + Fairlaunch",
+    "Call PresaleFactory.setLPLocker(address) to update",
+    "Call Fairlaunch.setLPLocker(address) per-instance to update"
+  ],
+  "nextSteps": [
+    "Update PRESALE_FACTORY_ADDRESS in .env, then re-run to auto-update",
+    "Update LP_LOCKER_ADDRESS in .env: 0xc1B619737d5F11490868D9A96025f864d7441532",
+    "Update finalize-presale.ts and finalize-fairlaunch.ts with locker address"
+  ]
+}

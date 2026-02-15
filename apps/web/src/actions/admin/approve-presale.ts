@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 
 /**
  * Admin action to approve a presale submission.
- * Moves status from SUBMITTED_FOR_REVIEW → APPROVED
+ * Moves status from SUBMITTED → APPROVED
  */
 export async function approvePresale(roundId: string) {
   try {
@@ -68,7 +68,7 @@ export async function approvePresale(roundId: string) {
 
 /**
  * Admin action to reject a presale submission.
- * Moves status from SUBMITTED_FOR_REVIEW → REJECTED
+ * Moves status from SUBMITTED → REJECTED
  */
 export async function rejectPresale(roundId: string, reason: string) {
   try {

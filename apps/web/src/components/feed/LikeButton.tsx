@@ -27,7 +27,7 @@ export function LikeButton({ postId, initialLiked, initialCount }: LikeButtonPro
     setLoading(true);
 
     try {
-      const { toggleLike } = await import('../../../app/feed/interactions');
+      const { toggleLike } = await import('../../app/feed/interactions');
       const result = await toggleLike(postId);
 
       setLiked(result.liked);

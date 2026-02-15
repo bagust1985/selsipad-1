@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { submitKYC, uploadKYCDocuments } from '../../../app/profile/kyc/actions';
+import { submitKYC, uploadKYCDocuments } from '../../app/profile/kyc/actions';
 import { FileUpload } from '@/components/kyc/FileUpload';
 
 interface KYCSubmitFormProps {

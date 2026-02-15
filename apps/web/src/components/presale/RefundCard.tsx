@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAccount, useWaitForTransactionReceipt } from 'wagmi';
-import { formatEther } from 'viem';
+import { formatEther, type Address } from 'viem';
 import { useUserContribution, useClaimRefund } from '@/lib/web3/presale-hooks';
 
 interface RefundCardProps {
@@ -16,8 +16,8 @@ export default function RefundCard({ roundAddress, presaleStatus }: RefundCardPr
 
   // Read user's contribution
   const { data: contribution, refetch: refetchContribution } = useUserContribution(
-    roundAddress,
-    address || ''
+    roundAddress as Address,
+    address
   );
 
   const {
@@ -25,7 +25,7 @@ export default function RefundCard({ roundAddress, presaleStatus }: RefundCardPr
     hash: txHash,
     isPending: isRefunding,
     error: txError,
-  } = useClaimRefund(roundAddress);
+  } = useClaimRefund(roundAddress as Address);
   const { data: receipt } = useWaitForTransactionReceipt({ hash: txHash });
   const isRefunded = !!receipt;
 

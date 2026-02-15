@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AmountInput, Button, ConfirmModal, useToast } from '@/components/ui';
 import { Card, CardContent } from '@/components/ui';
 import { useContribute } from '@/lib/web3/presale-hooks';
-import { useAccount, useBalance } from 'wagmi';
+import { savePresaleContribution } from '@/actions/presale/save-contribution';
+import { useAccount, useBalance, usePublicClient } from 'wagmi';
 import { formatUnits, isAddress, zeroAddress } from 'viem';
 import { useSearchParams } from 'next/navigation';
 
@@ -17,6 +18,8 @@ interface ParticipationFormProps {
   minContribution?: number;
   maxContribution?: number;
   projectType?: 'presale' | 'fairlaunch';
+  raised?: number;
+  target?: number; // hardcap
 }
 
 export function ParticipationForm({
@@ -28,6 +31,8 @@ export function ParticipationForm({
   minContribution = 0.1,
   maxContribution = 10,
   projectType = 'presale',
+  raised = 0,
+  target = 0,
 }: ParticipationFormProps) {
   const [amount, setAmount] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -36,42 +41,110 @@ export function ParticipationForm({
 
   const { address } = useAccount();
   const { data: balanceData } = useBalance({ address });
+  const publicClient = usePublicClient();
 
   // Presale contribute hook (V2.4 — supports referrer)
   const { contribute: presaleContribute, isPending: isPresaleContributing } = useContribute();
 
-  // Resolve referrer: query param ?ref= → fallback to zero
+  // Resolve referrer wallet address from referral code or direct address
+  // Fallback: use master referrer (platform wallet) so referral pool is always distributed
   const refParam = searchParams.get('ref') || '';
-  const referrer = isAddress(refParam) ? refParam : zeroAddress;
+  const MASTER_REFERRER = process.env.NEXT_PUBLIC_MASTER_REFERRER || '';
+  const defaultReferrer = isAddress(MASTER_REFERRER)
+    ? (MASTER_REFERRER as `0x${string}`)
+    : (zeroAddress as `0x${string}`);
+  const [referrer, setReferrer] = useState<`0x${string}`>(defaultReferrer);
+  const [referrerLabel, setReferrerLabel] = useState<string>('');
+
+  useEffect(() => {
+    if (!refParam) return;
+
+    // If it's already a valid wallet address, use it directly
+    if (isAddress(refParam)) {
+      setReferrer(refParam as `0x${string}`);
+      setReferrerLabel(refParam);
+      return;
+    }
+
+    // Otherwise, resolve referral code → wallet address via API
+    const resolveReferralCode = async () => {
+      try {
+        const res = await fetch(`/api/v1/referral/resolve?code=${encodeURIComponent(refParam)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.wallet_address && isAddress(data.wallet_address)) {
+            setReferrer(data.wallet_address as `0x${string}`);
+            setReferrerLabel(
+              `${data.wallet_address.slice(0, 6)}…${data.wallet_address.slice(-4)} (${refParam})`
+            );
+            console.log('[Referral] Resolved code', refParam, '→', data.wallet_address);
+          }
+        }
+      } catch (err) {
+        console.error('[Referral] Failed to resolve code:', err);
+      }
+    };
+
+    resolveReferralCode();
+  }, [refParam]);
 
   const userBalance = balanceData
     ? parseFloat(formatUnits(balanceData.value, balanceData.decimals))
     : 0;
 
+  // Hardcap enforcement: remaining capacity
+  const remainingCapacity = target > 0 ? Math.max(0, target - raised) : Infinity;
+  const isHardcapReached = target > 0 && raised >= target;
+  const effectiveMax = Math.min(maxContribution, remainingCapacity);
+
   const amountNum = parseFloat(amount) || 0;
   const isAmountValid =
-    amountNum >= minContribution && amountNum <= maxContribution && amountNum <= userBalance;
+    amountNum >= minContribution &&
+    amountNum <= effectiveMax &&
+    amountNum <= userBalance &&
+    !isHardcapReached;
 
-  // Button is enabled only if: wallet connected, contract exists, and amount is valid
-  const canParticipate = !!address && !!contractAddress && isAmountValid;
+  // Button is enabled only if: wallet connected, contract exists, amount is valid, hardcap not reached
+  const canParticipate = !!address && !!contractAddress && isAmountValid && !isHardcapReached;
 
   const handleMaxClick = () => {
-    const maxValue = Math.min(maxContribution, userBalance);
-    setAmount(maxValue.toString());
+    const maxValue = Math.min(effectiveMax, userBalance);
+    setAmount(maxValue > 0 ? maxValue.toString() : '0');
   };
 
   const handleSubmit = async () => {
-    if (!canParticipate || !contractAddress) return;
+    if (!canParticipate || !contractAddress || !publicClient) return;
 
     try {
       // Use presale contribute hook with referrer
-      await presaleContribute({
+      const hash = await presaleContribute({
         roundAddress: contractAddress as `0x${string}`,
         amount: BigInt(Math.floor(amountNum * 1e18)), // Convert to wei
         referrer: referrer as `0x${string}`,
       });
 
-      showToast('success', `Successfully contributed ${amount} ${network}`);
+      showToast('success', `Transaction sent! Waiting for confirmation...`);
+
+      // Wait for on-chain confirmation, then save to database
+      if (hash) {
+        try {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          if (receipt.status === 'success') {
+            // Save contribution to database for transaction history & referral tracking
+            await savePresaleContribution({
+              roundId: projectId,
+              txHash: hash,
+              amount: amount, // ETH/BNB amount string
+              referrerCode: refParam || undefined,
+            });
+            showToast('success', `Successfully contributed ${amount} ${network}`);
+          }
+        } catch (dbErr: any) {
+          console.warn('[Presale] DB save failed (on-chain tx succeeded):', dbErr);
+          showToast('success', `Contributed ${amount} ${network} (history may update shortly)`);
+        }
+      }
+
       setConfirmOpen(false);
       setAmount('');
     } catch (error: any) {
@@ -122,7 +195,7 @@ export function ParticipationForm({
           {/* Referrer indicator */}
           {referrer !== zeroAddress && (
             <div className="text-xs text-green-600 dark:text-green-400">
-              🔗 Referral: {referrer.slice(0, 6)}…{referrer.slice(-4)}
+              🔗 Referral: {referrerLabel || `${referrer.slice(0, 6)}…${referrer.slice(-4)}`}
             </div>
           )}
 

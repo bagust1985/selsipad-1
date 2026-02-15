@@ -4,46 +4,130 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { type Project } from '@/lib/data/projects';
 import { formatDistanceToNow } from 'date-fns';
+import { formatEther } from 'viem';
 
 interface Transaction {
   id: string;
   wallet_address: string;
-  amount: number;
+  amount: string;
   tx_hash: string;
   created_at: string;
   chain: string;
+  referrer?: string;
 }
 
 interface TransactionsTableProps {
   project: Project;
 }
 
+// Contributed event signature: Contributed(address indexed user, uint256 amount, address referral)
+const CONTRIBUTED_TOPIC = '0xec470969f3350ca5a15f0d85053f8763ffd0ee39c7b74fcdc5af7862718e292a';
+
+function getExplorerUrl(chain: string): { api: string; ui: string; key: string } {
+  switch (chain) {
+    case '97':
+    case 'bsc-testnet':
+      return {
+        api: 'https://api-testnet.bscscan.com/api',
+        ui: 'https://testnet.bscscan.com',
+        key: process.env.NEXT_PUBLIC_BSCSCAN_API_KEY || '',
+      };
+    case '56':
+    case 'bsc':
+      return {
+        api: 'https://api.bscscan.com/api',
+        ui: 'https://bscscan.com',
+        key: process.env.NEXT_PUBLIC_BSCSCAN_API_KEY || '',
+      };
+    default:
+      return {
+        api: 'https://api-testnet.bscscan.com/api',
+        ui: 'https://testnet.bscscan.com',
+        key: process.env.NEXT_PUBLIC_BSCSCAN_API_KEY || '',
+      };
+  }
+}
+
 export default function TransactionsTable({ project }: TransactionsTableProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const [source, setSource] = useState<'db' | 'chain'>('db');
 
   useEffect(() => {
     async function fetchTransactions() {
       try {
-        // project.id is likely the round_id based on getProjectById logic
-        const { data, error } = await supabase
+        // Step 1: Try database first
+        const supabase = createClient();
+        const { data: dbData, error: dbError } = await supabase
           .from('contributions')
           .select('*')
           .eq('round_id', project.id)
           .order('created_at', { ascending: false })
-          .limit(20);
+          .limit(50);
 
-        if (error) {
-          console.error('Error fetching transactions:', error);
+        if (!dbError && dbData && dbData.length > 0) {
+          setTransactions(
+            dbData.map((d: any) => ({
+              id: d.id,
+              wallet_address: d.wallet_address || 'Unknown',
+              amount: String(d.amount),
+              tx_hash: d.tx_hash,
+              created_at: d.created_at,
+              chain: project.chain || '97',
+            }))
+          );
+          setSource('db');
+          setLoading(false);
           return;
         }
 
-        if (data) {
-          setTransactions(data as Transaction[]);
+        // Step 2: Fallback → read on-chain events from BSCScan
+        if (project.contract_address) {
+          const explorer = getExplorerUrl(project.chain || '97');
+          const params = new URLSearchParams({
+            module: 'logs',
+            action: 'getLogs',
+            address: project.contract_address,
+            topic0: CONTRIBUTED_TOPIC,
+            fromBlock: '0',
+            toBlock: 'latest',
+            apikey: explorer.key,
+          });
+
+          const res = await fetch(`${explorer.api}?${params}`);
+          const json = await res.json();
+
+          if (json.status === '1' && json.result?.length > 0) {
+            const onChainTxs: Transaction[] = json.result.map((log: any, i: number) => {
+              // topics[1] = user address (indexed)
+              const userAddr = '0x' + (log.topics[1]?.slice(26) || '');
+              // data contains: amount (bytes 0-32), referral (bytes 32-64)
+              const amountHex = log.data.slice(0, 66);
+              const referralHex = '0x' + (log.data.slice(66, 130) || '');
+
+              const amountWei = BigInt(amountHex);
+              const amountEth = formatEther(amountWei);
+
+              return {
+                id: `chain-${i}`,
+                wallet_address: userAddr,
+                amount: amountEth,
+                tx_hash: log.transactionHash,
+                created_at: new Date(parseInt(log.timeStamp, 16) * 1000).toISOString(),
+                chain: project.chain || '97',
+                referrer:
+                  referralHex !== '0x0000000000000000000000000000000000000000'
+                    ? referralHex
+                    : undefined,
+              };
+            });
+
+            setTransactions(onChainTxs.reverse()); // newest first
+            setSource('chain');
+          }
         }
       } catch (err) {
-        console.error('Unexpected error:', err);
+        console.error('Error fetching transactions:', err);
       } finally {
         setLoading(false);
       }
@@ -52,7 +136,9 @@ export default function TransactionsTable({ project }: TransactionsTableProps) {
     if (project.id) {
       fetchTransactions();
     }
-  }, [project.id]);
+  }, [project.id, project.contract_address, project.chain]);
+
+  const explorer = getExplorerUrl(project.chain || '97');
 
   if (loading) {
     return (
@@ -68,6 +154,11 @@ export default function TransactionsTable({ project }: TransactionsTableProps) {
 
   return (
     <div className="overflow-x-auto">
+      {source === 'chain' && (
+        <div className="px-4 py-2 text-[10px] text-gray-500 border-b border-white/5">
+          📡 Showing on-chain data from BSCScan
+        </div>
+      )}
       <table className="w-full text-left">
         <thead>
           <tr className="border-b border-white/10 text-xs text-gray-400 uppercase tracking-wider">
@@ -81,18 +172,30 @@ export default function TransactionsTable({ project }: TransactionsTableProps) {
           {transactions.map((tx) => (
             <tr key={tx.id} className="hover:bg-white/5 transition-colors">
               <td className="px-4 py-3 text-sm font-mono text-gray-300">
-                {tx.wallet_address.slice(0, 6)}...{tx.wallet_address.slice(-4)}
+                <a
+                  href={`${explorer.ui}/address/${tx.wallet_address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-cyan-400 transition-colors"
+                >
+                  {tx.wallet_address.slice(0, 6)}...
+                  {tx.wallet_address.slice(-4)}
+                </a>
               </td>
               <td className="px-4 py-3 text-sm text-right font-medium text-white">
-                {Number(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 4 })}{' '}
+                {Number(tx.amount).toLocaleString(undefined, {
+                  maximumFractionDigits: 6,
+                })}{' '}
                 {project.currency}
               </td>
               <td className="px-4 py-3 text-sm text-right text-gray-400">
-                {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true })}
+                {formatDistanceToNow(new Date(tx.created_at), {
+                  addSuffix: true,
+                })}
               </td>
               <td className="px-4 py-3 text-sm text-right">
                 <a
-                  href={`https://testnet.bscscan.com/tx/${tx.tx_hash}`} // Hardcoded for BSC Testnet for now, or map chain
+                  href={`${explorer.ui}/tx/${tx.tx_hash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-cyan-400 hover:text-cyan-300 underline text-xs"

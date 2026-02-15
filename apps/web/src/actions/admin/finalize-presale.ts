@@ -747,33 +747,97 @@ async function processPresaleFeeSplits(
     const totalRaisedWei = totalRaised;
     let referralCount = 0;
 
+    // Master referrer address — used as on-chain fallback for users without referral codes.
+    // When detected, we resolve the REAL referrer from DB referral_relationships instead.
+    const MASTER_REFERRER = (process.env.NEXT_PUBLIC_MASTER_REFERRER || '').toLowerCase();
+
     for (const event of events) {
       const parsedLog = event as ethers.EventLog;
       if (!parsedLog.args) continue;
       const [contributor, amount, referrer] = parsedLog.args;
       if (referrer === ethers.ZeroAddress) continue;
 
-      // Look up wallets → user_ids (case-insensitive)
-      const { data: referrerWallet } = await supabase
-        .from('wallets')
-        .select('user_id')
-        .ilike('address', referrer)
-        .single();
+      // Look up contributor wallet → user_id
       const { data: contribWallet } = await supabase
         .from('wallets')
         .select('user_id')
         .ilike('address', contributor)
         .single();
 
-      if (!referrerWallet?.user_id || !contribWallet?.user_id) continue;
+      if (!contribWallet?.user_id) continue;
+
+      // Resolve the REAL referrer:
+      // If on-chain referrer is the master referrer OR not registered in wallets,
+      // look up the actual referrer from DB referral_relationships.
+      let realReferrerId: string | null = null;
+      const isOnchainMasterReferrer =
+        MASTER_REFERRER && String(referrer).toLowerCase() === MASTER_REFERRER;
+
+      if (!isOnchainMasterReferrer) {
+        // On-chain referrer is a specific wallet — try direct lookup
+        const { data: referrerWallet } = await supabase
+          .from('wallets')
+          .select('user_id')
+          .ilike('address', referrer)
+          .single();
+
+        if (referrerWallet?.user_id) {
+          realReferrerId = referrerWallet.user_id;
+          console.log(
+            `[processPresaleFeeSplits] Direct referrer found: ${referrer} → ${realReferrerId}`
+          );
+        }
+      }
+
+      // Fallback to DB referral_relationships (handles master referrer + unregistered wallets)
+      if (!realReferrerId) {
+        const { data: relationship } = await supabase
+          .from('referral_relationships')
+          .select('referrer_id, activated_at')
+          .eq('referee_id', contribWallet.user_id)
+          .single();
+
+        if (relationship?.referrer_id) {
+          realReferrerId = relationship.referrer_id;
+          console.log(
+            `[processPresaleFeeSplits] DB referral_relationship found: contributor ${contribWallet.user_id} → referrer ${realReferrerId}`
+          );
+
+          // Activate the relationship if not yet activated
+          if (!relationship.activated_at) {
+            const { error: activateErr } = await supabase
+              .from('referral_relationships')
+              .update({ activated_at: new Date().toISOString() })
+              .eq('referee_id', contribWallet.user_id)
+              .eq('referrer_id', realReferrerId);
+
+            if (!activateErr) {
+              // Increment referrer's active_referral_count
+              await supabase.rpc('increment_active_referral_count', {
+                target_user_id: realReferrerId,
+              });
+              console.log(
+                `[processPresaleFeeSplits] Activated referral: ${contribWallet.user_id} → ${realReferrerId}`
+              );
+            }
+          }
+        } else {
+          console.log(
+            `[processPresaleFeeSplits] No referral relationship for contributor ${contribWallet.user_id}, skipping`
+          );
+          continue;
+        }
+      }
+
+      if (!realReferrerId) continue;
 
       // FIX 5: pure bigint — no Number() precision loss
       const proportionalAmount = (referralWei * BigInt(amount)) / totalRaisedWei;
 
       const { error: ledgerErr } = await supabase.from('referral_ledger').upsert(
         {
-          referrer_id: referrerWallet.user_id,
-          source_type: 'PRESALE_CONTRIBUTION',
+          referrer_id: realReferrerId,
+          source_type: 'PRESALE',
           source_id: feeSplit.id,
           referee_id: contribWallet.user_id,
           amount: proportionalAmount.toString(),
@@ -787,7 +851,7 @@ async function processPresaleFeeSplits(
       if (!ledgerErr) {
         referralCount++;
         console.log(
-          `[processPresaleFeeSplits] Referral reward ${proportionalAmount.toString()} → referrer ${referrerWallet.user_id}`
+          `[processPresaleFeeSplits] Referral reward ${proportionalAmount.toString()} → referrer ${realReferrerId}`
         );
       } else if (ledgerErr.code !== '23505') {
         console.error('[processPresaleFeeSplits] Ledger upsert error:', ledgerErr);

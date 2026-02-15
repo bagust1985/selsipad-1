@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { getServerSession } from '@/lib/auth/session';
+import { getAdminSession } from '@/lib/auth/admin-session';
 import { ethers } from 'ethers';
 
 /**
@@ -26,7 +26,7 @@ export async function cancelFairlaunch(roundId: string) {
     }).catch(() => {});
     // #endregion
 
-    const session = await getServerSession();
+    const session = await getAdminSession();
     if (!session) {
       return { success: false, error: 'Not authenticated' };
     }
@@ -85,7 +85,8 @@ export async function cancelFairlaunch(roundId: string) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          location: 'apps/web/src/actions/admin/cancel-fairlaunch.ts:cancelFairlaunch:onchainSnapshot',
+          location:
+            'apps/web/src/actions/admin/cancel-fairlaunch.ts:cancelFairlaunch:onchainSnapshot',
           message: 'on-chain snapshot before cancel',
           data: {
             contractAddress: round.contract_address,
@@ -127,7 +128,8 @@ export async function cancelFairlaunch(roundId: string) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          location: 'apps/web/src/actions/admin/cancel-fairlaunch.ts:cancelFairlaunch:contractError',
+          location:
+            'apps/web/src/actions/admin/cancel-fairlaunch.ts:cancelFairlaunch:contractError',
           message: 'contract cancel failed',
           data: {
             name: contractError?.name,
@@ -170,4 +172,3 @@ export async function cancelFairlaunch(roundId: string) {
     return { success: false, error: error.message || 'Failed to cancel fairlaunch' };
   }
 }
-

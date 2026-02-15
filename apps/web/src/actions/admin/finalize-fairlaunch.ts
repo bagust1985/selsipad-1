@@ -1,7 +1,7 @@
 'use server';
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { getServerSession } from '@/lib/auth/session';
+import { getAdminSession } from '@/lib/auth/admin-session';
 import { ethers } from 'ethers';
 import { recordLPLock } from './record-lp-lock';
 
@@ -26,7 +26,7 @@ export async function getFairlaunchState(
   roundId: string
 ): Promise<{ success: boolean; state?: FairlaunchState; error?: string }> {
   try {
-    const session = await getServerSession();
+    const session = await getAdminSession();
     if (!session) return { success: false, error: 'Not authenticated' };
 
     const supabase = createServiceRoleClient();
@@ -86,7 +86,7 @@ export async function getFairlaunchState(
 export async function finalizeFairlaunch(roundId: string, action: FairlaunchAction = 'finalize') {
   try {
     // Verify admin
-    const session = await getServerSession();
+    const session = await getAdminSession();
     if (!session) {
       return { success: false, error: 'Not authenticated' };
     }

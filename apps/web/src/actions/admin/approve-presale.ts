@@ -1,7 +1,7 @@
 'use server';
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { getServerSession } from '@/lib/auth/session';
+import { getAdminSession } from '@/lib/auth/admin-session';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -10,7 +10,7 @@ import { revalidatePath } from 'next/cache';
  */
 export async function approvePresale(roundId: string) {
   try {
-    const session = await getServerSession();
+    const session = await getAdminSession();
     if (!session) {
       return { success: false, error: 'Not authenticated' };
     }
@@ -72,7 +72,7 @@ export async function approvePresale(roundId: string) {
  */
 export async function rejectPresale(roundId: string, reason: string) {
   try {
-    const session = await getServerSession();
+    const session = await getAdminSession();
     if (!session) {
       return { success: false, error: 'Not authenticated' };
     }

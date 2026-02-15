@@ -1,7 +1,7 @@
 'use server';
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { getServerSession } from '@/lib/auth/session';
+import { getAdminSession } from '@/lib/auth/admin-session';
 import { ethers } from 'ethers';
 import { revalidatePath } from 'next/cache';
 
@@ -16,7 +16,7 @@ const RPC_URLS: Record<string, string> = {
  */
 export async function cancelPresale(roundId: string, reason: string = 'Cancelled by admin') {
   try {
-    const session = await getServerSession();
+    const session = await getAdminSession();
     if (!session) {
       return { success: false, error: 'Not authenticated' };
     }

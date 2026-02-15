@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     if (roles.length === 0) {
       console.log('[Admin Auth] Access denied - no admin roles:', walletAddress);
-      
+
       // Audit failed login attempt
       await logAdminAction({
         actor_admin_id: userId,
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/admin',
+      path: '/', // Must be '/' so cookie is sent to /api/admin/* routes too
     });
 
     return response;

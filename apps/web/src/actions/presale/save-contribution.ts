@@ -2,6 +2,7 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { getServerSession } from '@/lib/auth/session';
+import { recordContribution } from '@/actions/referral/record-contribution';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -20,29 +21,50 @@ export async function savePresaleContribution({
   referrerCode?: string;
 }) {
   try {
+    console.log('[savePresaleContribution] CALLED with:', {
+      roundId,
+      txHash,
+      amount,
+      referrerCode,
+    });
     const session = await getServerSession();
     if (!session) {
+      console.warn('[savePresaleContribution] No session — user not authenticated');
       return { success: false, error: 'Not authenticated' };
     }
+    console.log('[savePresaleContribution] Session found:', {
+      userId: session.userId,
+      address: session.address,
+    });
 
     const supabase = createServiceRoleClient();
 
     // Verify round exists and is active
     const { data: round, error: roundError } = await supabase
       .from('launch_rounds')
-      .select('id, status, type')
+      .select('id, status, type, chain')
       .eq('id', roundId)
       .single();
 
     if (roundError || !round) {
+      console.warn('[savePresaleContribution] Round not found:', roundId, roundError?.message);
       return { success: false, error: 'Round not found' };
     }
 
+    console.log('[savePresaleContribution] Round found:', {
+      id: round.id,
+      status: round.status,
+      type: round.type,
+      chain: round.chain,
+    });
+
     if (round.type !== 'PRESALE') {
+      console.warn('[savePresaleContribution] Not a presale round:', round.type);
       return { success: false, error: 'Not a presale round' };
     }
 
     if (!['DEPLOYED', 'LIVE'].includes(round.status)) {
+      console.warn('[savePresaleContribution] Presale not active:', round.status);
       return { success: false, error: `Presale not active: ${round.status}` };
     }
 
@@ -72,6 +94,7 @@ export async function savePresaleContribution({
     }
 
     // Insert contribution
+    // NOTE: referrer tracking is handled separately via fee_splits, NOT via contributions table
     const { data, error } = await supabase
       .from('contributions')
       .insert({
@@ -79,9 +102,10 @@ export async function savePresaleContribution({
         user_id: session.userId,
         wallet_address: session.address,
         amount: parseFloat(amount),
+        chain: round.chain || '97',
         tx_hash: txHash,
-        referrer_id: referrerId,
         status: 'CONFIRMED',
+        confirmed_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -104,6 +128,22 @@ export async function savePresaleContribution({
       console.warn('[savePresaleContribution] RPC not available:', rpcErr.message);
     }
 
+    // ✅ Referral tracking (best-effort, non-fatal)
+    try {
+      await recordContribution({
+        userId: session.userId,
+        sourceType: 'PRESALE',
+        sourceId: roundId,
+        amount: (parseFloat(amount) * 1e18).toString(), // Convert to wei string
+        asset: 'NATIVE',
+        chain: round.chain || '97',
+        txHash,
+      });
+    } catch (refErr: any) {
+      console.warn('[savePresaleContribution] Referral tracking (non-fatal):', refErr?.message);
+    }
+
+    revalidatePath(`/project/${roundId}`);
     revalidatePath(`/presales/${roundId}`);
     return { success: true, data };
   } catch (error: any) {

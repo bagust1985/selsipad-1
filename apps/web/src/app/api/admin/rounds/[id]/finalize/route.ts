@@ -281,7 +281,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
             refund_status: 'NONE',
           };
         });
-        await supabase.from('round_allocations').upsert(allocations);
+        await supabase
+          .from('round_allocations')
+          .upsert(allocations, { onConflict: 'round_id,user_id' });
       }
     }
 

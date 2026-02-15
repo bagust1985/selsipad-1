@@ -1,7 +1,15 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from '@/lib/auth/session';
+
+// Use service_role client to bypass RLS for server-side portfolio queries
+const getSupabaseAdmin = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+};
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -70,7 +78,7 @@ export async function getPortfolioData(): Promise<PortfolioData> {
     return emptyPortfolio();
   }
 
-  const supabase = createClient();
+  const supabase = getSupabaseAdmin(); // Use service_role client
   const userId = session.userId;
 
   // Fetch all data in parallel
@@ -190,6 +198,8 @@ async function fetchInvestedProjects(supabase: any, userId: string): Promise<Inv
 
 async function fetchClaimSchedule(supabase: any, userId: string): Promise<ClaimScheduleItem[]> {
   try {
+    console.log('[Portfolio] Fetching claim schedule for user:', userId);
+
     const { data, error } = await supabase
       .from('vesting_allocations')
       .select(
@@ -221,6 +231,8 @@ async function fetchClaimSchedule(supabase: any, userId: string): Promise<ClaimS
       console.error('[Portfolio] Error fetching vesting allocations:', error);
       return [];
     }
+
+    console.log('[Portfolio] Vesting allocations raw data:', JSON.stringify(data, null, 2));
 
     return (data || []).map((alloc: any) => {
       const schedule = alloc.vesting_schedules || {};

@@ -673,13 +673,13 @@ export function CreatePresaleWizard({
               )}
             </div>
 
-            {currentStep < 10 && (
+            {currentStep < 9 && (
               <button
                 type="button"
                 onClick={handleNext}
                 className="flex items-center gap-2 px-8 py-3 rounded-[14px] font-bold bg-gradient-to-r from-[#39AEC4] to-[#756BBA] hover:from-[#4EABC8] hover:to-[#756BBA] transition-all shadow-lg shadow-[#756BBA]/20 transform hover:-translate-y-0.5"
               >
-                {currentStep === 9 ? 'Review Compliance' : 'Next Step'}
+                Next Step
                 <ArrowRight className="w-4 h-4" />
               </button>
             )}

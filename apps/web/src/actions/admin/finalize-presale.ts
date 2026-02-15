@@ -456,7 +456,6 @@ export async function finalizePresale(
               allocations.push({
                 round_id: roundId,
                 user_id: walletRow?.user_id || null,
-                wallet_address: proof.wallet_address.toLowerCase(),
                 contributed_amount: contributedBnb,
                 allocation_tokens: tokenAmount,
                 claimable_tokens: 0,
@@ -468,12 +467,90 @@ export async function finalizePresale(
 
             const { error: allocErr } = await supabase
               .from('round_allocations')
-              .upsert(allocations, { onConflict: 'round_id,wallet_address' });
+              .upsert(allocations, { onConflict: 'round_id,user_id' });
 
             if (allocErr) {
               console.warn('[finalizePresale] round_allocations upsert error:', allocErr.message);
             } else {
               console.log(`[finalizePresale] ✅ ${allocations.length} round_allocations written`);
+            }
+
+            // ─── Step 5.5: Create Vesting Schedule & Allocations ───
+            // Create master vesting schedule and individual vesting allocations
+            try {
+              const roundParams = round.params as any;
+              const totalTokens = allocations.reduce((sum, a) => sum + a.allocation_tokens, 0);
+              const tgePercentage = roundParams?.investor_vesting?.tge_percentage || 0;
+              const cliffMonths = roundParams?.investor_vesting?.cliff_months || 0;
+              const vestingMonths = roundParams?.investor_vesting?.schedule?.length || 12;
+
+              // Get token address from projects table
+              let tokenAddress = roundParams?.token_address;
+              if (!tokenAddress && round.project_id) {
+                const { data: project } = await supabase
+                  .from('projects')
+                  .select('token_address')
+                  .eq('id', round.project_id)
+                  .single();
+                tokenAddress = project?.token_address;
+              }
+
+              if (!tokenAddress) {
+                console.warn('[finalizePresale] No token_address found, skipping vesting setup');
+                throw new Error('token_address required for vesting');
+              }
+
+              // Create vesting schedule (master schedule for this round)
+              const { data: schedule, error: scheduleErr } = await supabase
+                .from('vesting_schedules')
+                .upsert(
+                  {
+                    round_id: roundId,
+                    token_address: tokenAddress,
+                    chain: String(round.chain || '97'),
+                    total_tokens: totalTokens,
+                    tge_percentage: tgePercentage,
+                    tge_at: new Date().toISOString(), // TGE starts at finalization
+                    cliff_months: cliffMonths,
+                    vesting_months: vestingMonths,
+                    interval_type: 'MONTHLY',
+                    status: 'CONFIRMED', // Valid: PENDING|CONFIRMED|FAILED|PAUSED
+                    contract_address: contractAddress,
+                  },
+                  { onConflict: 'round_id' }
+                )
+                .select()
+                .single();
+
+              if (scheduleErr || !schedule) {
+                console.warn('[finalizePresale] vesting_schedules error:', scheduleErr?.message);
+              } else {
+                console.log(`[finalizePresale] ✅ Vesting schedule created: ${schedule.id}`);
+
+                // Create individual vesting allocations for each user
+                const vestingAllocations = allocations.map((alloc) => ({
+                  schedule_id: schedule.id,
+                  round_id: roundId, // Required field in vesting_allocations
+                  user_id: alloc.user_id,
+                  allocation_tokens: alloc.allocation_tokens,
+                  claimed_tokens: 0,
+                  // No 'status' field in vesting_allocations schema
+                }));
+
+                const { error: vestingErr } = await supabase
+                  .from('vesting_allocations')
+                  .upsert(vestingAllocations, { onConflict: 'user_id,schedule_id' });
+
+                if (vestingErr) {
+                  console.warn('[finalizePresale] vesting_allocations error:', vestingErr.message);
+                } else {
+                  console.log(
+                    `[finalizePresale] ✅ ${vestingAllocations.length} vesting_allocations created`
+                  );
+                }
+              }
+            } catch (vestingErr) {
+              console.warn('[finalizePresale] vesting creation error (non-fatal):', vestingErr);
             }
           }
         }

@@ -48,6 +48,7 @@ export function ParticipationForm({
 
   // Resolve referrer wallet address from referral code or direct address
   // Fallback: use master referrer (platform wallet) so referral pool is always distributed
+  // Also persist to localStorage so it works across page navigation
   const refParam = searchParams.get('ref') || '';
   const MASTER_REFERRER = process.env.NEXT_PUBLIC_MASTER_REFERRER || '';
   const defaultReferrer = isAddress(MASTER_REFERRER)
@@ -57,27 +58,37 @@ export function ParticipationForm({
   const [referrerLabel, setReferrerLabel] = useState<string>('');
 
   useEffect(() => {
-    if (!refParam) return;
+    // Save ref param to localStorage if present (for cross-page persistence)
+    if (refParam) {
+      localStorage.setItem('selsipad_referral', refParam);
+    }
+
+    // Use URL param if present, otherwise check localStorage
+    const effectiveRef = refParam || localStorage.getItem('selsipad_referral') || '';
+
+    if (!effectiveRef) return;
 
     // If it's already a valid wallet address, use it directly
-    if (isAddress(refParam)) {
-      setReferrer(refParam as `0x${string}`);
-      setReferrerLabel(refParam);
+    if (isAddress(effectiveRef)) {
+      setReferrer(effectiveRef as `0x${string}`);
+      setReferrerLabel(effectiveRef);
       return;
     }
 
     // Otherwise, resolve referral code → wallet address via API
     const resolveReferralCode = async () => {
       try {
-        const res = await fetch(`/api/v1/referral/resolve?code=${encodeURIComponent(refParam)}`);
+        const res = await fetch(
+          `/api/v1/referral/resolve?code=${encodeURIComponent(effectiveRef)}`
+        );
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.wallet_address && isAddress(data.wallet_address)) {
             setReferrer(data.wallet_address as `0x${string}`);
             setReferrerLabel(
-              `${data.wallet_address.slice(0, 6)}…${data.wallet_address.slice(-4)} (${refParam})`
+              `${data.wallet_address.slice(0, 6)}…${data.wallet_address.slice(-4)} (${effectiveRef})`
             );
-            console.log('[Referral] Resolved code', refParam, '→', data.wallet_address);
+            console.log('[Referral] Resolved code', effectiveRef, '→', data.wallet_address);
           }
         }
       } catch (err) {

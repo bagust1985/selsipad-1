@@ -17,6 +17,7 @@ export interface Project {
   status: 'live' | 'upcoming' | 'ended';
   raised: number;
   target: number;
+  softcap?: number;
   participants?: number;
   kyc_verified: boolean;
   audit_status: 'pass' | 'pending' | null;
@@ -247,7 +248,8 @@ export async function getProjectById(id: string): Promise<Project | null> {
           chain: roundData.chain,
           status: calculateRealTimeStatus(roundData),
           raised: Number(roundData.total_raised) || 0,
-          target: params.softcap || params.hardcap || 1000,
+          target: params.hardcap || params.softcap || 1000,
+          softcap: params.softcap || 0,
           participants: roundData.total_participants || 0,
           kyc_verified: !!(
             project.kyc_status === 'VERIFIED' ||
@@ -333,7 +335,8 @@ export async function getProjectById(id: string): Promise<Project | null> {
         chain: activeRound.chain,
         status: calculateRealTimeStatus(activeRound),
         raised: Number(activeRound.total_raised) || 0,
-        target: params.softcap || params.hardcap || 1000,
+        target: params.hardcap || params.softcap || 1000,
+        softcap: params.softcap || 0,
         participants: activeRound.total_participants || 0,
         kyc_verified: !!(
           data.kyc_status === 'VERIFIED' ||
@@ -477,7 +480,8 @@ export async function getAllProjects(filters?: {
             chain: round.chain, // Add specific chain ID
             status: calculateRealTimeStatus(round),
             raised: Number(round.total_raised) || 0,
-            target: params.softcap || params.hardcap || 1000,
+            target: params.hardcap || params.softcap || 1000,
+            softcap: params.softcap || 0,
             participants: round.total_participants || 0,
             kyc_verified: !!(
               project.kyc_status === 'VERIFIED' ||

@@ -44,27 +44,38 @@ export function ContributionForm({
 
   // Resolve referrer: if refParam is a wallet address use directly,
   // otherwise resolve referral code → wallet address via API
+  // Also persist to localStorage so it works across page navigation
   useEffect(() => {
-    if (!refParam) return;
+    // Save ref param to localStorage if present (for cross-page persistence)
+    if (refParam) {
+      localStorage.setItem('selsipad_referral', refParam);
+    }
 
-    if (isAddress(refParam)) {
-      setReferrer(refParam);
-      setReferrerLabel(refParam);
+    // Use URL param if present, otherwise check localStorage
+    const effectiveRef = refParam || localStorage.getItem('selsipad_referral') || '';
+
+    if (!effectiveRef) return;
+
+    if (isAddress(effectiveRef)) {
+      setReferrer(effectiveRef);
+      setReferrerLabel(effectiveRef);
       return;
     }
 
     // Resolve referral code → wallet address
     const resolveReferralCode = async () => {
       try {
-        const res = await fetch(`/api/v1/referral/resolve?code=${encodeURIComponent(refParam)}`);
+        const res = await fetch(
+          `/api/v1/referral/resolve?code=${encodeURIComponent(effectiveRef)}`
+        );
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.wallet_address && isAddress(data.wallet_address)) {
-            setReferrer(data.wallet_address);
+            setReferrer(data.wallet_address as Address);
             setReferrerLabel(
-              `${data.wallet_address.slice(0, 6)}…${data.wallet_address.slice(-4)} (${refParam})`
+              `${data.wallet_address.slice(0, 6)}…${data.wallet_address.slice(-4)} (${effectiveRef})`
             );
-            console.log('[Presale Referral] Resolved code', refParam, '→', data.wallet_address);
+            console.log('[Presale Referral] Resolved code', effectiveRef, '→', data.wallet_address);
           }
         }
       } catch (err) {

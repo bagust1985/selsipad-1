@@ -194,11 +194,11 @@ export function useClaimedAmount(
 /**
  * Hook for contributing to a presale
  * Usage:
- *   const { write, data: hash, isPending } = useContribute();
- *   await write({ roundAddress, amount, referrer });
+ *   const { contribute, hash, isPending } = useContribute();
+ *   const txHash = await contribute({ roundAddress, amount, referrer });
  */
 export function useContribute() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContractAsync, data: hash, isPending, error } = useWriteContract();
 
   const contribute = async ({
     roundAddress,
@@ -209,13 +209,15 @@ export function useContribute() {
     amount: bigint;
     referrer?: Address;
   }) => {
-    return writeContract({
+    // writeContractAsync returns the tx hash (unlike writeContract which returns void)
+    const txHash = await writeContractAsync({
       address: roundAddress,
       abi: PRESALE_ROUND_ABI,
       functionName: 'contribute',
       args: [amount, referrer],
       value: amount,
     });
+    return txHash;
   };
 
   return {

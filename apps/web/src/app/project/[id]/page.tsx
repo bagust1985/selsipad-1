@@ -275,7 +275,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                               value:
                                 project.type === 'fairlaunch'
                                   ? `${project.target.toLocaleString()} ${project.currency}`
-                                  : `${(project.target * 0.5).toLocaleString()} ${project.currency}`,
+                                  : `${(project.softcap || 0).toLocaleString()} ${project.currency}`,
                             },
                             ...(project.type !== 'fairlaunch'
                               ? [

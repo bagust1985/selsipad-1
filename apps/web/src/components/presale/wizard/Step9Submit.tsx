@@ -138,9 +138,18 @@ export function Step9Submit({
   const { valid: complianceValid, violations } = validateComplianceGates(complianceStatus);
 
   // Escrow calculation
+  // teamAllocation is a PERCENTAGE of total supply (e.g. "30" = 30%)
+  // Calculate actual token count: totalSupply * percent / 100
+  const teamAllocationPercent = parseFloat(teamAllocation || '0');
+  const tokenTotalSupply = parseFloat(wizardData.total_supply || '0');
+  const saleTokensNum = parseFloat(tokensForSale || '0');
+  const teamTokenCount =
+    tokenTotalSupply > 0 && teamAllocationPercent > 0
+      ? Math.ceil(tokenTotalSupply * (teamAllocationPercent / 100))
+      : 0;
   const escrowBreakdown = getEscrowBreakdown({
     tokensForSale: tokensForSale || '0',
-    teamVestingTokens: teamAllocation || '0',
+    teamVestingTokens: teamTokenCount.toString(),
     lpLockPercentage: lpLockPercentage || 0,
   });
 

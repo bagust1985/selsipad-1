@@ -327,6 +327,10 @@ export function SubmitStep({ formData, onBack }: SubmitStepProps) {
       const data = await response.json();
 
       if (!data.success) {
+        // Handle 401 Unauthorized with helpful message
+        if (response.status === 401) {
+          throw new Error('Please sign in with Supabase before submitting your project.');
+        }
         throw new Error(data.error || data.details?.join(', ') || 'Submission failed');
       }
 

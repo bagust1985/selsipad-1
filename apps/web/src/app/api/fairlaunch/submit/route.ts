@@ -13,6 +13,7 @@ import {
 } from '@/lib/fairlaunch/deployment-validation';
 import { ethers } from 'ethers';
 import type { FairlaunchDeployParams } from '@/lib/fairlaunch/params-builder';
+import { getAuthUserId } from '@/lib/auth/require-admin';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,31 +25,30 @@ const ESCROW_VAULT_ADDRESS = '0x6849A09c27F26fF0e58a2E36Dd5CAB2F9d0c617F';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  let userId: string | undefined;
-  let walletAddress: string | undefined;
 
   try {
-    // 1. Authenticate user
+    // 1. Authenticate user (REQUIRED - matches presale pattern)
+    const userId = await getAuthUserId(request);
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Please sign in to submit your project' },
+        { status: 401 }
+      );
+    }
+
+    // Get wallet address from session
     const { getServerSession } = await import('@/lib/auth/session');
     const session = await getServerSession();
-
-    if (session) {
-      userId = session.userId;
-      walletAddress = session.address;
-      console.log('[Submit API] Authenticated via session:', { userId, walletAddress });
-    } else {
-      const walletHeader = request.headers.get('x-wallet-address');
-      if (walletHeader) {
-        walletAddress = walletHeader;
-        console.log('[Submit API] Using wallet-only auth:', walletAddress);
-      } else {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-    }
+    const walletAddress = session?.address;
 
     if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Wallet address required - Please connect your wallet' },
+        { status: 400 }
+      );
     }
+
+    console.log('[Submit API] Authenticated submission:', { userId, walletAddress });
 
     // 2. Parse and validate request body
     const body = await request.json();

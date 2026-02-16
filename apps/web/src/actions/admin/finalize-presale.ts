@@ -1,10 +1,10 @@
 'use server';
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { cookies } from 'next/headers';
 import { ethers } from 'ethers';
 import { revalidatePath } from 'next/cache';
 import { recordLPLock } from './record-lp-lock';
+import { getAdminSession } from '@/lib/auth/admin-session';
 
 const RPC_URLS: Record<string, string> = {
   '97': process.env.BSC_TESTNET_RPC_URL || 'https://bsc-testnet-rpc.publicnode.com',
@@ -72,45 +72,20 @@ export async function finalizePresale(
   }
 ) {
   try {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session_token')?.value;
+    const adminSession = await getAdminSession();
 
-    if (!sessionToken) {
-      return { success: false, error: 'Not authenticated — no session cookie' };
+    if (!adminSession) {
+      return { success: false, error: 'Not authenticated — admin session required' };
     }
 
     const supabase = createServiceRoleClient();
-
-    // Verify admin via service-role (bypasses RLS)
-    const { data: sessionData } = await supabase
-      .from('auth_sessions')
-      .select('wallets!inner(user_id)')
-      .eq('session_token', sessionToken)
-      .gt('expires_at', new Date().toISOString())
-      .single();
-
-    const userId = (sessionData?.wallets as any)?.user_id;
-    if (!userId) {
-      return { success: false, error: 'Session expired' };
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('user_id', userId)
-      .single();
-
-    if (!profile?.is_admin) {
-      return { success: false, error: 'Admin access required' };
-    }
-
-    const session = { userId };
+    const session = { userId: adminSession.userId };
 
     // Get round details
     const { data: round, error: roundError } = await supabase
       .from('launch_rounds')
       .select(
-        'id, status, type, chain, contract_address, round_address, vesting_vault_address, total_raised, params, project_id, escrow_tx_hash, escrow_amount, chain_id'
+        'id, status, type, chain, contract_address, round_address, vesting_vault_address, total_raised, params, project_id, escrow_tx_hash, escrow_amount, chain_id, deployment_block_number'
       )
       .eq('id', roundId)
       .single();
@@ -875,9 +850,8 @@ async function processPresaleFeeSplits(
  */
 export async function getPresaleOnchainState(roundId: string) {
   try {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session_token')?.value;
-    if (!sessionToken) return { success: false, error: 'Not authenticated' };
+    const adminSession = await getAdminSession();
+    if (!adminSession) return { success: false, error: 'Not authenticated' };
 
     const supabase = createServiceRoleClient();
     const { data: round, error } = await supabase

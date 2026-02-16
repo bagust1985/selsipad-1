@@ -17,6 +17,8 @@ import {
   ExternalLink,
   Zap,
   CheckCircle2,
+  MessageCircle,
+  Link2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -425,6 +427,108 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                         <TransactionsTable project={project} />
                       </div>
                     ),
+                  },
+                  {
+                    id: 'social',
+                    label: 'Social Media',
+                    content: (() => {
+                      // Gather social links from metadata + params
+                      const params = (project as any).params || {};
+                      const socials = [
+                        {
+                          platform: 'Website',
+                          url: metadata.website || metadata.projectWebsite || params.projectWebsite,
+                          icon: <Globe size={24} />,
+                          color: 'from-blue-500 to-cyan-500',
+                          borderColor: 'border-blue-500/20 hover:border-blue-500/40',
+                          bgColor: 'bg-blue-500/10',
+                          textColor: 'text-blue-400',
+                        },
+                        {
+                          platform: 'Twitter / X',
+                          url: metadata.twitter || params.twitter,
+                          icon: <Twitter size={24} />,
+                          color: 'from-sky-400 to-blue-500',
+                          borderColor: 'border-sky-500/20 hover:border-sky-500/40',
+                          bgColor: 'bg-sky-500/10',
+                          textColor: 'text-sky-400',
+                        },
+                        {
+                          platform: 'Telegram',
+                          url: metadata.telegram || params.telegram,
+                          icon: <Send size={24} />,
+                          color: 'from-blue-400 to-indigo-500',
+                          borderColor: 'border-indigo-500/20 hover:border-indigo-500/40',
+                          bgColor: 'bg-indigo-500/10',
+                          textColor: 'text-indigo-400',
+                        },
+                        {
+                          platform: 'Discord',
+                          url: metadata.discord || params.discord,
+                          icon: <Disc size={24} />,
+                          color: 'from-violet-500 to-purple-600',
+                          borderColor: 'border-violet-500/20 hover:border-violet-500/40',
+                          bgColor: 'bg-violet-500/10',
+                          textColor: 'text-violet-400',
+                        },
+                      ];
+                      const activeSocials = socials.filter((s) => s.url);
+
+                      return (
+                        <div className="mt-6 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          {activeSocials.length > 0 ? (
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              {activeSocials.map((social) => (
+                                <a
+                                  key={social.platform}
+                                  href={social.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`group relative flex items-center gap-4 p-5 rounded-2xl bg-[#0A0A0C]/60 border ${social.borderColor} backdrop-blur-xl transition-all duration-300 hover:bg-white/[0.04] hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5`}
+                                >
+                                  {/* Gradient glow on hover */}
+                                  <div
+                                    className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${social.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}
+                                  />
+                                  <div
+                                    className={`relative flex-shrink-0 p-3 rounded-xl ${social.bgColor} ${social.textColor}`}
+                                  >
+                                    {social.icon}
+                                  </div>
+                                  <div className="relative flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-white mb-0.5">
+                                      {social.platform}
+                                    </p>
+                                    <p className="text-xs text-gray-400 truncate">
+                                      {social.url
+                                        .replace(/^https?:\/\/(www\.)?/, '')
+                                        .replace(/\/$/, '')}
+                                    </p>
+                                  </div>
+                                  <ExternalLink
+                                    size={16}
+                                    className="relative text-gray-600 group-hover:text-gray-300 transition-colors flex-shrink-0"
+                                  />
+                                </a>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="rounded-3xl p-8 bg-[#0A0A0C]/40 border border-white/5 text-center">
+                              <div className="mx-auto w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
+                                <Link2 size={28} className="text-gray-600" />
+                              </div>
+                              <h4 className="text-lg font-bold text-gray-400 mb-2">
+                                No Social Links
+                              </h4>
+                              <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                                This project hasn&apos;t added any social media links yet. Check
+                                back later for updates.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })(),
                   },
                   {
                     id: 'safety',

@@ -58,6 +58,9 @@ export function ExploreProjectCard({ project, index }: ExploreProjectCardProps) 
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, [project.startDate, project.endDate, isUpcoming, isEnded]);
+  const softcap = (project as any).softcap || 0;
+  const isSoftcapMet = isEnded && (softcap <= 0 || project.raised >= softcap);
+  const isRefundable = isEnded && softcap > 0 && project.raised < softcap;
   const isSuccessful = isEnded && project.raised >= (project.target || 0);
 
   // Active or Successful projects get color
@@ -128,7 +131,7 @@ export function ExploreProjectCard({ project, index }: ExploreProjectCardProps) 
           <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0C] via-transparent to-black/60" />
 
           {/* Status Badge (Left) */}
-          <div className="absolute top-4 left-4 z-10">
+          <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5">
             <div
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md ${statusBg}`}
             >
@@ -142,6 +145,18 @@ export function ExploreProjectCard({ project, index }: ExploreProjectCardProps) 
                 {project.status === 'live' ? 'Live Now' : project.status}
               </span>
             </div>
+            {isEnded && (
+              <div
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full border backdrop-blur-md text-[10px] font-bold uppercase tracking-wider ${
+                  isRefundable
+                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                }`}
+              >
+                <span>{isRefundable ? '⚠️' : '✅'}</span>
+                <span>{isRefundable ? 'Refund' : 'Success'}</span>
+              </div>
+            )}
           </div>
 
           {/* Network Badge (Right) */}
@@ -276,7 +291,9 @@ export function ExploreProjectCard({ project, index }: ExploreProjectCardProps) 
               <Clock size={12} />
               <span>
                 {isEnded
-                  ? 'Ended'
+                  ? isRefundable
+                    ? 'Softcap Not Reached'
+                    : 'Ended'
                   : isLive
                     ? `Ends in ${countdown || '...'}`
                     : `Starts in ${countdown || '...'}`}

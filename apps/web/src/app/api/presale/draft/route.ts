@@ -145,6 +145,12 @@ export async function POST(request: NextRequest) {
         banner_url: basics.banner_url,
         anti_bot: body.anti_bot,
         fees_referral: body.fees_referral,
+        // Social links — must be in params for project detail page display
+        projectWebsite: basics.website_url || undefined,
+        twitter: basics.twitter_url || undefined,
+        telegram: basics.telegram_url || undefined,
+        discord: basics.discord_url || undefined,
+        github: basics.github_url || undefined,
       },
     };
 

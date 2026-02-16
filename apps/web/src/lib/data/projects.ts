@@ -195,7 +195,8 @@ export async function getProjectById(id: string): Promise<Project | null> {
         *,
         projects (
           id, name, symbol, description, logo_url, status,
-          kyc_status, sc_scan_status, metadata, factory_address
+          kyc_status, sc_scan_status, metadata, factory_address,
+          website, twitter, telegram, discord, github
         ),
         vesting_schedules (
           contract_address
@@ -282,7 +283,15 @@ export async function getProjectById(id: string): Promise<Project | null> {
           startDate: roundData.start_at,
           endDate: roundData.end_at,
           // ✅ Add metadata and factory_address for SAFU badges
-          metadata: project.metadata || {},
+          // Merge social links from params into metadata for Social Media tab
+          metadata: {
+            ...(project.metadata || {}),
+            website: (project.metadata || {}).website || params.projectWebsite || project.website,
+            twitter: (project.metadata || {}).twitter || params.twitter || project.twitter,
+            telegram: (project.metadata || {}).telegram || params.telegram || project.telegram,
+            discord: (project.metadata || {}).discord || params.discord || project.discord,
+            github: params.github || project.github,
+          },
           factory_address: project.factory_address || null,
           min_contribution: params.min_contribution ?? undefined,
           max_contribution: params.max_contribution ?? undefined,
@@ -364,6 +373,14 @@ export async function getProjectById(id: string): Promise<Project | null> {
         vesting_address: activeRound.vesting_vault_address || params.vesting_address || null,
         startDate: activeRound.start_at,
         endDate: activeRound.end_at,
+        // Merge social links from params into metadata for Social Media tab
+        metadata: {
+          ...(data.metadata || {}),
+          website: (data.metadata || {}).website || params.projectWebsite,
+          twitter: (data.metadata || {}).twitter || params.twitter,
+          telegram: (data.metadata || {}).telegram || params.telegram,
+          discord: (data.metadata || {}).discord || params.discord,
+        },
         min_contribution: params.min_contribution ?? undefined,
         max_contribution: params.max_contribution ?? undefined,
         tokenomics: extractTokenomics(params),

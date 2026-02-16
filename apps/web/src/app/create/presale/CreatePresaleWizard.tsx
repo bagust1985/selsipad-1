@@ -269,6 +269,12 @@ export function CreatePresaleWizard({
         banner_url: wizardData.basics?.banner_url,
         anti_bot: wizardData.anti_bot,
         fees_referral: wizardData.fees_referral,
+        // Social links — saved to params for Social Media tab display
+        projectWebsite: wizardData.basics?.website_url || undefined,
+        twitter: wizardData.basics?.twitter_url || undefined,
+        telegram: wizardData.basics?.telegram_url || undefined,
+        discord: wizardData.basics?.discord_url || undefined,
+        github: wizardData.basics?.github_url || undefined,
       };
       const patchRes = await fetch(`/api/rounds/${roundId}`, {
         method: 'PATCH',
@@ -359,8 +365,14 @@ export function CreatePresaleWizard({
         banner_url: validated.basics?.banner_url,
         anti_bot: validated.anti_bot,
         fees_referral: validated.fees_referral,
+        // Social links — saved to params for Social Media tab display
+        projectWebsite: validated.basics?.website_url || undefined,
+        twitter: validated.basics?.twitter_url || undefined,
+        telegram: validated.basics?.telegram_url || undefined,
+        discord: validated.basics?.discord_url || undefined,
+        github: validated.basics?.github_url || undefined,
       };
-      await fetch(`/api/rounds/${currentRoundId}`, {
+      const patchRes = await fetch(`/api/rounds/${currentRoundId}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -374,6 +386,9 @@ export function CreatePresaleWizard({
           params,
         }),
       });
+      if (!patchRes.ok) {
+        console.warn('[Wizard] PATCH round params failed:', await patchRes.text());
+      }
 
       const submitRes = await fetch(`/api/rounds/${currentRoundId}/submit`, {
         method: 'POST',

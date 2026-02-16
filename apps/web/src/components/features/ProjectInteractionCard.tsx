@@ -4,6 +4,7 @@ import { useAccount } from 'wagmi';
 import { ParticipationForm } from './ParticipationForm'; // Adjust path if needed
 import FairlaunchClaimer from '@/components/fairlaunch/FairlaunchClaimer';
 import VestingClaimer from '@/components/presale/VestingClaimer';
+import PresaleRefundClaimer from '@/components/presale/PresaleRefundClaimer';
 import { StatusPill } from '@/components/presale/StatusPill'; // Or generic badge
 import { type Project } from '@/lib/data/projects';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
@@ -157,12 +158,29 @@ export function ProjectInteractionCard({ project }: ProjectInteractionCardProps)
         </div>
       );
     } else {
-      // Presale with Vesting
+      // Presale — check if soft cap was met to determine Claim vs Refund
+      const softcap = (project as any).softcap || 0;
+      const isSoftcapMet = softcap <= 0 || project.raised >= softcap;
+
       return (
         <div className="p-6 bg-[#0A0A0C] border border-white/10 rounded-2xl shadow-xl space-y-4">
-          <h3 className="text-xl font-bold text-white">Project Ended</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-white">Project Ended</h3>
+            {!isSoftcapMet && (
+              <span className="text-xs px-2 py-1 bg-yellow-900/40 text-yellow-400 border border-yellow-500/30 rounded-full">
+                Refund Available
+              </span>
+            )}
+          </div>
           {address ? (
-            <VestingClaimer presaleId={project.id} userAddress={address} />
+            isSoftcapMet ? (
+              <VestingClaimer presaleId={project.id} userAddress={address} />
+            ) : (
+              <PresaleRefundClaimer
+                contractAddress={project.contract_address || ''}
+                currency={project.currency}
+              />
+            )
           ) : (
             <div className="text-center text-gray-400 py-4">Connect wallet to view allocation</div>
           )}

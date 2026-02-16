@@ -66,38 +66,66 @@ export function ParticipationForm({
     // Use URL param if present, otherwise check localStorage
     const effectiveRef = refParam || localStorage.getItem('selsipad_referral') || '';
 
-    if (!effectiveRef) return;
-
-    // If it's already a valid wallet address, use it directly
-    if (isAddress(effectiveRef)) {
-      setReferrer(effectiveRef as `0x${string}`);
-      setReferrerLabel(effectiveRef);
-      return;
-    }
-
-    // Otherwise, resolve referral code → wallet address via API
-    const resolveReferralCode = async () => {
-      try {
-        const res = await fetch(
-          `/api/v1/referral/resolve?code=${encodeURIComponent(effectiveRef)}`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.wallet_address && isAddress(data.wallet_address)) {
-            setReferrer(data.wallet_address as `0x${string}`);
-            setReferrerLabel(
-              `${data.wallet_address.slice(0, 6)}…${data.wallet_address.slice(-4)} (${effectiveRef})`
-            );
-            console.log('[Referral] Resolved code', effectiveRef, '→', data.wallet_address);
-          }
+    const resolveReferrer = async () => {
+      // 1. If we have a ref code/address from URL or localStorage, use it
+      if (effectiveRef) {
+        // If it's already a valid wallet address, use it directly
+        if (isAddress(effectiveRef)) {
+          setReferrer(effectiveRef as `0x${string}`);
+          setReferrerLabel(effectiveRef);
+          return;
         }
-      } catch (err) {
-        console.error('[Referral] Failed to resolve code:', err);
+
+        // Otherwise, resolve referral code → wallet address via API
+        try {
+          const res = await fetch(
+            `/api/v1/referral/resolve?code=${encodeURIComponent(effectiveRef)}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.wallet_address && isAddress(data.wallet_address)) {
+              setReferrer(data.wallet_address as `0x${string}`);
+              setReferrerLabel(
+                `${data.wallet_address.slice(0, 6)}…${data.wallet_address.slice(-4)} (${effectiveRef})`
+              );
+              console.log('[Referral] Resolved code', effectiveRef, '→', data.wallet_address);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('[Referral] Failed to resolve code:', err);
+        }
       }
+
+      // 2. No ref from URL/localStorage — check DB for permanent referrer
+      if (address) {
+        try {
+          const res = await fetch('/api/v1/referral/my-referrer', { credentials: 'include' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.referrer && isAddress(data.referrer)) {
+              setReferrer(data.referrer as `0x${string}`);
+              const code = data.code || '';
+              setReferrerLabel(
+                `${data.referrer.slice(0, 6)}…${data.referrer.slice(-4)}${code ? ` (${code})` : ''}`
+              );
+              // Persist to localStorage so subsequent navigations are instant
+              if (code) localStorage.setItem('selsipad_referral', code);
+              console.log('[Referral] Permanent referrer from DB:', data.referrer, code);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('[Referral] Failed to fetch permanent referrer:', err);
+        }
+      }
+
+      // 3. Final fallback: master referrer
+      // (already set as default state, no action needed)
     };
 
-    resolveReferralCode();
-  }, [refParam]);
+    resolveReferrer();
+  }, [refParam, address]);
 
   const userBalance = balanceData
     ? parseFloat(formatUnits(balanceData.value, balanceData.decimals))

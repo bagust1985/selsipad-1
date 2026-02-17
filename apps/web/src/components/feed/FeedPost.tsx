@@ -34,6 +34,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [reposting, setReposting] = useState(false);
   const [reposted, setReposted] = useState(false);
+  const [repostCount, setRepostCount] = useState(post.repost_count || 0);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [commentCount, setCommentCount] = useState(post.replies || 0);
@@ -123,8 +124,10 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
       setReposting(true);
       try {
         const response = await fetch(`/api/feed/repost/${post.id}`, { method: 'DELETE' });
-        if (response.ok) setReposted(false);
-        else alert('Failed to remove repost');
+        if (response.ok) {
+          setReposted(false);
+          setRepostCount((prev) => Math.max(prev - 1, 0));
+        } else alert('Failed to remove repost');
       } catch (error) {
         alert('Failed to remove repost');
       } finally {
@@ -135,8 +138,10 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
       setReposting(true);
       try {
         const response = await fetch(`/api/feed/repost/${post.id}`, { method: 'POST' });
-        if (response.ok) setReposted(true);
-        else {
+        if (response.ok) {
+          setReposted(true);
+          setRepostCount((prev) => prev + 1);
+        } else {
           const data = await response.json();
           alert(data.error || 'Failed to repost');
         }
@@ -230,20 +235,31 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
     return count.toString();
   };
 
+  // For reposts, show the original post's content
+  const displayPost = post.type === 'repost' && post.reposted_post ? post.reposted_post : post;
+
   return (
     <div className="font-twitter group/post mb-6 rounded-[20px] bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-[#39AEC4]/10 hover:border-[#39AEC4]/30 transition-all p-4 sm:p-5 shadow-lg hover:shadow-xl hover:shadow-[#756BBA]/5">
+      {/* Repost Banner */}
+      {post.type === 'repost' && (
+        <div className="flex items-center gap-2 text-gray-400 text-xs mb-3 pl-10">
+          <Repeat2 className="w-3.5 h-3.5 text-green-400" />
+          <span className="font-semibold">{post.author.username}</span>
+          <span>Reposted</span>
+        </div>
+      )}
       <div className="flex items-start gap-3">
         {/* Avatar */}
-        <Link href={`/feed/profile/${post.author.id}`} className="flex-shrink-0">
-          {post.author.avatar_url ? (
+        <Link href={`/feed/profile/${displayPost.author.id}`} className="flex-shrink-0">
+          {displayPost.author.avatar_url ? (
             <img
-              src={post.author.avatar_url}
-              alt={post.author.username}
+              src={displayPost.author.avatar_url}
+              alt={displayPost.author.username}
               className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-[#39AEC4]/40 bg-gradient-to-br from-[#39AEC4]/30 to-[#756BBA]/30 p-[1px] ring-2 ring-transparent group-hover/post:ring-[#39AEC4]/20 transition-all"
             />
           ) : (
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#39AEC4]/30 to-[#756BBA]/30 border border-[#39AEC4]/40 flex items-center justify-center text-white font-semibold text-sm sm:text-base group-hover/post:from-[#39AEC4]/40 group-hover/post:to-[#756BBA]/40 transition-all">
-              {post.author.username[0]?.toUpperCase()}
+              {displayPost.author.username[0]?.toUpperCase()}
             </div>
           )}
         </Link>
@@ -255,12 +271,12 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1 flex-wrap">
                 <Link
-                  href={`/feed/profile/${post.author.id}`}
+                  href={`/feed/profile/${displayPost.author.id}`}
                   className="font-semibold text-sm sm:text-base text-white hover:text-[#39AEC4] transition-colors truncate"
                 >
-                  {post.author.username}
+                  {displayPost.author.username}
                 </Link>
-                {post.author.bluecheck && (
+                {displayPost.author.bluecheck && (
                   <BadgeCheck className="w-4 h-4 text-[#39AEC4] fill-[#39AEC4]/20 flex-shrink-0" />
                 )}
 
@@ -280,7 +296,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-gray-400 text-xs sm:text-sm hover:text-[#39AEC4] hover:underline transition-colors cursor-pointer">
-                  @{post.author.username.toLowerCase().replace(/\s/g, '')}
+                  @{displayPost.author.username.toLowerCase().replace(/\s/g, '')}
                 </span>
                 <span className="text-gray-600 text-xs">·</span>
                 <span className="text-gray-500 text-xs">{getTimeAgo()}</span>
@@ -329,10 +345,10 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
               </div>
             </div>
           ) : (
-            <Link href={`/feed/post/${post.id}`} className="block cursor-pointer">
+            <Link href={`/feed/post/${displayPost.id}`} className="block cursor-pointer">
               <p className="text-sm sm:text-base text-gray-200 leading-relaxed mt-2 whitespace-pre-wrap break-words">
                 {/* Highlight hashtags */}
-                {post.content.split(/(\s+)/).map((part, i) => {
+                {displayPost.content.split(/(\s+)/).map((part, i) => {
                   if (part.startsWith('#')) {
                     return (
                       <span key={i} className="text-[#39AEC4] hover:underline cursor-pointer">
@@ -345,19 +361,19 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
               </p>
 
               {/* Image Grid */}
-              {post.image_urls && post.image_urls.length > 0 && (
+              {displayPost.image_urls && displayPost.image_urls.length > 0 && (
                 <div
                   className={`mt-3 grid gap-2 ${
-                    post.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+                    displayPost.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
                   }`}
                 >
-                  {post.image_urls.map((url, index) => (
+                  {displayPost.image_urls.map((url, index) => (
                     <img
                       key={index}
                       src={url}
                       alt={`Post image ${index + 1}`}
                       className={`rounded-2xl border border-[#39AEC4]/10 object-cover bg-black/40 ${
-                        post.image_urls!.length === 1 ? 'max-h-96 w-full' : 'h-64 w-full'
+                        displayPost.image_urls!.length === 1 ? 'max-h-96 w-full' : 'h-64 w-full'
                       }`}
                     />
                   ))}
@@ -409,7 +425,9 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
               >
                 <Repeat2 className="w-4 h-4 sm:w-[18px] sm:h-[18px]" />
               </div>
-              <span className="text-xs sm:text-sm font-medium">{reposting ? '...' : ''}</span>
+              <span className="text-xs sm:text-sm font-medium">
+                {reposting ? '...' : repostCount > 0 ? formatCount(repostCount) : ''}
+              </span>
             </button>
 
             {/* Like */}

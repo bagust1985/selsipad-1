@@ -14,7 +14,7 @@ export interface Post {
   content: string;
   project_id?: string;
   project_name?: string;
-  type: 'text' | 'update' | 'quote';
+  type: 'text' | 'update' | 'quote' | 'repost';
   created_at: string;
   likes: number;
   replies: number;
@@ -22,8 +22,10 @@ export interface Post {
   image_urls?: string[];
   hashtags?: string[];
   view_count?: number;
+  repost_count?: number;
   edit_count?: number;
   last_edited_at?: string;
+  reposted_post?: Post;
 }
 
 /**
@@ -45,7 +47,9 @@ export async function getFeedPosts(limit = 20): Promise<Post[]> {
     // Fetch posts without JOIN (no FK relationship anymore)
     const { data, error } = await supabase
       .from('posts')
-      .select('id, author_id, content, project_id, type, created_at, image_urls, hashtags')
+      .select(
+        'id, author_id, content, project_id, type, created_at, image_urls, hashtags, repost_count, view_count, comment_count, reposted_post_id'
+      )
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -73,6 +77,9 @@ export async function getFeedPosts(limit = 20): Promise<Post[]> {
     const postIds = data.map((p) => p.id);
     const likesData = await getPostLikeCounts(postIds, user?.id);
 
+    // Hydrate reposted posts
+    const repostMap = await hydrateReposts(supabase, data, profileMap, user?.id);
+
     // Map to frontend format with manual join
     return data.map((post: any) => {
       const author = profileMap.get(post.author_id) || {};
@@ -81,7 +88,7 @@ export async function getFeedPosts(limit = 20): Promise<Post[]> {
       return {
         id: post.id,
         author: {
-          id: post.author_id, // Use author_id (user_id) for ownership check
+          id: post.author_id,
           username: (author as any).username || 'Anonymous',
           avatar_url: (author as any).avatar_url,
           bluecheck:
@@ -90,14 +97,17 @@ export async function getFeedPosts(limit = 20): Promise<Post[]> {
         },
         content: post.content,
         project_id: post.project_id,
-        project_name: undefined, // Will need separate query if needed
+        project_name: undefined,
         type: mapPostType(post.type),
         created_at: post.created_at,
         likes: likes.count,
-        replies: 0,
+        replies: post.comment_count || 0,
         is_liked: likes.userLiked,
         image_urls: post.image_urls || [],
         hashtags: post.hashtags || [],
+        repost_count: post.repost_count || 0,
+        view_count: post.view_count || 0,
+        reposted_post: post.reposted_post_id ? repostMap.get(post.reposted_post_id) : undefined,
       };
     });
   } catch (err) {
@@ -121,7 +131,9 @@ export async function getProjectPosts(projectId: string): Promise<Post[]> {
 
     const { data, error } = await supabase
       .from('posts')
-      .select('id, author_id, content, project_id, type, created_at')
+      .select(
+        'id, author_id, content, project_id, type, created_at, repost_count, view_count, comment_count'
+      )
       .eq('project_id', projectId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -167,8 +179,10 @@ export async function getProjectPosts(projectId: string): Promise<Post[]> {
         type: mapPostType(post.type),
         created_at: post.created_at,
         likes: likes.count,
-        replies: 0,
+        replies: post.comment_count || 0,
         is_liked: likes.userLiked,
+        repost_count: post.repost_count || 0,
+        view_count: post.view_count || 0,
       };
     });
   } catch (err) {
@@ -346,16 +360,100 @@ async function getPostLikeCounts(
   }
 }
 
-function mapPostType(dbType: string): 'text' | 'update' | 'quote' {
+function mapPostType(dbType: string): 'text' | 'update' | 'quote' | 'repost' {
   switch (dbType) {
     case 'UPDATE':
       return 'update';
     case 'QUOTE':
       return 'quote';
+    case 'REPOST':
+      return 'repost';
     case 'TEXT':
     default:
       return 'text';
   }
+}
+
+/**
+ * Hydrate Reposted Posts
+ *
+ * For any REPOST type posts, bulk-fetches the original posts and returns a Map.
+ */
+async function hydrateReposts(
+  supabase: any,
+  posts: any[],
+  profileMap: Map<string, any>,
+  userId?: string
+): Promise<Map<string, Post>> {
+  const repostIds = posts
+    .filter((p: any) => p.type === 'REPOST' && p.reposted_post_id)
+    .map((p: any) => p.reposted_post_id);
+
+  if (repostIds.length === 0) return new Map();
+
+  const uniqueIds = [...new Set(repostIds)];
+
+  const { data: originalPosts } = await supabase
+    .from('posts')
+    .select(
+      'id, author_id, content, project_id, type, created_at, image_urls, hashtags, repost_count, view_count'
+    )
+    .in('id', uniqueIds)
+    .is('deleted_at', null);
+
+  if (!originalPosts || originalPosts.length === 0) return new Map();
+
+  // Fetch missing author profiles for original posts
+  const missingAuthorIds = [
+    ...new Set(
+      originalPosts.map((p: any) => p.author_id).filter((id: string) => !profileMap.has(id))
+    ),
+  ];
+
+  if (missingAuthorIds.length > 0) {
+    const { data: extraProfiles } = await supabase
+      .from('profiles')
+      .select('user_id, username, avatar_url, bluecheck_status')
+      .in('user_id', missingAuthorIds);
+
+    (extraProfiles || []).forEach((p: any) => profileMap.set(p.user_id, p));
+  }
+
+  // Get likes for original posts
+  const originalPostIds = originalPosts.map((p: any) => p.id);
+  const likesData = await getPostLikeCounts(originalPostIds, userId);
+
+  const result = new Map<string, Post>();
+
+  originalPosts.forEach((post: any) => {
+    const author = profileMap.get(post.author_id) || {};
+    const likes = likesData[post.id] || { count: 0, userLiked: false };
+
+    result.set(post.id, {
+      id: post.id,
+      author: {
+        id: post.author_id,
+        username: (author as any).username || 'Anonymous',
+        avatar_url: (author as any).avatar_url,
+        bluecheck:
+          (author as any).bluecheck_status === 'ACTIVE' ||
+          (author as any).bluecheck_status === 'VERIFIED',
+      },
+      content: post.content,
+      project_id: post.project_id,
+      type: mapPostType(post.type),
+      created_at: post.created_at,
+      likes: likes.count,
+      replies: 0,
+      is_liked: likes.userLiked,
+      image_urls: post.image_urls || [],
+      hashtags: post.hashtags || [],
+      repost_count: post.repost_count || 0,
+      view_count: post.view_count || 0,
+    });
+  });
+
+  return result;
 }
 
 /**
@@ -393,7 +491,9 @@ export async function getFollowingFeed(limit = 20): Promise<Post[]> {
     // Fetch posts from followed users
     const { data, error } = await supabase
       .from('posts')
-      .select('id, author_id, content, project_id, type, created_at')
+      .select(
+        'id, author_id, content, project_id, type, created_at, repost_count, view_count, comment_count'
+      )
       .in('author_id', followingIds)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -440,8 +540,10 @@ export async function getFollowingFeed(limit = 20): Promise<Post[]> {
         type: mapPostType(post.type),
         created_at: post.created_at,
         likes: likes.count,
-        replies: 0,
+        replies: post.comment_count || 0,
         is_liked: likes.userLiked,
+        repost_count: post.repost_count || 0,
+        view_count: post.view_count || 0,
       };
     });
   } catch (err) {
@@ -465,7 +567,9 @@ export async function getPostById(postId: string): Promise<Post | null> {
 
     const { data: post, error } = await supabase
       .from('posts')
-      .select('id, author_id, content, project_id, type, created_at, image_urls, hashtags')
+      .select(
+        'id, author_id, content, project_id, type, created_at, image_urls, hashtags, repost_count, view_count, comment_count'
+      )
       .eq('id', postId)
       .is('deleted_at', null)
       .single();
@@ -501,10 +605,12 @@ export async function getPostById(postId: string): Promise<Post | null> {
       type: mapPostType(post.type),
       created_at: post.created_at,
       likes: likes.count,
-      replies: 0,
+      replies: post.comment_count || 0,
       is_liked: likes.userLiked,
       image_urls: post.image_urls || [],
       hashtags: post.hashtags || [],
+      repost_count: post.repost_count || 0,
+      view_count: post.view_count || 0,
     };
   } catch (err) {
     console.error('Unexpected error in getPostById:', err);

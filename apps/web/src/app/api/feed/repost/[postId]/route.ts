@@ -1,6 +1,6 @@
 import { getServerSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 
 /**
  * POST /api/feed/repost/[postId]
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, { params }: { params: { postId:
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
     const { postId } = params;
 
     // Check if original post exists
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest, { params }: { params: { postId:
         author_id: session.userId,
         type: 'REPOST',
         reposted_post_id: postId,
-        content: '', // Reposts don't have additional content
+        content: '🔁', // Repost marker (content column has min-length constraint)
       })
       .select()
       .single();
@@ -90,7 +90,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { postI
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
     const { postId } = params;
 
     // Find and delete user's repost

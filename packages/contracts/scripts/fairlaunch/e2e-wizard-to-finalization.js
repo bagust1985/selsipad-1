@@ -45,7 +45,8 @@ const hre = require('hardhat');
 const ESCROW_VAULT = '0x6849A09c27F26fF0e58a2E36Dd5CAB2F9d0c617F';
 const FACTORY = '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175';
 const LP_LOCKER = '0x422293092c353abB6BEFaBAdBBEb1D6257F17298';
-const FEE_SPLITTER = '0x141fd4e368FAE882640Ca7612EF12778cF985645';
+// NOTE: FeeSplitter address is read dynamically from the factory contract
+// (it's set as an immutable at factory deployment time)
 const TREASURY_WALLET = '0xaC89Bf746dAf1c782Ed87e81a89fe8885CF979F5';
 
 // ═══════════════════════════════════════════════════════
@@ -320,6 +321,8 @@ async function main() {
   // Get factory and deploy
   const factory = await hre.ethers.getContractAt('FairlaunchFactory', FACTORY);
   const deploymentFee = await factory.DEPLOYMENT_FEE();
+  const factoryFeeSplitter = await factory.feeSplitter();
+  log('📋', `Factory FeeSplitter: ${factoryFeeSplitter}`);
   log('💳', `Deployment fee: ${hre.ethers.formatEther(deploymentFee)} BNB`);
 
   log('🚀', 'Calling factory.createFairlaunch()...');
@@ -594,12 +597,25 @@ async function main() {
 
   const vestingTokenBalance = await token.balanceOf(vestingAddr);
   log('📊', `Vesting vault token balance: ${hre.ethers.formatUnits(vestingTokenBalance, 18)} WZRD`);
-  log('📊', `Expected vesting: ${hre.ethers.formatUnits(teamVestingTokens, 18)} WZRD`);
+  log(
+    '📊',
+    `Expected minimum (team vesting): ${hre.ethers.formatUnits(teamVestingTokens, 18)} WZRD`
+  );
 
-  if (vestingTokenBalance === teamVestingTokens) {
-    log('✅', 'Vesting vault funded correctly');
+  // NOTE: Vesting vault receives teamVestingTokens from factory deployment
+  // PLUS leftover tokens from finalization (_distributeFundsStep sends remaining
+  // tokens not needed for user claims to the vesting vault)
+  if (vestingTokenBalance >= teamVestingTokens) {
+    const extra = vestingTokenBalance - teamVestingTokens;
+    log(
+      '✅',
+      `Vesting vault funded correctly (${hre.ethers.formatUnits(
+        extra,
+        18
+      )} WZRD extra from LP leftover)`
+    );
   } else {
-    log('⚠️', 'WARNING: Vesting balance mismatch!');
+    log('❌', 'ERROR: Vesting vault underfunded!');
   }
 
   // ─────────────────────────────────────────────────────
@@ -633,8 +649,8 @@ async function main() {
     ['LP Token exists', lpTokenAddr !== hre.ethers.ZeroAddress],
     ['LP Tokens locked', lpBalance > 0n],
     ['Escrow empty', escrowAfter === 0n],
-    ['Vesting funded', vestingTokenBalance === teamVestingTokens],
-    ['FeeSplitter configured', feeSplitterAddr === FEE_SPLITTER],
+    ['Vesting funded', vestingTokenBalance >= teamVestingTokens],
+    ['FeeSplitter configured', feeSplitterAddr === factoryFeeSplitter],
     ['LP Locker configured', configuredLocker === LP_LOCKER],
   ];
 

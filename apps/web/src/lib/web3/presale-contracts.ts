@@ -280,11 +280,11 @@ export const CONTRACTS = {
   },
   bsc_mainnet: {
     chainId: 56,
-    factory: '0xdD7B81C73b94F3dc4bE5fBd1feEc675E43F29F65' as `0x${string}`,
-    feeSplitter: '0xc85e258D50f430d1958A77f7dA8505f70028e37f' as `0x${string}`,
+    factory: '0x0b3662a97C962bdAFC3e66dcE076A65De18C223d' as `0x${string}`,
+    feeSplitter: '0x2Bf655410Cf6d7A88dc0d4D1f815546C8Eb2Ab52' as `0x${string}`,
     timelockExecutor: '0x124D5b097838A2F15b08f83239961b5D5D825223' as `0x${string}`, // treasury
     dexRouter: '0x10ED43C718714eb63d5aA57B78B54704E256024E' as `0x${string}`, // PancakeSwap V2 mainnet
-    lpLocker: '0x70E7fA993DB041AdB5bB97B01B3D8a9B999866f3' as `0x${string}`,
+    lpLocker: '0x4c6bA7e2667EBa61c0E84694A4828D0b33ffAF85' as `0x${string}`,
     deployBlock: 0, // Will be set after first presale deploy
   },
 } as const;

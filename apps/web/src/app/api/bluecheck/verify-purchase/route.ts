@@ -15,7 +15,7 @@ import { bscTestnet, bsc } from 'viem/chains';
 // Per-network BlueCheck contract addresses
 const BLUECHECK_ADDRESSES: Record<number, string> = {
   97: '0xfFaB42EcD7Eb0a85b018516421C9aCc088aC7157', // BSC Testnet
-  56: '0x7d33B957D8B27133Fa9e7765A18306A7BA60D275', // BSC Mainnet
+  56: '0xC14CdFE71Ca04c26c969a1C8a6aA4b1192e6fC43', // BSC Mainnet
 };
 
 // Per-network chain configs

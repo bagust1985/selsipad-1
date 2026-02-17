@@ -89,7 +89,7 @@ const wagmiConfig = createConfig({
     // Mainnets
     [base.id]: http(),
     [mainnet.id]: http(),
-    [bsc.id]: http(),
+    [bsc.id]: http('https://bsc-rpc.publicnode.com', { timeout: 15000 }),
     // Testnets
     [baseSepolia.id]: http(),
     [sepolia.id]: http(),

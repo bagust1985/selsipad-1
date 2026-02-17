@@ -46,8 +46,8 @@ export const CONTRACT_ADDRESSES: Record<
   },
   // BSC Mainnet
   56: {
-    presaleFactory: '0xdD7B81C73b94F3dc4bE5fBd1feEc675E43F29F65',
-    blueCheck: '0x7d33B957D8B27133Fa9e7765A18306A7BA60D275',
+    presaleFactory: '0x0b3662a97C962bdAFC3e66dcE076A65De18C223d',
+    blueCheck: '0xC14CdFE71Ca04c26c969a1C8a6aA4b1192e6fC43',
   },
   // Sepolia
   11155111: {

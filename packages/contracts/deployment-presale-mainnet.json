@@ -1,0 +1,17 @@
+{
+  "network": "BSC Mainnet",
+  "chainId": "56",
+  "timestamp": "2026-02-17T14:37:00.224Z",
+  "deployBlock": 81762840,
+  "deployer": "0x59788e689b3c1d36F9968c6CC78CC4Ce1b2Ecd4E",
+  "contracts": {
+    "feeSplitter": "0x2Bf655410Cf6d7A88dc0d4D1f815546C8Eb2Ab52",
+    "lpLocker": "0x4c6bA7e2667EBa61c0E84694A4828D0b33ffAF85",
+    "factory": "0x0b3662a97C962bdAFC3e66dcE076A65De18C223d",
+    "dexRouter": "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+  },
+  "transactions": {
+    "lpLocker": "0xd06327567370526033707c77c500a8d011805074079a7a193e52af674cc4d4ca",
+    "factory": "0xec838f5942863c913c5afcb46b098fc728aaf1353939cb37f178c77216c988d9"
+  }
+}

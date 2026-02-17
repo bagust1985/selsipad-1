@@ -17,6 +17,7 @@ import {
 import { LikeButton } from './LikeButton';
 import { PostMenu } from './PostMenu';
 import { CommentModal } from './CommentModal';
+import { sharePost } from '../../app/feed/interactions';
 
 import { type Post as FeedDataPost } from '@/lib/data/feed';
 
@@ -46,9 +47,11 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
   // Close share menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (shareMenuRef.current && !shareMenuRef.current.contains(event.target as Node)) {
-        setShowShareMenu(false);
-      }
+      const target = event.target as HTMLElement;
+      // Don't close if clicking inside the share menu ref or anywhere inside the portal dropdown
+      if (shareMenuRef.current && shareMenuRef.current.contains(target)) return;
+      if (target.closest('[data-share-portal]')) return;
+      setShowShareMenu(false);
     };
 
     if (showShareMenu) {
@@ -176,13 +179,11 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
 
   const handleCopyLink = async () => {
     try {
-      const postUrl = `${window.location.origin}/feed?post=${post.id}`;
+      const postUrl = `${window.location.origin}/feed/post/${post.id}`;
       await navigator.clipboard.writeText(postUrl);
       alert('Post link copied to clipboard!');
       setShowShareMenu(false);
-      import('../../app/feed/interactions').then(({ sharePost }) => {
-        sharePost(post.id, 'link').catch(() => {});
-      });
+      sharePost(post.id, 'link').catch(() => {});
     } catch (error) {
       console.error('Failed to copy link:', error);
       alert('Failed to copy link');
@@ -190,8 +191,10 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
   };
 
   const handleShareTo = (platform: 'twitter' | 'telegram' | 'whatsapp') => {
-    const postUrl = `${window.location.origin}/feed?post=${post.id}`;
-    const text = `Check out this post: ${post.content.slice(0, 100)}${post.content.length > 100 ? '...' : ''}`;
+    const postUrl = `${window.location.origin}/feed/post/${post.id}`;
+    const shareContent =
+      post.type === 'repost' && post.reposted_post ? post.reposted_post.content : post.content;
+    const text = `Check out this post: ${shareContent.slice(0, 100)}${shareContent.length > 100 ? '...' : ''}`;
 
     let shareUrl = '';
     switch (platform) {
@@ -208,9 +211,7 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
 
     window.open(shareUrl, '_blank');
     setShowShareMenu(false);
-    import('../../app/feed/interactions').then(({ sharePost }) => {
-      sharePost(post.id, 'link').catch(() => {});
-    });
+    sharePost(post.id, 'link').catch(() => {});
   };
 
   // Format time ago (Twitter style)
@@ -459,7 +460,11 @@ export function FeedPost({ post, currentUserId, onDelete }: FeedPostProps) {
               {showShareMenu &&
                 typeof document !== 'undefined' &&
                 createPortal(
-                  <div className="fixed inset-0 z-[100]" onClick={() => setShowShareMenu(false)}>
+                  <div
+                    data-share-portal
+                    className="fixed inset-0 z-[100]"
+                    onClick={() => setShowShareMenu(false)}
+                  >
                     <div
                       className="absolute bg-black/95 backdrop-blur-xl border border-[#39AEC4]/20 rounded-2xl shadow-xl shadow-black/50 py-2 w-48"
                       style={{

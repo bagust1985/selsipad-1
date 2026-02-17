@@ -22,7 +22,7 @@ import { useAccount } from 'wagmi';
 import { MultiChainConnectWallet } from '@/components/wallet/MultiChainConnectWallet';
 import { useBlueCheckPurchase } from '@/hooks/useBlueCheckPurchase';
 import { useToast } from '@/components/ui';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface BlueCheckClientContentProps {
   bluecheckStatus: string;
@@ -331,6 +331,8 @@ function RejectedContent() {
 function PurchaseContent() {
   const { address, isConnected } = useAccount();
   const { showToast } = useToast();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncAttempted, setSyncAttempted] = useState(false);
   const {
     requiredBNB,
     hasPurchased,
@@ -352,15 +354,48 @@ function PurchaseContent() {
     }
   };
 
-  // Already purchased on-chain
+  // Auto-sync: if on-chain says purchased but DB status is 'none', fix it
+  useEffect(() => {
+    if (hasPurchased && address && !syncAttempted) {
+      setSyncAttempted(true);
+      setIsSyncing(true);
+      fetch('/api/admin/bluecheck/fix-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: address }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            showToast('success', 'Blue Check badge synced! Refreshing...');
+            setTimeout(() => window.location.reload(), 1500);
+          } else {
+            setIsSyncing(false);
+          }
+        })
+        .catch(() => setIsSyncing(false));
+    }
+  }, [hasPurchased, address, syncAttempted]);
+
+  // Already purchased on-chain — show syncing or already purchased
   if (hasPurchased) {
     return (
       <div className="rounded-[20px] border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl p-6 text-center">
         <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/20 flex items-center justify-center mb-4">
-          <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+          {isSyncing ? (
+            <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+          ) : (
+            <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+          )}
         </div>
-        <h3 className="text-lg font-bold text-emerald-400 mb-1">Already Purchased!</h3>
-        <p className="text-sm text-gray-400">You already own a lifetime Blue Check badge.</p>
+        <h3 className="text-lg font-bold text-emerald-400 mb-1">
+          {isSyncing ? 'Syncing Badge...' : 'Already Purchased!'}
+        </h3>
+        <p className="text-sm text-gray-400">
+          {isSyncing
+            ? 'Activating your Blue Check badge, please wait...'
+            : 'You already own a lifetime Blue Check badge.'}
+        </p>
       </div>
     );
   }

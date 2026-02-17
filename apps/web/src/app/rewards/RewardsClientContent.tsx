@@ -27,18 +27,14 @@ export function RewardsClientContent({ stats }: RewardsClientContentProps) {
           activeReferrals: stats.activeReferrals,
           pendingReferrals: stats.pendingReferrals,
           totalEarningsUsd: stats.evmTotalUsd,
-          pendingEarningsUsd:
-            stats.evmPendingNative !== '0.000000'
-              ? stats.evmTotalUsd // Show USD equivalent of pending
-              : '0.00',
+          pendingEarningsUsd: stats.pendingEarningsUsd,
         }
       : {
           totalReferrals: stats.totalReferrals,
           activeReferrals: stats.activeReferrals,
           pendingReferrals: stats.pendingReferrals,
           totalEarningsUsd: stats.solanaTotalUsd,
-          pendingEarningsUsd:
-            stats.solanaPendingNative !== '0.000000' ? stats.solanaTotalUsd : '0.00',
+          pendingEarningsUsd: stats.pendingEarningsUsd,
         };
 
   const pendingAmount =

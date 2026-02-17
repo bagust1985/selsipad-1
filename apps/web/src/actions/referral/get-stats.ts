@@ -159,6 +159,7 @@ export async function getReferralStats(): Promise<{
 
     let totalEarningsNative = { evm: 0, solana: 0 };
     let claimedEarningsNative = { evm: 0, solana: 0 };
+    let pendingNative = { evm: 0, solana: 0 };
     const earningsBySource: Record<string, number> = {
       FAIRLAUNCH: 0,
       PRESALE: 0,
@@ -174,25 +175,15 @@ export async function getReferralStats(): Promise<{
 
       if (entry.status === 'CLAIMED') {
         claimedEarningsNative[chainType] += nativeAmount;
+      } else {
+        // CLAIMABLE or PENDING = pending rewards
+        pendingNative[chainType] += nativeAmount;
       }
 
       const src = entry.source_type as string;
       if (src in earningsBySource) {
         earningsBySource[src] = (earningsBySource[src] ?? 0) + nativeAmount;
       }
-    });
-
-    // 4. Get pending earnings from fee_splits (amounts in wei)
-    const { data: feeSplits } = await supabase
-      .from('fee_splits')
-      .select('referral_pool_amount, chain')
-      .eq('processed', false);
-
-    let pendingNative = { evm: 0, solana: 0 };
-    feeSplits?.forEach((split) => {
-      const nativeAmount = weiToNative(split.referral_pool_amount || '0');
-      const chainType = getChainType(split.chain as string);
-      pendingNative[chainType] += nativeAmount;
     });
 
     // 5. Convert to USD
@@ -220,18 +211,44 @@ export async function getReferralStats(): Promise<{
     const hasActiveReferral = activeReferrals > 0;
 
     // 7. Get contribution stats for each referred user
+    //    Includes both project contributions AND Blue Check purchases
     const referredUsers = await Promise.all(
       (relationships || []).map(async (rel: any) => {
+        // Get project contributions (presale/fairlaunch)
         const { data: contributions } = await supabase
           .from('contributions')
           .select('amount')
           .eq('user_id', rel.referee_id);
 
-        const totalContributions = contributions?.length || 0;
+        let totalContributions = contributions?.length || 0;
         let contributionAmount = 0;
 
         contributions?.forEach((c) => {
           contributionAmount += weiToNative(c.amount || '0');
+        });
+
+        // Also check for Blue Check purchase by this referee
+        const { data: bcProfile } = await supabase
+          .from('profiles')
+          .select('bluecheck_status')
+          .eq('user_id', rel.referee_id)
+          .single();
+
+        if (bcProfile?.bluecheck_status === 'ACTIVE') {
+          totalContributions += 1; // Count Blue Check as a contribution
+        }
+
+        // Check referral_ledger for reward amounts from this referee
+        const { data: ledgerFromReferee } = await supabase
+          .from('referral_ledger')
+          .select('amount, source_type')
+          .eq('referrer_id', session.userId);
+
+        // Sum BLUECHECK rewards that came from this referee's activity
+        ledgerFromReferee?.forEach((entry) => {
+          if (entry.source_type === 'BLUECHECK') {
+            contributionAmount += weiToNative(entry.amount || '0');
+          }
         });
 
         const profile = profileMap.get(rel.referee_id);

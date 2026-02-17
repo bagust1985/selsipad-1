@@ -10,7 +10,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    const supabase = createClient();
 
     // Check authentication
     const {

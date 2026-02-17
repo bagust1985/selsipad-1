@@ -3,12 +3,12 @@
  * Run this from the admin panel or via API
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    const supabase = createServiceRoleClient();
 
     const { wallet_address } = await request.json();
 
@@ -18,12 +18,11 @@ export async function POST(request: Request) {
 
     console.log('🔍 Checking wallet:', wallet_address);
 
-    // Get wallet
+    // Get wallet - use user_id column (not profile_id)
     const { data: wallet, error: walletError } = await supabase
       .from('wallets')
-      .select('profile_id, address, network')
-      .eq('address', wallet_address.toLowerCase())
-      .eq('network', 'EVM')
+      .select('user_id, address, chain')
+      .ilike('address', wallet_address)
       .single();
 
     if (walletError || !wallet) {
@@ -38,8 +37,8 @@ export async function POST(request: Request) {
     // Get current profile status
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('user_id, username, bluecheck_status, bluecheck_purchased_at')
-      .eq('user_id', wallet.profile_id)
+      .select('user_id, username, bluecheck_status')
+      .eq('user_id', wallet.user_id)
       .single();
 
     if (profileError) {
@@ -64,26 +63,13 @@ export async function POST(request: Request) {
       .from('profiles')
       .update({
         bluecheck_status: 'ACTIVE',
-        bluecheck_purchased_at: new Date().toISOString(),
-        bluecheck_grant_type: 'PURCHASE',
       })
-      .eq('user_id', wallet.profile_id)
-      .select();
+      .eq('user_id', wallet.user_id)
+      .select('user_id, username, bluecheck_status');
 
     if (updateError) {
       return NextResponse.json({ error: 'Update failed', details: updateError }, { status: 500 });
     }
-
-    // Create audit log
-    await supabase.from('bluecheck_audit_log').insert({
-      action_type: 'MANUAL_GRANT',
-      target_user_id: wallet.profile_id,
-      reason: 'Manual fix after successful on-chain purchase',
-      metadata: {
-        wallet_address: wallet_address,
-        previous_status: profile.bluecheck_status,
-      },
-    });
 
     return NextResponse.json({
       success: true,

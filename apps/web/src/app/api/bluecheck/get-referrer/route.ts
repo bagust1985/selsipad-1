@@ -6,7 +6,7 @@
  */
 
 import { getServerSession } from '@/lib/auth/session';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
@@ -15,42 +15,66 @@ export async function GET() {
 
     // If no session, return null (no referrer)
     if (!session?.userId) {
+      console.log('[BlueCheck GetReferrer] No session');
       return NextResponse.json({ referrer_address: null });
     }
 
-    const supabase = await createClient();
+    console.log('[BlueCheck GetReferrer] Looking up referrer for user:', session.userId);
 
-    // Get user's referrer relationship
-    const { data: relationship } = await supabase
+    // Use service role to bypass RLS
+    const supabase = createServiceRoleClient();
+
+    // Get user's referrer relationship (don't filter by is_active - new referrals may not be activated yet)
+    const { data: relationship, error: relError } = await supabase
       .from('referral_relationships')
       .select('referrer_id')
       .eq('referee_id', session.userId)
-      .eq('is_active', true)
       .single();
+
+    console.log('[BlueCheck GetReferrer] Relationship:', relationship, 'Error:', relError?.message);
 
     if (!relationship?.referrer_id) {
+      console.log('[BlueCheck GetReferrer] No referrer found for user');
       return NextResponse.json({ referrer_address: null });
     }
 
-    // Get referrer's wallet address on BSC Testnet (chain 97)
-    const { data: wallet } = await supabase
+    // Get referrer's wallet address - check ALL chains, prefer BSC Testnet
+    const { data: wallets, error: walletError } = await supabase
       .from('wallets')
-      .select('address')
+      .select('address, chain')
       .eq('user_id', relationship.referrer_id)
-      .eq('chain', '97') // BSC Testnet
-      .single();
+      .order('chain', { ascending: true });
 
-    if (!wallet?.address) {
-      console.warn('Referrer has no BSC Testnet wallet:', relationship.referrer_id);
+    console.log(
+      '[BlueCheck GetReferrer] Referrer wallets:',
+      wallets,
+      'Error:',
+      walletError?.message
+    );
+
+    if (!wallets || wallets.length === 0) {
+      console.warn('[BlueCheck GetReferrer] Referrer has no wallets:', relationship.referrer_id);
       return NextResponse.json({ referrer_address: null });
     }
+
+    // Prefer BSC Testnet (chain 97), fallback to any wallet
+    const bscWallet = wallets.find((w) => w.chain === '97');
+    const walletAddress = bscWallet?.address || wallets[0]?.address;
+
+    console.log(
+      '[BlueCheck GetReferrer] Using wallet:',
+      walletAddress,
+      '(chain:',
+      bscWallet ? '97' : wallets[0]?.chain,
+      ')'
+    );
 
     return NextResponse.json({
-      referrer_address: wallet.address,
+      referrer_address: walletAddress,
       referrer_id: relationship.referrer_id,
     });
   } catch (error) {
-    console.error('Error fetching referrer address:', error);
+    console.error('[BlueCheck GetReferrer] Error:', error);
     return NextResponse.json({ referrer_address: null });
   }
 }

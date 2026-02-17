@@ -1,7 +1,7 @@
 'use server';
 
 import { getServerSession } from '@/lib/auth/session';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { revalidatePath } from 'next/cache';
 
 interface UpdateProfileData {
@@ -37,7 +37,7 @@ function validateNickname(nickname: string): { valid: boolean; error?: string } 
  */
 async function uploadAvatar(userId: string, file: File): Promise<string> {
   // Use admin client to bypass RLS for storage
-  const supabaseAdmin = createClient();
+  const supabaseAdmin = createServiceRoleClient();
 
   // Validate file type
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -90,7 +90,7 @@ export async function updateProfile(
       return { success: false, error: 'Not authenticated' };
     }
 
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
     const updates: any = {};
 
     // Handle nickname update
@@ -134,7 +134,7 @@ export async function updateProfile(
         if (bannerFile.size > 3 * 1024 * 1024) {
           return { success: false, error: 'Banner file must be less than 3MB' };
         }
-        const supabaseAdmin = createClient();
+        const supabaseAdmin = createServiceRoleClient();
         const timestamp = Date.now();
         const ext = bannerFile.name.split('.').pop();
         const filename = `${session.userId}/banner-${timestamp}.${ext}`;
@@ -188,7 +188,7 @@ export async function deleteAvatar(): Promise<{ success: boolean; error?: string
       return { success: false, error: 'Not authenticated' };
     }
 
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     // Get current avatar URL to extract filename
     const { data: profile } = await supabase

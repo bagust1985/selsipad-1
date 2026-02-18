@@ -19,11 +19,12 @@ import {
 import { SplineBackground } from '@/components/home/SplineBackground';
 import { MultiChainConnectWallet } from '@/components/wallet/MultiChainConnectWallet';
 import { getTrendingStats } from '@/actions/feed/get-trending-stats';
+import { getServerSession } from '@/lib/auth/session';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 export default async function HomePage() {
-  const trendingStats = await getTrendingStats();
+  const [trendingStats, session] = await Promise.all([getTrendingStats(), getServerSession()]);
   return (
     <div className="min-h-screen bg-black text-white dark relative overflow-hidden font-sans">
       {/* Animated Background Layer */}
@@ -212,7 +213,7 @@ export default async function HomePage() {
               So I will keep the big card at the bottom.
           */}
           <div className="w-full">
-            <SocialFeedCard />
+            <SocialFeedCard userId={session?.userId} />
           </div>
 
           {/* Disclaimer Section */}

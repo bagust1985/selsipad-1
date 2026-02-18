@@ -1,5 +1,6 @@
 import { getPostById, getPostComments } from '@/lib/data/feed';
 import { getUserProfile } from '@/lib/data/profile';
+import { getServerSession } from '@/lib/auth/session';
 import PostDetailClient from './PostDetailClient';
 
 export const dynamic = 'force-dynamic';
@@ -12,8 +13,9 @@ interface PageProps {
 export default async function PostDetailPage({ params }: PageProps) {
   const { postId } = params;
 
+  const session = await getServerSession();
   const [post, comments, profile] = await Promise.all([
-    getPostById(postId),
+    getPostById(postId, session?.userId),
     getPostComments(postId),
     getUserProfile(),
   ]);

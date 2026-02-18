@@ -48,13 +48,12 @@ export function FeedProfileClientContent({ userId }: { userId: string }) {
         const followData = await followRes.json();
         setIsFollowing(followData.following);
 
-        // Get current user ID
-        const { createClient } = await import('@/lib/supabase/client');
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        setCurrentUserId(user?.id);
+        // Get current user ID from session API
+        const sessionRes = await fetch('/api/auth/session');
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          setCurrentUserId(sessionData.userId);
+        }
       } catch (err) {
         console.error('Error loading profile:', err);
       } finally {

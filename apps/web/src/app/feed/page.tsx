@@ -1,5 +1,6 @@
 import { getFeedPosts } from '@/lib/data/feed';
 import { getUserProfile } from '@/lib/data/profile';
+import { getServerSession } from '@/lib/auth/session';
 import FeedClientContent from './FeedClientContent';
 
 // Force dynamic rendering to always fetch fresh data
@@ -13,7 +14,8 @@ export const revalidate = 0;
  * and passes to client component for interactive rendering
  */
 export default async function FeedPage() {
-  const [posts, profile] = await Promise.all([getFeedPosts(), getUserProfile()]);
+  const session = await getServerSession();
+  const [posts, profile] = await Promise.all([getFeedPosts(20, session?.userId), getUserProfile()]);
 
   console.log('[Feed Page] Profile data:', {
     profile,

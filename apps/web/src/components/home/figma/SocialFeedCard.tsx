@@ -11,7 +11,11 @@ import Link from 'next/link';
 
 const MAX_HOMEPAGE_POSTS = 5;
 
-export function SocialFeedCard() {
+interface SocialFeedCardProps {
+  userId?: string;
+}
+
+export function SocialFeedCard({ userId }: SocialFeedCardProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [newPostIds, setNewPostIds] = useState<Set<string>>(new Set());
@@ -21,7 +25,7 @@ export function SocialFeedCard() {
   useEffect(() => {
     const loadPosts = async () => {
       try {
-        const data = await getFeedPosts();
+        const data = await getFeedPosts(20, userId);
         setPosts(data.slice(0, MAX_HOMEPAGE_POSTS));
       } catch (error) {
         console.error('Failed to load feed posts', error);

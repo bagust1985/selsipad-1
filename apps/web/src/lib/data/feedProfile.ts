@@ -80,7 +80,7 @@ export async function getUserPosts(userId: string, limit = 20) {
   try {
     const { data, error } = await supabase
       .from('posts')
-      .select('id, author_id, content, type, created_at, image_urls, hashtags')
+      .select('id, author_id, content, type, created_at, image_urls, hashtags, like_count')
       .eq('author_id', userId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -95,18 +95,6 @@ export async function getUserPosts(userId: string, limit = 20) {
       .eq('user_id', userId)
       .single();
 
-    // Get like counts
-    const postIds = data.map((p) => p.id);
-    const { data: likes } = await supabase
-      .from('post_likes')
-      .select('post_id, user_id')
-      .in('post_id', postIds);
-
-    const likeCounts: Record<string, number> = {};
-    (likes || []).forEach((like: any) => {
-      likeCounts[like.post_id] = (likeCounts[like.post_id] || 0) + 1;
-    });
-
     return data.map((post: any) => ({
       id: post.id,
       author: {
@@ -119,7 +107,7 @@ export async function getUserPosts(userId: string, limit = 20) {
       content: post.content,
       type: post.type?.toLowerCase() || 'text',
       created_at: post.created_at,
-      likes: likeCounts[post.id] || 0,
+      likes: post.like_count || 0,
       replies: 0,
       is_liked: false,
       image_urls: post.image_urls || [],

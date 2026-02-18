@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from '@/lib/auth/session';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,10 +8,7 @@ export const dynamic = 'force-dynamic';
  * POST /api/feed/follow/[userId]
  * Follow a user
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { userId: string } }) {
   try {
     const session = await getServerSession();
 
@@ -26,7 +23,7 @@ export async function POST(
       return NextResponse.json({ error: 'Cannot follow yourself' }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     // Check if already following
     const { data: existing } = await supabase
@@ -62,10 +59,7 @@ export async function POST(
  * DELETE /api/feed/follow/[userId]
  * Unfollow a user
  */
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { userId: string } }) {
   try {
     const session = await getServerSession();
 
@@ -74,7 +68,7 @@ export async function DELETE(
     }
 
     const { userId: targetUserId } = params;
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     const { error } = await supabase
       .from('user_follows')
@@ -98,10 +92,7 @@ export async function DELETE(
  * GET /api/feed/follow/[userId]
  * Check if current user is following target user
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { userId: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { userId: string } }) {
   try {
     const session = await getServerSession();
 
@@ -110,7 +101,7 @@ export async function GET(
     }
 
     const { userId: targetUserId } = params;
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     const { data } = await supabase
       .from('user_follows')

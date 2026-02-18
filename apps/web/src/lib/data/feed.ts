@@ -34,21 +34,16 @@ export interface Post {
  * Fetches posts for the social feed with pagination
  * Ordered by created_at descending (newest first)
  */
-export async function getFeedPosts(limit = 20): Promise<Post[]> {
+export async function getFeedPosts(limit = 20, userId?: string): Promise<Post[]> {
   const supabase = createClient();
 
   try {
-    // Get current user (if authenticated) to check is_liked
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
     // Fetch posts with author profile join
     // Fetch posts without JOIN (no FK relationship anymore)
     const { data, error } = await supabase
       .from('posts')
       .select(
-        'id, author_id, content, project_id, type, created_at, image_urls, hashtags, repost_count, view_count, comment_count, reposted_post_id'
+        'id, author_id, content, project_id, type, created_at, image_urls, hashtags, repost_count, view_count, comment_count, like_count, reposted_post_id'
       )
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -75,10 +70,10 @@ export async function getFeedPosts(limit = 20): Promise<Post[]> {
 
     // Get like counts and user's likes
     const postIds = data.map((p) => p.id);
-    const likesData = await getPostLikeCounts(postIds, user?.id);
+    const likesData = await getPostLikeData(postIds, data, userId);
 
     // Hydrate reposted posts
-    const repostMap = await hydrateReposts(supabase, data, profileMap, user?.id);
+    const repostMap = await hydrateReposts(supabase, data, profileMap, userId);
 
     // Map to frontend format with manual join
     return data.map((post: any) => {
@@ -121,18 +116,14 @@ export async function getFeedPosts(limit = 20): Promise<Post[]> {
  *
  * Fetches posts for a specific project
  */
-export async function getProjectPosts(projectId: string): Promise<Post[]> {
+export async function getProjectPosts(projectId: string, userId?: string): Promise<Post[]> {
   const supabase = createClient();
 
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
     const { data, error } = await supabase
       .from('posts')
       .select(
-        'id, author_id, content, project_id, type, created_at, repost_count, view_count, comment_count'
+        'id, author_id, content, project_id, type, created_at, repost_count, view_count, comment_count, like_count'
       )
       .eq('project_id', projectId)
       .is('deleted_at', null)
@@ -157,7 +148,7 @@ export async function getProjectPosts(projectId: string): Promise<Post[]> {
     const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
 
     const postIds = data.map((p) => p.id);
-    const likesData = await getPostLikeCounts(postIds, user?.id);
+    const likesData = await getPostLikeData(postIds, data, userId);
 
     return data.map((post: any) => {
       const author = profileMap.get(post.author_id) || {};
@@ -197,18 +188,19 @@ export async function getProjectPosts(projectId: string): Promise<Post[]> {
  * Creates a new post in the social feed
  * Requires Blue Check status for posting
  */
-export async function createPost(content: string, projectId?: string): Promise<Post> {
+export async function createPost(
+  content: string,
+  projectId?: string,
+  userId?: string
+): Promise<Post> {
   const supabase = createClient();
 
   try {
-    // Get authenticated user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
+    // userId must be provided by caller (from getServerSession)
+    if (!userId) {
       throw new Error('User not authenticated');
     }
+    const user = { id: userId };
 
     // Check Blue Check status (required for posting)
     const { data: profile } = await supabase
@@ -268,17 +260,14 @@ export async function createPost(content: string, projectId?: string): Promise<P
  *
  * Adds a like to a post
  */
-export async function likePost(postId: string): Promise<void> {
+export async function likePost(postId: string, userId?: string): Promise<void> {
   const supabase = createClient();
 
   try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
+    if (!userId) {
       throw new Error('User not authenticated');
     }
+    const user = { id: userId };
 
     // Insert like (will fail silently if already exists due to unique constraint)
     await supabase.from('post_likes').insert({
@@ -296,17 +285,14 @@ export async function likePost(postId: string): Promise<void> {
  *
  * Removes a like from a post
  */
-export async function unlikePost(postId: string): Promise<void> {
+export async function unlikePost(postId: string, userId?: string): Promise<void> {
   const supabase = createClient();
 
   try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
+    if (!userId) {
       throw new Error('User not authenticated');
     }
+    const user = { id: userId };
 
     // Delete like
     await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', user.id);
@@ -318,46 +304,46 @@ export async function unlikePost(postId: string): Promise<void> {
 
 // Helper functions
 
-async function getPostLikeCounts(
+/**
+ * Get like data for posts using the trigger-maintained like_count column
+ * and only querying post_likes for the is_liked boolean check.
+ */
+async function getPostLikeData(
   postIds: string[],
+  postsData: any[],
   userId?: string
 ): Promise<Record<string, { count: number; userLiked: boolean }>> {
   if (postIds.length === 0) return {};
 
   const supabase = createClient();
 
-  try {
-    // Get like counts
-    const { data: likes } = await supabase
-      .from('post_likes')
-      .select('post_id, user_id')
-      .in('post_id', postIds);
+  // Build result from posts.like_count (trigger-maintained, single source of truth)
+  const result: Record<string, { count: number; userLiked: boolean }> = {};
+  postsData.forEach((post: any) => {
+    result[post.id] = { count: post.like_count || 0, userLiked: false };
+  });
 
-    // Aggregate counts and check user likes
-    const result: Record<string, { count: number; userLiked: boolean }> = {};
+  // Only query post_likes for the is_liked check if user is authenticated
+  if (userId) {
+    try {
+      const { data: userLikes } = await supabase
+        .from('post_likes')
+        .select('post_id')
+        .eq('user_id', userId)
+        .in('post_id', postIds);
 
-    postIds.forEach((id) => {
-      result[id] = { count: 0, userLiked: false };
-    });
-
-    (likes || []).forEach((like: any) => {
-      if (!result[like.post_id]) {
-        result[like.post_id] = { count: 0, userLiked: false };
-      }
-      const postResult = result[like.post_id];
-      if (postResult) {
-        postResult.count++;
-        if (userId && like.user_id === userId) {
-          postResult.userLiked = true;
+      (userLikes || []).forEach((like: any) => {
+        const entry = result[like.post_id];
+        if (entry) {
+          entry.userLiked = true;
         }
-      }
-    });
-
-    return result;
-  } catch (err) {
-    console.error('Error fetching post like counts:', err);
-    return {};
+      });
+    } catch (err) {
+      console.error('Error checking user likes:', err);
+    }
   }
+
+  return result;
 }
 
 function mapPostType(dbType: string): 'text' | 'update' | 'quote' | 'repost' {
@@ -396,7 +382,7 @@ async function hydrateReposts(
   const { data: originalPosts } = await supabase
     .from('posts')
     .select(
-      'id, author_id, content, project_id, type, created_at, image_urls, hashtags, repost_count, view_count'
+      'id, author_id, content, project_id, type, created_at, image_urls, hashtags, repost_count, view_count, like_count'
     )
     .in('id', uniqueIds)
     .is('deleted_at', null);
@@ -421,7 +407,7 @@ async function hydrateReposts(
 
   // Get likes for original posts
   const originalPostIds = originalPosts.map((p: any) => p.id);
-  const likesData = await getPostLikeCounts(originalPostIds, userId);
+  const likesData = await getPostLikeData(originalPostIds, originalPosts, userId);
 
   const result = new Map<string, Post>();
 
@@ -461,17 +447,11 @@ async function hydrateReposts(
  *
  * Fetches posts only from users that the current user follows
  */
-export async function getFollowingFeed(limit = 20): Promise<Post[]> {
+export async function getFollowingFeed(limit = 20, userId?: string): Promise<Post[]> {
   const supabase = createClient();
 
   try {
-    // Get current user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!userId) {
       console.warn('User not authenticated');
       return [];
     }
@@ -480,7 +460,7 @@ export async function getFollowingFeed(limit = 20): Promise<Post[]> {
     const { data: following } = await supabase
       .from('user_follows')
       .select('following_id')
-      .eq('follower_id', user.id);
+      .eq('follower_id', userId);
 
     if (!following || following.length === 0) {
       return [];
@@ -492,7 +472,7 @@ export async function getFollowingFeed(limit = 20): Promise<Post[]> {
     const { data, error } = await supabase
       .from('posts')
       .select(
-        'id, author_id, content, project_id, type, created_at, repost_count, view_count, comment_count'
+        'id, author_id, content, project_id, type, created_at, repost_count, view_count, comment_count, like_count'
       )
       .in('author_id', followingIds)
       .is('deleted_at', null)
@@ -518,7 +498,7 @@ export async function getFollowingFeed(limit = 20): Promise<Post[]> {
     const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
 
     const postIds = data.map((p) => p.id);
-    const likesData = await getPostLikeCounts(postIds, user?.id);
+    const likesData = await getPostLikeData(postIds, data, userId);
 
     return data.map((post: any) => {
       const author = profileMap.get(post.author_id) || {};
@@ -557,18 +537,14 @@ export async function getFollowingFeed(limit = 20): Promise<Post[]> {
  *
  * Fetches a single post by its ID with author profile and like data
  */
-export async function getPostById(postId: string): Promise<Post | null> {
+export async function getPostById(postId: string, userId?: string): Promise<Post | null> {
   const supabase = createClient();
 
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
     const { data: post, error } = await supabase
       .from('posts')
       .select(
-        'id, author_id, content, project_id, type, created_at, image_urls, hashtags, repost_count, view_count, comment_count'
+        'id, author_id, content, project_id, type, created_at, image_urls, hashtags, repost_count, view_count, comment_count, like_count'
       )
       .eq('id', postId)
       .is('deleted_at', null)
@@ -587,7 +563,7 @@ export async function getPostById(postId: string): Promise<Post | null> {
       .single();
 
     // Get like data
-    const likesData = await getPostLikeCounts([post.id], user?.id);
+    const likesData = await getPostLikeData([post.id], [post], userId);
     const likes = likesData[post.id] || { count: 0, userLiked: false };
 
     return {
@@ -690,17 +666,18 @@ export async function getPostComments(postId: string): Promise<PostComment[]> {
  *
  * Adds a comment to a post
  */
-export async function createComment(postId: string, content: string): Promise<PostComment | null> {
+export async function createComment(
+  postId: string,
+  content: string,
+  userId?: string
+): Promise<PostComment | null> {
   const supabase = createClient();
 
   try {
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user) {
+    if (!userId) {
       throw new Error('User not authenticated');
     }
+    const user = { id: userId };
 
     const { data: profile } = await supabase
       .from('profiles')

@@ -1,6 +1,7 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from '@/lib/auth/session';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 
 /**
  * Follow a user
@@ -8,21 +9,17 @@ import { createClient } from '@/lib/supabase/server';
  */
 export async function followUser(targetUserId: string) {
   try {
-    const supabase = createClient();
+    const session = await getServerSession();
 
-    // Get current user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!session?.userId) {
       return { success: false, error: 'Authentication required' };
     }
 
-    if (user.id === targetUserId) {
+    if (session.userId === targetUserId) {
       return { success: false, error: 'Cannot follow yourself' };
     }
+
+    const supabase = createServiceRoleClient();
 
     // Check if target user is followable (has active badge)
     const { data: isFollowable, error: checkError } = await supabase.rpc('is_user_followable', {
@@ -43,7 +40,7 @@ export async function followUser(targetUserId: string) {
 
     // Create follow relationship
     const { error: insertError } = await supabase.from('user_follows').insert({
-      follower_id: user.id,
+      follower_id: session.userId,
       following_id: targetUserId,
     });
 
@@ -68,23 +65,19 @@ export async function followUser(targetUserId: string) {
  */
 export async function unfollowUser(targetUserId: string) {
   try {
-    const supabase = createClient();
+    const session = await getServerSession();
 
-    // Get current user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!session?.userId) {
       return { success: false, error: 'Authentication required' };
     }
+
+    const supabase = createServiceRoleClient();
 
     // Delete follow relationship
     const { error: deleteError } = await supabase
       .from('user_follows')
       .delete()
-      .eq('follower_id', user.id)
+      .eq('follower_id', session.userId)
       .eq('following_id', targetUserId);
 
     if (deleteError) {
@@ -104,23 +97,19 @@ export async function unfollowUser(targetUserId: string) {
  */
 export async function checkIfFollowing(targetUserId: string) {
   try {
-    const supabase = createClient();
+    const session = await getServerSession();
 
-    // Get current user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!session?.userId) {
       return { isFollowing: false };
     }
+
+    const supabase = createServiceRoleClient();
 
     // Check if follow relationship exists
     const { data, error } = await supabase
       .from('user_follows')
       .select('id')
-      .eq('follower_id', user.id)
+      .eq('follower_id', session.userId)
       .eq('following_id', targetUserId)
       .single();
 
@@ -142,7 +131,7 @@ export async function checkIfFollowing(targetUserId: string) {
  */
 export async function checkUserFollowable(targetUserId: string) {
   try {
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     const { data, error } = await supabase.rpc('is_user_followable', {
       target_user_id: targetUserId,
@@ -165,7 +154,7 @@ export async function checkUserFollowable(targetUserId: string) {
  */
 export async function getFollowers(userId: string, limit = 50, offset = 0) {
   try {
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     const { data, error } = await supabase.rpc('get_user_followers', {
       target_user_id: userId,
@@ -190,7 +179,7 @@ export async function getFollowers(userId: string, limit = 50, offset = 0) {
  */
 export async function getFollowing(userId: string, limit = 50, offset = 0) {
   try {
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     const { data, error } = await supabase.rpc('get_user_following', {
       target_user_id: userId,

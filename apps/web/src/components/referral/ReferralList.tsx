@@ -18,14 +18,13 @@ export function ReferralList({ referredUsers }: Props) {
     });
   };
 
-  const formatAmount = (weiAmount: string): string => {
+  const formatAmount = (amountStr: string): string => {
     try {
-      const amount = BigInt(weiAmount);
-      const usdt = Number(amount) / 1e18;
-      if (usdt === 0) return '$0';
-      return `$${usdt.toLocaleString('en-US', {
+      const amount = parseFloat(amountStr || '0');
+      if (amount === 0) return '$0';
+      return `$${amount.toLocaleString('en-US', {
         minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
+        maximumFractionDigits: 4,
       })}`;
     } catch {
       return '$0';

@@ -1,19 +1,21 @@
 {
-    "name": "@selsipad/ui",
-    "version": "0.0.0",
-    "main": "./src/index.tsx",
-    "types": "./src/index.tsx",
-    "license": "MIT",
-    "scripts": {
-        "lint": "eslint .",
-        "typecheck": "tsc --noEmit"
-    },
-    "dependencies": {
-        "react": "^18.0.0"
-    },
-    "devDependencies": {
-        "@types/react": "^18.0.0",
-        "typescript": "^5.0.0",
-        "eslint": "^8.0.0"
-    }
+  "name": "@selsipad/ui",
+  "version": "0.0.0",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0"
+  }
 }

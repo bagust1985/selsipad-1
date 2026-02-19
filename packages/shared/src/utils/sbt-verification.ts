@@ -66,7 +66,7 @@ export async function verifySbtOwnership(
  * Mock Solana SBT Verification
  * TODO: Replace with actual RPC call (getParsedTokenAccountsByOwner)
  */
-async function verifySolanaSbt(wallet: string, mint: string): Promise<boolean> {
+async function verifySolanaSbt(wallet: string, _mint: string): Promise<boolean> {
   // Simulate network delay
   await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -79,7 +79,7 @@ async function verifySolanaSbt(wallet: string, mint: string): Promise<boolean> {
  * Mock EVM SBT Verification
  * TODO: Replace with actual RPC call (ERC721.balanceOf)
  */
-async function verifyEvmSbt(wallet: string, contract: string): Promise<boolean> {
+async function verifyEvmSbt(wallet: string, _contract: string): Promise<boolean> {
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   // Mock logic: Valid if wallet starts with "0xvalid"

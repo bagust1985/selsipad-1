@@ -11,7 +11,6 @@ import type {
   EmergencyPauseVestingRequest,
   VestingStatus,
   LockStatus,
-  SuccessGateStatus,
 } from '../types/fase5';
 
 export class VestingValidationError extends Error {
@@ -303,8 +302,6 @@ export function validateClaimAmount(claimAmount: bigint, availableAmount: bigint
  * Validates TGE timestamp
  */
 export function validateTgeTimestamp(tgeAt: Date): void {
-  const now = new Date();
-
   // TGE cannot be in far future (> 30 days)
   const maxFuture = new Date();
   maxFuture.setDate(maxFuture.getDate() + 30);

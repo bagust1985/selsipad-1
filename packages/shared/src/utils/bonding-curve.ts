@@ -272,7 +272,7 @@ export function validateBondingPoolConfig(config: {
     if (threshold < minThreshold) errors.push('Graduation threshold too low (minimum 1 SOL)');
     if (threshold > maxThreshold)
       errors.push('Graduation threshold too high (maximum 100,000 SOL)');
-  } catch (e) {
+  } catch {
     errors.push('Invalid number format in configuration');
   }
 
@@ -314,7 +314,7 @@ export function validateSwapAmount(
         errors.push('Token input exceeds available reserves');
       }
     }
-  } catch (e) {
+  } catch {
     errors.push('Invalid swap amount format');
   }
 

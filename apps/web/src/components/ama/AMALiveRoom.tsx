@@ -120,7 +120,7 @@ export function AMALiveRoom({
             {/* Title */}
             <div>
               <h2 className="text-white font-semibold">{projectName} AMA</h2>
-              <p className="text-gray-400 text-sm">Hosted by SELSIPAD Team</p>
+              <p className="text-gray-400 text-sm">Hosted by SELSILA Team</p>
             </div>
           </div>
 
@@ -253,7 +253,7 @@ export function AMALiveRoom({
                     <span className="text-white font-bold text-sm">S</span>
                   </div>
                   <div>
-                    <p className="text-[#39AEC4] font-medium text-sm">SELSIPAD Team</p>
+                    <p className="text-[#39AEC4] font-medium text-sm">SELSILA Team</p>
                     <p className="text-gray-500 text-xs">Moderator</p>
                   </div>
                 </div>

@@ -28,14 +28,14 @@ export function Footer() {
           </Link>
         </div>
 
-        <div className="text-xs text-gray-600">© 2024 Selsipad Ecosystem. All rights reserved.</div>
+        <div className="text-xs text-gray-600">© 2024 Selsila Ecosystem. All rights reserved.</div>
       </div>
       <div className="container mx-auto px-4 mt-8 pb-4 border-t border-white/5 pt-4">
         <p className="text-[10px] text-gray-600 text-center leading-relaxed">
-          Disclaimer: Selsipad will never endorse or encourage that you invest in any of the
-          projects listed and therefore, accept no liability for any loss occasioned. It is the
-          user(s) responsibility to do their own research and seek financial advice from a
-          professional. More information about (DYOR) can be found via Binance Academy.
+          Disclaimer: Selsila does not endorse, recommend, or guarantee any project listed on this
+          platform. All investments carry inherent risks. Users are solely responsible for
+          conducting their own research (DYOR) and seeking independent financial advice before
+          making any investment decisions. Selsila shall not be held liable for any losses incurred.
         </p>
       </div>
     </footer>

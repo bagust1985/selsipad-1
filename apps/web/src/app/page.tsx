@@ -42,7 +42,7 @@ export default async function HomePage() {
               {/* Logo */}
               <div className="flex items-center gap-2 sm:gap-3">
                 <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#39AEC4] to-[#756BBA] bg-clip-text text-transparent font-audiowide">
-                  SELSIPAD
+                  SELSILA
                 </span>
               </div>
 
@@ -227,20 +227,168 @@ export default async function HomePage() {
                   Disclaimer
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
-                  Selsipad will never endorse or encourage that you invest in any of the projects
-                  listed and therefore, accept no liability for any loss occasioned. It is the
-                  user(s) responsibility to do their own research and seek financial advice from a
-                  professional. More information about (DYOR) can be found via{' '}
-                  <a
-                    href="https://academy.binance.com/en/glossary/do-your-own-research"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#39AEC4] hover:text-[#4EABC8] underline underline-offset-2 transition-colors"
-                  >
-                    Binance Academy
-                  </a>
-                  .
+                  Selsipad does not endorse, recommend, or guarantee any project listed on this
+                  platform. All investments carry inherent risks. Users are solely responsible for
+                  conducting their own research (DYOR) and seeking independent financial advice
+                  before making any investment decisions. Selsipad shall not be held liable for any
+                  losses incurred.
                 </p>
+              </div>
+            </div>
+          </div>
+          {/* Site Footer Card */}
+          <div className="w-full rounded-[20px] bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-[#39AEC4]/20 p-5 sm:p-8 shadow-xl shadow-[#756BBA]/10">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-6 sm:gap-8">
+              {/* Brand Column */}
+              <div className="col-span-2 sm:col-span-4 lg:col-span-1 mb-2 lg:mb-0">
+                <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#39AEC4] to-[#756BBA] bg-clip-text text-transparent font-audiowide mb-2">
+                  SELSILA
+                </h2>
+                <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed max-w-[200px]">
+                  The Future of Decentralized Launchpads. Multi-chain token launches made simple and
+                  secure.
+                </p>
+              </div>
+
+              {/* Resources */}
+              <div>
+                <h3 className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-3">
+                  Resources
+                </h3>
+                <ul className="space-y-2">
+                  <li>
+                    <a
+                      href="https://selsiworld.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-500 hover:text-[#39AEC4] transition-colors"
+                    >
+                      Website Official
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://github.com/SelsilaOfficial"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-500 hover:text-[#39AEC4] transition-colors"
+                    >
+                      GitHub
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/docs"
+                      className="text-xs text-gray-500 hover:text-[#39AEC4] transition-colors"
+                    >
+                      Documentation
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Community */}
+              <div>
+                <h3 className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-3">
+                  Community
+                </h3>
+                <ul className="space-y-2">
+                  <li>
+                    <a
+                      href="https://t.me/SelsilaOfficial"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-500 hover:text-[#39AEC4] transition-colors"
+                    >
+                      Telegram
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://mail.google.com/mail/?view=cm&to=support@selsiscan.online"
+                      className="text-xs text-gray-500 hover:text-[#39AEC4] transition-colors"
+                    >
+                      Contact Us
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://youtube.com/@selsiworld?si=6vNtbPrG1657RV0A"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-500 hover:text-[#39AEC4] transition-colors"
+                    >
+                      YouTube
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Legal */}
+              <div>
+                <h3 className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-3">
+                  Legal
+                </h3>
+                <ul className="space-y-2">
+                  <li>
+                    <a
+                      href="/privacy"
+                      className="text-xs text-gray-500 hover:text-[#39AEC4] transition-colors"
+                    >
+                      Legal and Compliance
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/terms"
+                      className="text-xs text-gray-500 hover:text-[#39AEC4] transition-colors"
+                    >
+                      Terms and Conditions
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Bottom bar */}
+            <div className="mt-6 pt-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p className="text-[10px] text-gray-600">
+                © 2025 — 2026 Selsila. All rights reserved.
+              </p>
+              <div className="flex items-center gap-4">
+                <a
+                  href="https://t.me/SelsilaOfficial"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-600 hover:text-[#39AEC4] transition-colors"
+                  aria-label="Telegram"
+                >
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M11.944 0A12 12 0 1 0 24 12.056A12.01 12.01 0 0 0 11.944 0Zm5.654 8.26l-1.7 8.03c-.128.6-.465.746-.942.465l-2.6-1.916-1.255 1.21c-.14.139-.256.256-.524.256l.186-2.65 4.823-4.356c.21-.186-.046-.29-.325-.104l-5.96 3.754-2.568-.8c-.558-.174-.57-.558.116-.826l10.035-3.87c.465-.17.873.104.72.81Z" />
+                  </svg>
+                </a>
+                <a
+                  href="https://github.com/SelsilaOfficial"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-600 hover:text-[#39AEC4] transition-colors"
+                  aria-label="GitHub"
+                >
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12Z" />
+                  </svg>
+                </a>
+                <a
+                  href="https://x.com/selsilaworld"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-600 hover:text-[#39AEC4] transition-colors"
+                  aria-label="X"
+                >
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                </a>
               </div>
             </div>
           </div>

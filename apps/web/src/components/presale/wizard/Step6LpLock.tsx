@@ -28,15 +28,15 @@ export function Step6LpLock({ data, onChange, errors }: Step6LpLockProps) {
         </p>
       </div>
 
-      {/* Selsipad Platform Badge */}
+      {/* Selsila Platform Badge */}
       <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-700/40 rounded-lg">
         <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-600/30">
           <Lock className="w-5 h-5 text-purple-400" />
         </div>
         <div>
-          <p className="text-white font-semibold">Selsipad LP Locker</p>
+          <p className="text-white font-semibold">Selsila LP Locker</p>
           <p className="text-sm text-gray-400">
-            Liquidity is locked via Selsipad&apos;s built-in LP locker smart contract
+            Liquidity is locked via Selsila&apos;s built-in LP locker smart contract
           </p>
         </div>
       </div>
@@ -96,7 +96,7 @@ export function Step6LpLock({ data, onChange, errors }: Step6LpLockProps) {
             <p className="text-gray-400">
               Once the presale ends successfully, {data.percentage || 0}% of the raised liquidity
               will be automatically added to the DEX and locked for {data.duration_months || 0}{' '}
-              months via Selsipad&apos;s LP Locker contract. You will receive the{' '}
+              months via Selsila&apos;s LP Locker contract. You will receive the{' '}
               <span className="text-green-300 font-medium">&quot;Locked Liquidity&quot;</span>{' '}
               badge.
             </p>

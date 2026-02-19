@@ -103,7 +103,7 @@ export function LPLockList({ locks }: LPLockListProps) {
         <Lock className="w-12 h-12 text-gray-600 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-white mb-2">No Locked Liquidity Yet</h3>
         <p className="text-gray-500 text-sm max-w-md mx-auto">
-          When projects launch via Selsipad, their liquidity will be automatically locked and
+          When projects launch via Selsila, their liquidity will be automatically locked and
           displayed here for investor transparency.
         </p>
       </div>

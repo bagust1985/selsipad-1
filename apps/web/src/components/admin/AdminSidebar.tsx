@@ -2,19 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Rocket, 
-  Coins, 
-  Lock, 
-  UserCheck, 
-  ShieldCheck, 
-  FileText, 
-  Activity, 
+import {
+  LayoutDashboard,
+  Rocket,
+  Coins,
+  Lock,
+  UserCheck,
+  ShieldCheck,
+  FileText,
+  Activity,
   MessageSquare,
   LogOut,
   Menu,
-  X 
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -24,61 +24,60 @@ const menuItems = [
     title: 'Dashboard',
     href: '/admin',
     icon: LayoutDashboard,
-    exact: true
+    exact: true,
   },
   {
     title: 'Fairlaunch',
     href: '/admin/fairlaunch',
-    icon: Rocket
+    icon: Rocket,
   },
   {
     title: 'Presales',
     href: '/admin/presales',
-    icon: Coins
+    icon: Coins,
   },
   {
     title: 'Liquidity Locks',
     href: '/admin/liquidity-locks',
-    icon: Lock
+    icon: Lock,
   },
   {
     title: 'KYC & Verification',
     href: '/admin/kyc',
-    icon: UserCheck
+    icon: UserCheck,
   },
   {
     title: 'Badges',
     href: '/admin/badges',
-    icon: ShieldCheck
+    icon: ShieldCheck,
   },
   {
     title: 'Smart Contracts',
     href: '/admin/contracts',
-    icon: FileText
+    icon: FileText,
   },
   {
     title: 'Audit Logs',
     href: '/admin/audit-log',
-    icon: Activity
+    icon: Activity,
   },
   {
     title: 'AMA & Feed',
     href: '/admin/ama',
-    icon: MessageSquare
+    icon: MessageSquare,
   },
 ];
 
-export function AdminSidebar({ 
-  className,
-  onClose 
-}: { 
-  className?: string;
-  onClose?: () => void;
-}) {
+export function AdminSidebar({ className, onClose }: { className?: string; onClose?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <div className={cn("flex flex-col h-full bg-gray-900/50 backdrop-blur-xl border-r border-gray-800", className)}>
+    <div
+      className={cn(
+        'flex flex-col h-full bg-gray-900/50 backdrop-blur-xl border-r border-gray-800',
+        className
+      )}
+    >
       {/* Logo Area */}
       <div className="p-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -86,7 +85,7 @@ export function AdminSidebar({
             <span className="font-bold text-white">S</span>
           </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            Selsipad <span className="text-gray-500 text-sm font-normal">Admin</span>
+            Selsila <span className="text-gray-500 text-sm font-normal">Admin</span>
           </span>
         </div>
         {onClose && (
@@ -99,27 +98,25 @@ export function AdminSidebar({
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         {menuItems.map((item) => {
-          const isActive = item.exact 
-            ? pathname === item.href
-            : pathname.startsWith(item.href);
-            
+          const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={onClose}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group",
-                isActive 
-                  ? "bg-green-500/10 text-green-400 border border-green-500/20" 
-                  : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group',
+                isActive
+                  ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
               )}
             >
-              <item.icon 
-                size={18} 
+              <item.icon
+                size={18}
                 className={cn(
-                  "transition-colors",
-                  isActive ? "text-green-400" : "text-gray-500 group-hover:text-white"
+                  'transition-colors',
+                  isActive ? 'text-green-400' : 'text-gray-500 group-hover:text-white'
                 )}
               />
               <span className="font-medium text-sm">{item.title}</span>

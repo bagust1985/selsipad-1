@@ -15,7 +15,7 @@ export function DashboardHeader() {
            */}
           <Link href="/" className="flex flex-col">
             <span className="font-extrabold text-2xl tracking-tight animate-text-glow leading-none">
-              SELSIPAD
+              SELSILA
             </span>
             <span className="text-[11px] text-white/80 font-medium tracking-wide whitespace-nowrap">
               Launchpad Multi Network

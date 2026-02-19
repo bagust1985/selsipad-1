@@ -83,7 +83,7 @@ const wagmiConfig = createConfig({
   connectors: [
     walletConnect({ projectId, showQrModal: false }),
     injected({ shimDisconnect: true }),
-    coinbaseWallet({ appName: 'SELSIPAD' }),
+    coinbaseWallet({ appName: 'SELSILA' }),
   ],
   transports: {
     // Mainnets

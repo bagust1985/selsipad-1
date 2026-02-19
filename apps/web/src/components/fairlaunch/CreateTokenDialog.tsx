@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
 import { X } from 'lucide-react';
-import { 
-  getTokenCreationFee, 
+import {
+  getTokenCreationFee,
   TOKEN_FACTORY_ADDRESSES,
-  SimpleTokenFactoryABI 
+  SimpleTokenFactoryABI,
 } from '@/lib/web3/token-factory';
 import type { Address } from 'viem';
 import { decodeEventLog } from 'viem';
@@ -15,10 +15,21 @@ type CreateTokenDialogProps = {
   network: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onTokenCreated: (data: { address: string; name: string; symbol: string; decimals: number; totalSupply: string }) => void;
+  onTokenCreated: (data: {
+    address: string;
+    name: string;
+    symbol: string;
+    decimals: number;
+    totalSupply: string;
+  }) => void;
 };
 
-export function CreateTokenDialog({ network, open, onOpenChange, onTokenCreated }: CreateTokenDialogProps) {
+export function CreateTokenDialog({
+  network,
+  open,
+  onOpenChange,
+  onTokenCreated,
+}: CreateTokenDialogProps) {
   const [formData, setFormData] = useState({
     type: 'standard',
     name: '',
@@ -28,7 +39,11 @@ export function CreateTokenDialog({ network, open, onOpenChange, onTokenCreated 
   });
 
   const { writeContract, data: hash, isPending, reset } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({ hash });
+  const {
+    isLoading: isConfirming,
+    isSuccess,
+    data: receipt,
+  } = useWaitForTransactionReceipt({ hash });
   const publicClient = usePublicClient();
 
   // Extract token address when transaction succeeds
@@ -43,17 +58,24 @@ export function CreateTokenDialog({ network, open, onOpenChange, onTokenCreated 
               data: log.data,
               topics: log.topics,
             });
-            
+
             if (decoded.eventName === 'TokenCreated') {
               const tokenAddress = (decoded.args as any).token as string;
               const creatorAddress = (decoded.args as any).creator as string;
               console.log('Token created:', tokenAddress);
-              
+
               // Auto-verify token on BSCScan
-              const chainId = network.includes('bsc_testnet') ? 97 : network.includes('bnb') ? 56 : undefined;
+              const chainId = network.includes('bsc_testnet')
+                ? 97
+                : network.includes('bnb')
+                  ? 56
+                  : undefined;
               if (chainId) {
-                const totalSupplyWei = (BigInt(formData.totalSupply) * (10n ** BigInt(formData.decimals))).toString();
-                
+                const totalSupplyWei = (
+                  BigInt(formData.totalSupply) *
+                  10n ** BigInt(formData.decimals)
+                ).toString();
+
                 fetch('/api/internal/verify-factory-token', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -67,17 +89,17 @@ export function CreateTokenDialog({ network, open, onOpenChange, onTokenCreated 
                     chainId,
                   }),
                 })
-                  .then(res => res.json())
-                  .then(data => {
+                  .then((res) => res.json())
+                  .then((data) => {
                     if (data.success) {
                       console.log('✅ Token verification submitted:', data.guid);
                     } else {
                       console.error('❌ Verification failed:', data.error);
                     }
                   })
-                  .catch(err => console.error('❌ Verification request failed:', err));
+                  .catch((err) => console.error('❌ Verification request failed:', err));
               }
-              
+
               onTokenCreated({
                 address: tokenAddress,
                 name: formData.name,
@@ -85,7 +107,7 @@ export function CreateTokenDialog({ network, open, onOpenChange, onTokenCreated 
                 decimals: formData.decimals,
                 totalSupply: formData.totalSupply,
               });
-              
+
               // Reset form and close dialog after short delay
               setTimeout(() => {
                 reset();
@@ -120,7 +142,7 @@ export function CreateTokenDialog({ network, open, onOpenChange, onTokenCreated 
     try {
       const factoryAddress = TOKEN_FACTORY_ADDRESSES[network] as Address;
       const creationFee = getTokenCreationFee(network);
-      const totalSupply = BigInt(formData.totalSupply) * (10n ** BigInt(formData.decimals));
+      const totalSupply = BigInt(formData.totalSupply) * 10n ** BigInt(formData.decimals);
 
       await writeContract({
         address: factoryAddress,
@@ -145,7 +167,7 @@ export function CreateTokenDialog({ network, open, onOpenChange, onTokenCreated 
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
           <h2 className="text-xl font-bold text-white">Create Token</h2>
-          <button 
+          <button
             onClick={() => onOpenChange(false)}
             className="p-1 hover:bg-gray-800 rounded-lg transition-colors"
           >
@@ -207,7 +229,9 @@ export function CreateTokenDialog({ network, open, onOpenChange, onTokenCreated 
             <input
               type="number"
               value={formData.decimals}
-              onChange={(e) => setFormData({ ...formData, decimals: parseInt(e.target.value) || 18 })}
+              onChange={(e) =>
+                setFormData({ ...formData, decimals: parseInt(e.target.value) || 18 })
+              }
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
               placeholder="18"
               min="1"
@@ -225,13 +249,15 @@ export function CreateTokenDialog({ network, open, onOpenChange, onTokenCreated 
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
               placeholder="1000000"
             />
-            <p className="text-xs text-gray-500 mt-1">Before decimals (e.g., 1000000 = 1M tokens)</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Before decimals (e.g., 1000000 = 1M tokens)
+            </p>
           </div>
 
-          {/* Selsipad Anti-Bot System (Disabled for Standard) */}
+          {/* Selsila Anti-Bot System (Disabled for Standard) */}
           <div className="flex items-center gap-2 opacity-50">
             <input type="checkbox" disabled className="w-4 h-4" />
-            <label className="text-sm text-gray-500">Implement Selsipad Anti-Bot System</label>
+            <label className="text-sm text-gray-500">Implement Selsila Anti-Bot System</label>
           </div>
 
           {/* Creation Fee */}
@@ -245,7 +271,13 @@ export function CreateTokenDialog({ network, open, onOpenChange, onTokenCreated 
             <button
               type="button"
               onClick={handleCreate}
-              disabled={isPending || isConfirming || !formData.name || !formData.symbol || !formData.totalSupply}
+              disabled={
+                isPending ||
+                isConfirming ||
+                !formData.name ||
+                !formData.symbol ||
+                !formData.totalSupply
+              }
               className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all shadow-lg"
             >
               {isPending || isConfirming ? 'Creating Token...' : 'Create Token'}

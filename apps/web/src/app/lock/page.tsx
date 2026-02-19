@@ -5,9 +5,9 @@ import { LPLockList } from '@/components/lock/LPLockList';
 import { SplineBackground } from '@/components/home/SplineBackground';
 
 export const metadata = {
-  title: 'LP Lock | Selsipad - Liquidity Transparency',
+  title: 'LP Lock | Selsila - Liquidity Transparency',
   description:
-    'View all locked liquidity across Presale, Fairlaunch, and Bonding Curve projects on Selsipad.',
+    'View all locked liquidity across Presale, Fairlaunch, and Bonding Curve projects on Selsila.',
 };
 
 export default async function LockPage() {
@@ -51,7 +51,7 @@ export default async function LockPage() {
           <h2 className="text-2xl font-bold text-white mb-2">Liquidity Transparency</h2>
           <p className="text-sm text-gray-400 max-w-2xl mx-auto">
             All project liquidity is locked for investor protection. View lock details, durations,
-            and verification links for every project launched on Selsipad.
+            and verification links for every project launched on Selsila.
           </p>
         </div>
 

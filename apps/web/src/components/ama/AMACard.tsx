@@ -128,7 +128,7 @@ export function AMACard({
                 ✓ Verified
               </span>
             </div>
-            <p className="text-[10px] text-[#39AEC4]/70 mt-0.5">Hosted by SELSIPAD Team</p>
+            <p className="text-[10px] text-[#39AEC4]/70 mt-0.5">Hosted by SELSILA Team</p>
           </div>
         </div>
 

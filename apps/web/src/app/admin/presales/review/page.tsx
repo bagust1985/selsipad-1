@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { AdminReviewQueue } from './AdminReviewQueue';
 
 export const metadata = {
-  title: 'Admin Review Queue | SELSIPAD',
+  title: 'Admin Review Queue | SELSILA',
   description: 'Review and approve presale submissions',
 };
 

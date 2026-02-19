@@ -40,7 +40,7 @@ export function Hero() {
           <div className="w-full h-full bg-[radial-gradient(circle_at_50%_50%,#1e1b4b_0%,#000000_100%)] flex items-center justify-center">
             <img
               src="/assets/selsipad-full-logo.png"
-              alt="Selsipad Logo"
+              alt="Selsila Logo"
               className="w-1/2 max-w-[500px] opacity-20 blur-sm"
             />
           </div>
@@ -54,7 +54,7 @@ export function Hero() {
       {/* Content */}
       <div className="relative z-10 px-6 pt-24 text-white flex flex-col items-center justify-center h-[80vh]">
         <h1 className="text-5xl md:text-8xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/50 drop-shadow-2xl">
-          SELSIPAD
+          SELSILA
         </h1>
         <p className="mt-4 text-xl text-white/60 font-light tracking-wide">
           The Future of Decentralized Launchpads

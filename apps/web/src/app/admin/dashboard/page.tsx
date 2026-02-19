@@ -53,7 +53,7 @@ export default async function AdminDashboard() {
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
           <p className="text-gray-400">
-            Welcome to SELSIPAD Admin Panel. Review pending items and monitor platform activity.
+            Welcome to SELSILA Admin Panel. Review pending items and monitor platform activity.
           </p>
         </div>
         <AdminLogout />

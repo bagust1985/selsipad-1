@@ -1,9 +1,10 @@
 require('@nomicfoundation/hardhat-toolbox');
 require('@nomicfoundation/hardhat-verify');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../apps/web/.env') });
 
-const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY;
-const ADMIN_DEPLOYER_PRIVATE_KEY = process.env.ADMIN_DEPLOYER_PRIVATE_KEY;
+const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY_TESTNET || process.env.DEPLOYER_PRIVATE_KEY;
+const ADMIN_DEPLOYER_PRIVATE_KEY = process.env.ADMIN_PRIVATE_KEY || process.env.ADMIN_DEPLOYER_PRIVATE_KEY;
 
 function getValidAccounts(...keys) {
   return keys.filter(key => key && key !== '').map(key => key.startsWith('0x') ? key : `0x${key}`);
@@ -36,7 +37,7 @@ module.exports = {
       },
     },
     sepolia: {
-      url: process.env.SEPOLIA_RPC_URL || '',
+      url: process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
       accounts: getValidAccounts(DEPLOYER_PRIVATE_KEY, ADMIN_DEPLOYER_PRIVATE_KEY),
       chainId: 11155111,
     },

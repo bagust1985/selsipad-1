@@ -59,11 +59,15 @@ const FACTORY_ABI = [
 const FACTORY_ADDRESSES: Record<string, string> = {
   '97': '0x67c3DAE448B55C3B056C39B173118d69b7891866', // BSC Testnet V2.4
   '56': '0x0b3662a97C962bdAFC3e66dcE076A65De18C223d', // BSC Mainnet
+  '11155111': process.env.NEXT_PUBLIC_PRESALE_FACTORY_SEPOLIA || '0xfeF5DaD7f3eDACC16373C1991152D7F297a1Ed1A',
+  '84532': process.env.NEXT_PUBLIC_PRESALE_FACTORY_BASE_SEPOLIA || '0xD75C41be5e55e4bf1e74deA3Dce7a229aEdDb6E5',
 };
 
 const RPC_URLS: Record<string, string> = {
   '97': process.env.BSC_TESTNET_RPC_URL || 'https://bsc-testnet-rpc.publicnode.com',
   '56': process.env.BSC_MAINNET_RPC_URL || 'https://bsc-dataseed.binance.org',
+  '11155111': process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
+  '84532': process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org',
 };
 
 /**

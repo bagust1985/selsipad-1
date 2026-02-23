@@ -47,7 +47,7 @@ const FAIRLAUNCH_FACTORY_ADDRESSES: Record<string, string> = {
   bnb: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
   bsc_testnet: '0xa6dE6Ebd3E0ED5AcbE9c07B59C738C610821e175', // Pair Pre-Create Fix (Feb 12)
   base: '0x0000000000000000000000000000000000000000', // TODO: Deploy factory
-  base_sepolia: '0x3aF79445842A54D8cF6E928DBc9C46F3a2B0B0fB',
+  base_sepolia: '0x58eCA1c84D28A1A44B5Ff4127dB8a9A1d2706b4a',
 };
 
 // Chain IDs
